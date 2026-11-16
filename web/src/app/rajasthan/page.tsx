@@ -2,10 +2,11 @@ import { CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PhaseGaps, SeasonExplorer, TeamDots } from '@/components/charts/RRCharts'
-import { Badge, PageHead, Plain, SectionHead, Stat, StatRow, signed } from '@/components/ui'
+import { Tag, PageHead, Note, SectionHead, Stat, signed } from '@/components/kit'
 import { getRR } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import type { Gap, SquadPlayer } from '@/lib/types'
+import { SquadTables } from '@/views/SquadTables'
 
 export const metadata: Metadata = { title: 'Rajasthan Royals, IPL 2026 review' }
 
@@ -22,14 +23,12 @@ export default function RajasthanPage() {
   const best = rr.gaps[rr.gaps.length - 1]
   const mu = rr.matchups
   const pv = rr.provenance
-  const batters = rr.squad.filter((p) => p.bat && p.bat.balls >= 10).sort((a, b) => b.bat!.rv - a.bat!.rv)
-  const bowlers = rr.squad.filter((p) => p.bowl && p.bowl.balls >= 12).sort((a, b) => b.bowl!.rv - a.bowl!.rv)
 
   return (
     <>
       <PageHead
         title="Rajasthan Royals in IPL 2026"
-        takeaway={
+        summary={
           <>
             Fourth in the league with {s.won} wins from {s.played}, then a win in the Eliminator and defeat in Qualifier 2. The{' '}
             {gapName(best)} was the best in the league. The leaks were {leaks.map(gapName).join(', ')}: together about{' '}
@@ -38,13 +37,13 @@ export default function RajasthanPage() {
         }
       />
 
-      <StatRow cols={5}>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
         <Stat label="League finish" value={`${s.pos}th`} note={`${s.points} points, ${s.won} won, ${s.lost} lost`} />
         <Stat label="Net run rate" value={signed(s.nrr, 3)} note="league stage" />
         <Stat label="Playoffs" value="Q2" note={s.playoff_result ?? ''} />
         <Stat label="Most runs" value={runs.bat!.runs} tone="pink" note={`${runs.name}, strike rate ${runs.bat!.sr}`} />
         <Stat label="Most wickets" value={wkts.bowl!.wkts} tone="pink" note={`${wkts.name}, economy ${wkts.bowl!.econ}`} />
-      </StatRow>
+      </div>
 
       <SectionHead title="All 16 matches">
         Pick a match to see how RR’s chance of winning moved ball by ball. Pink shading marks pressure moments.
@@ -60,11 +59,11 @@ export default function RajasthanPage() {
           <PhaseGaps phases={rr.phases} />
         </section>
         <div className="flex flex-col gap-4">
-          <Plain title="Reading it">
+          <Note title="Reading it">
             <b>{signed(best.gap_vs_avg)}</b> next to {gapName(best)} means RR scored about {best.gap_vs_avg.toFixed(0)} more runs
             a match in that phase than an average team would have from the same positions. The blue bars are the problem: RR were
             8th of 10 in both batting and bowling at the death.
-          </Plain>
+          </Note>
           <section className="panel overflow-hidden">
             <h3 className="border-b border-line px-4 py-3 text-[14px] font-semibold">The same story in familiar numbers</h3>
             <table className="w-full text-[13px]">
@@ -124,10 +123,7 @@ export default function RajasthanPage() {
         Runs added compared with an average IPL 2026 player in the same situations, over the whole season. Sorted from most to
         least valuable.
       </SectionHead>
-      <div className="grid gap-6 xl:grid-cols-2">
-        <SquadTable title="Batting" rows={batters} kind="bat" />
-        <SquadTable title="Bowling" rows={bowlers} kind="bowl" />
-      </div>
+      <SquadTables squad={rr.squad} />
 
       <section className="panel mt-6 flex flex-wrap items-center justify-between gap-4 border-gold/50 bg-gold-soft/40 p-5">
         <div className="max-w-[70ch]">
@@ -169,9 +165,9 @@ export default function RajasthanPage() {
         <section className="panel overflow-hidden">
           <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-5 py-3">
             <h3 className="text-[14.5px] font-semibold">Checked against the public record</h3>
-            <Badge tone={pv.checks_passed === pv.checks.length ? 'pink' : 'blue'}>
+            <Tag tone={pv.checks_passed === pv.checks.length ? 'pink' : 'blue'}>
               {pv.checks_passed} of {pv.checks.length} match exactly
-            </Badge>
+            </Tag>
           </div>
           <table className="w-full text-[13px]">
             <thead className="text-[12px] text-ink-3">
@@ -211,53 +207,5 @@ export default function RajasthanPage() {
         </section>
       </div>
     </>
-  )
-}
-
-function SquadTable({ title, rows, kind }: { title: string; rows: SquadPlayer[]; kind: 'bat' | 'bowl' }) {
-  return (
-    <section className="panel overflow-hidden">
-      <h3 className="display border-b border-line px-5 py-3 text-[1.5rem]">{title}</h3>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[560px] text-[13px]">
-          <thead className="text-[12px] text-ink-3">
-            <tr className="border-b border-line">
-              <th className="px-5 py-2 text-left font-medium">Player</th>
-              <th className="px-2 py-2 text-right font-medium">{kind === 'bat' ? 'Runs' : 'Wkts'}</th>
-              <th className="px-2 py-2 text-right font-medium">{kind === 'bat' ? 'SR' : 'Econ'}</th>
-              <th className="px-2 py-2 text-right font-medium">Death</th>
-              <th className="px-2 py-2 text-right font-medium">Pressure</th>
-              <th className="px-5 py-2 text-right font-medium">Runs added</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((p) => {
-              const d = p[kind]!
-              const death = d.phases.Death
-              return (
-                <tr key={p.id} className="border-b border-line last:border-0">
-                  <td className="px-5 py-2">
-                    <span className="font-semibold">{p.name}</span>
-                    {p.overseas && <span className="ml-1.5 text-[11px] text-ink-3">overseas</span>}
-                  </td>
-                  <td className="num px-2 py-2 text-right">{kind === 'bat' ? p.bat!.runs : p.bowl!.wkts}</td>
-                  <td className="num px-2 py-2 text-right">{kind === 'bat' ? p.bat!.sr : p.bowl!.econ}</td>
-                  <td className="num px-2 py-2 text-right text-ink-2" title={`${death.balls} balls at the death, runs added per 100`}>
-                    {death.balls >= 12 ? signed(death.rv100, 0) : '–'}
-                  </td>
-                  <td className="num px-2 py-2 text-right text-ink-2" title={`${d.p_balls} pressure balls, runs added per 100`}>
-                    {d.p_balls >= 12 ? signed(d.p_rv100, 0) : '–'}
-                  </td>
-                  <td className={`num px-5 py-2 text-right font-semibold ${d.rv >= 0 ? 'text-pink-ink' : 'text-blue'}`}>{signed(d.rv, 0)}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      <p className="border-t border-line px-5 py-2.5 text-[12px] text-ink-3">
-        Death and Pressure columns: runs added per 100 balls in that situation (shown from 12 balls). Runs added: season total.
-      </p>
-    </section>
   )
 }

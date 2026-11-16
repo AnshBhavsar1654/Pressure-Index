@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
-import { PageHead, Plain, SectionHead, Stat, StatRow } from '@/components/ui'
+import { PageHead, Note, SectionHead, Stat} from '@/components/kit'
 import { getGrid, getSummary } from '@/lib/data'
 import { fmt } from '@/lib/format'
+import { MomentsTable } from '@/views/MomentsTable'
 import { ChaseMap, PressureShape } from '@/views/PressureCharts'
 
 export const metadata: Metadata = { title: 'How pressure works' }
@@ -27,13 +28,13 @@ export default function PressurePage() {
     <>
       <PageHead
         title="How pressure works"
-        takeaway="Pressure is not just the last over or a high asking rate. It is any moment where the next ball could change who wins. A tight chase is pressure; a chase that is already lost is not, however dramatic it looks."
+        summary="Pressure is not just the last over or a high asking rate. It is any moment where the next ball could change who wins. A tight chase is pressure; a chase that is already lost is not, however dramatic it looks."
       >
         <div className="max-w-sm">
-          <Plain>
+          <Note title="The idea">
             Think of a scoreboard that shows each team’s <b>chance of winning</b>. If the next ball could move it a lot, that
             ball is high pressure. If almost nothing could move it, the game is decided and there is no pressure.
-          </Plain>
+          </Note>
         </div>
       </PageHead>
 
@@ -53,12 +54,12 @@ export default function PressurePage() {
         The pressure label was never shown to the scoring model, yet cricket changes exactly as you would expect when the stakes
         rise.
       </SectionHead>
-      <StatRow cols={4}>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
         <Stat label="Wickets per 100 balls" value={c.pressure.wkt_pct.toFixed(1)} tone="pink" note={`against ${c.normal.wkt_pct.toFixed(1)} in ordinary moments`} />
         <Stat label="Wides and no-balls" value={`${c.pressure.extras_pct.toFixed(1)}%`} tone="pink" note={`against ${c.normal.extras_pct.toFixed(1)}%: bowlers feel it too`} />
         <Stat label="Dot balls" value={`${c.pressure.dot_pct.toFixed(0)}%`} tone="pink" note={`against ${c.normal.dot_pct.toFixed(0)}%`} />
         <Stat label="Pressure moments found" value={fmt.int(c.pressure.balls)} note={`out of ${fmt.int(s.n_balls)} deliveries`} />
-      </StatRow>
+      </div>
 
       <div className="mt-6 flex flex-col gap-6">
         <ChaseMap grid={getGrid()} />
@@ -66,40 +67,10 @@ export default function PressurePage() {
       </div>
 
       <SectionHead title="The tensest balls in five years of data">
-        Each is the single highest-stakes ball of its match. Almost all are last-ball finishes, which is exactly what a
+        The single highest-stakes ball of each match. Almost all are last-ball finishes, which is exactly what a
         pressure measure should find.
       </SectionHead>
-      <section className="panel overflow-x-auto">
-        <table className="w-full min-w-[760px] text-[13.5px]">
-          <thead className="text-left text-[12.5px] text-ink-3">
-            <tr className="border-b border-line">
-              <th className="px-5 py-2.5 font-medium">Match</th>
-              <th className="px-3 py-2.5 font-medium">Situation</th>
-              <th className="px-3 py-2.5 font-medium">Batter v bowler</th>
-              <th className="px-3 py-2.5 text-right font-medium">Chasing side’s win chance</th>
-              <th className="px-5 py-2.5 text-right font-medium">Stakes (× typical ball)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {s.moments.slice(0, 10).map((mo) => (
-              <tr key={mo.match + mo.date} className="border-b border-line last:border-0">
-                <td className="px-5 py-2.5">
-                  <div className="font-semibold">{mo.match}</div>
-                  <div className="text-[12px] text-ink-3">
-                    {mo.comp}, {fmt.date(mo.date)}
-                  </div>
-                </td>
-                <td className="px-3 py-2.5">{mo.state}</td>
-                <td className="px-3 py-2.5">
-                  {mo.striker} v {mo.bowler}
-                </td>
-                <td className="num px-3 py-2.5 text-right">{fmt.pct(mo.wp)}</td>
-                <td className="display num px-5 py-2.5 text-right text-[1.4rem] text-pink">{mo.li.toFixed(0)}×</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+      <MomentsTable moments={s.moments} />
     </>
   )
 }
