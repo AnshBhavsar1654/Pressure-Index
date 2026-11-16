@@ -136,17 +136,17 @@ export function rescore(players: Player[], w: Weights) {
 export type ScoredPlayer = ReturnType<typeof rescore>[number]
 
 export const COMPONENT_LABEL: Record<ComponentKey, string> = {
-  pressure: 'Pressure run value',
-  impact: 'Win probability added',
-  delta: 'Lift over own baseline',
-  consistency: 'Match-to-match consistency',
+  pressure: 'Output under pressure',
+  impact: 'Match-winning impact',
+  delta: 'Rise above own normal',
+  consistency: 'Consistency',
 }
 
 export const COMPONENT_HINT: Record<ComponentKey, string> = {
-  pressure: 'Runs above expected per 100 high-pressure balls, shrunk toward the player’s own level',
-  impact: 'Share of match won per 100 high-pressure balls, from the win-probability model',
-  delta: 'How much better (or worse) the player is under pressure than in ordinary situations',
-  consistency: 'Share of pressure innings or spells that finished above expectation',
+  pressure: 'Runs added per 100 high-pressure balls, compared with an average player in the same situations',
+  impact: 'How much each pressure ball moved the team’s chance of winning',
+  delta: 'How much better (or worse) the player is under pressure than in ordinary moments',
+  consistency: 'Share of pressure innings or spells that beat the average',
 }
 
 /* ----------------------------------------------------------------- RR 2026 */
@@ -202,4 +202,16 @@ export interface RRData {
   strengths: Gap[]
   recommendations: Recommendation[]
   pool: { known: boolean; note: string | null; updated: string | null }
+  provenance: Provenance
+}
+
+export interface Provenance {
+  files: { file: string; use: string; rows: number | null }[]
+  comp_id: number
+  match_ids: number[]
+  league_balls: number
+  league_matches: number
+  reference: { name: string; url: string; accessed: string }
+  checks: { item: string; public: string; ours: string; match: boolean }[]
+  checks_passed: number
 }
