@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Note, PageHead } from '@/components/kit'
-import { getRole, getSummary } from '@/lib/data'
+import { getRanked, getRole, getSummary } from '@/lib/data'
 import type { Role } from '@/lib/types'
 import { Leaderboard } from '@/views/Leaderboard'
 
@@ -21,7 +21,7 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
   const players = data.players
     .filter((p) => p.p_balls >= floor.export_min_balls && p.p_matches >= floor.export_min_matches)
     .map((p) => ({ ...p, matches: [], seasons: [], phases: [] }))
-  const [a, b, c] = data.players
+  const [a, b, c] = getRanked(role)
   const noun = role === 'bat' ? 'batters' : 'bowlers'
   return (
     <>
@@ -29,14 +29,15 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
         title={role === 'bat' ? 'Batters under pressure' : 'Bowlers under pressure'}
         summary={
           <>
-            {a.name}, {b.name} and {c.name} lead {data.eligibility.n_eligible} eligible {noun}. Each has at least{' '}
+            {a.name}, {b.name} and {c.name} lead the {data.eligibility.n_ranked} qualified {noun} RR could sign. Each has at least{' '}
             {data.eligibility.min_pressure_balls} high-pressure balls across {data.eligibility.min_pressure_matches} or more
             matches, so nobody ranks on one lucky night.
           </>
         }
       >
-        <Note title="Reading the numbers" className="max-w-md">
-          <b>+10</b> under pressure means {role === 'bat' ? '10 more runs scored' : '10 more runs saved'} per 100 pressure balls than an average {role === 'bat' ? 'batter' : 'bowler'} in the same situations. <b>0</b> is exactly average.
+        <Note title="Three numbers to read first" className="max-w-md">
+          <b>Under pressure +10</b>: {role === 'bat' ? '10 more runs scored' : '10 more runs saved'} per 100 pressure balls than an average {role === 'bat' ? 'batter' : 'bowler'} in the same spot.{' '}
+          <b>Consistency 70%</b>: delivered 7 times in 10. <b>Top-10 confidence 60%</b>: stays top 10 in 6 of 10 re-runs, so a safe pick.
         </Note>
       </PageHead>
       <Leaderboard

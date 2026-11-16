@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { fmt } from '@/lib/format'
+import { betterThan, EXCLUDED_LONG, term, winPts } from '@/lib/terms'
 import { COMPONENT_LABEL, rescore, type ComponentKey, type Player, type Role, type Weights } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -36,11 +37,11 @@ function rowsFor(role: Role): Row[] {
   const bat = role === 'bat'
   const d = (n: number) => (v: number | null | undefined) => fmt.dec(v, n)
   return [
-    { label: bat ? 'Runs added per 100 (pressure)' : 'Runs saved per 100 (pressure)', get: (p) => p.p_rv100, fmt: (v) => fmt.signed(v), better: 1 },
-    { label: bat ? 'Runs added per 100 (normal)' : 'Runs saved per 100 (normal)', get: (p) => p.n_rv100, fmt: (v) => fmt.signed(v), better: 1 },
-    { label: 'Rise above own normal', get: (p) => p.delta100, fmt: (v) => fmt.signed(v), better: 1 },
-    { label: 'Win probability added per 100', get: (p) => p.wpa100, fmt: (v) => fmt.signed(v, 2), better: 1 },
-    { label: 'Consistency', hint: 'Share of pressure innings or spells above average', get: (p) => p.cons, fmt: (v) => fmt.pct(v), better: 1 },
+    { label: `Under pressure (${bat ? 'runs added' : 'runs saved'} per 100)`, hint: term('underPressure', role).def, get: (p) => p.p_rv100, fmt: (v) => fmt.signed(v), better: 1 },
+    { label: `Normal (${bat ? 'runs added' : 'runs saved'} per 100)`, hint: term('normal').def, get: (p) => p.n_rv100, fmt: (v) => fmt.signed(v), better: 1 },
+    { label: 'Lift under pressure', hint: term('lift').def, get: (p) => p.delta100, fmt: (v) => fmt.signed(v), better: 1 },
+    { label: 'Win impact', hint: term('winImpact').def, get: (p) => p.wpa100, fmt: winPts, better: 1 },
+    { label: 'Consistency', hint: term('consistency', role).def, get: (p) => p.cons, fmt: (v) => fmt.pct(v), better: 1 },
     bat
       ? { label: 'Strike rate (pressure)', get: (p) => p.press.sr, fmt: d(0), better: 1 }
       : { label: 'Economy (pressure)', get: (p) => p.press.econ, fmt: d(2), better: -1 },
@@ -76,11 +77,11 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
 
   const pool = pools[role]
   const chosen = useMemo(() => ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Player => !!p), [ids, pool])
-  const ranked = useMemo(() => pool.filter((p) => p.rank != null), [pool])
+  const qualified = useMemo(() => pool.filter((p) => p.merit_rank != null), [pool])
   // rating ingredients as z-scores against the submitted pool, adding the player if outside it
   const zs = useMemo(
-    () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.rank != null ? ranked : [...ranked, p], weights).find((x) => x.id === p.id)!.z])),
-    [chosen, ranked, weights],
+    () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.merit_rank != null ? qualified : [...qualified, p], weights).find((x) => x.id === p.id)!.z])),
+    [chosen, qualified, weights],
   )
 
   const suggestions = useMemo(() => {
@@ -129,7 +130,7 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
       <Card>
         <CardHeader>
           <CardTitle>Choose who to compare</CardTitle>
-          <CardDescription>Every player with a profile is available, including those outside the submitted ranking.</CardDescription>
+          <CardDescription>Every player with a profile is available, including those outside my ranking.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -208,14 +209,18 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
               </div>
               <div className="flex items-end justify-between">
                 <span>
-                  <span className="block text-[12.5px] text-ink-3">Submitted rank</span>
+                  <span className="block text-[12.5px] text-ink-3">My rank</span>
                   <span className="display num text-[2rem] text-pink">{p.rank ?? '–'}</span>
                 </span>
                 <Button asChild variant="outline" size="sm" className="rounded-md">
                   <Link href={`/players/${role}/${p.id}/`}>Full profile</Link>
                 </Button>
               </div>
-              {p.rank == null && <p className="text-[12px] leading-snug text-ink-3">Outside the submitted ranking, so these figures rest on a small sample.</p>}
+              {p.rank == null && (
+                <p className="text-[12px] leading-snug text-ink-3">
+                  {p.excluded ? EXCLUDED_LONG[p.excluded] : 'Not enough pressure balls to be ranked, so these figures rest on a small sample.'}
+                </p>
+              )}
             </section>
           ))}
         </div>
@@ -266,7 +271,7 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
             <CardHeader>
               <CardTitle>What drives the rating</CardTitle>
               <CardDescription>
-                Each bar compares the player with every other eligible {noun}. A bar to the right of centre is above the pool average.
+                The four things the rating weighs. The number is the share of qualified {noun}s each player beats; right of centre is above average.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">
@@ -284,7 +289,7 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
                             <span className="absolute inset-y-0 left-1/2 w-px bg-line" />
                             <span className="absolute inset-y-0 rounded-full" style={{ background: COLORS[i], width: `${w}%`, left: z >= 0 ? '50%' : `${50 - w}%` }} />
                           </span>
-                          <span className="num w-10 text-right text-[12.5px] text-ink-2">{fmt.signed(z, 1)}</span>
+                          <span className="num w-10 text-right text-[12.5px] text-ink-2">{betterThan(z)}%</span>
                         </div>
                       )
                     })}

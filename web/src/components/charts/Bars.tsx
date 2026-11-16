@@ -56,10 +56,10 @@ export function LiHistogram({
                   content: (
                     <div className="flex flex-col gap-1">
                       <div className="font-semibold">
-                        LI {b.x.toFixed(1)} to {(b.x + step).toFixed(1)}
+                        Stakes {b.x.toFixed(1)}× to {(b.x + step).toFixed(1)}×
                       </div>
                       <TipRow label="Deliveries" value={fmt.int(b.n)} />
-                      <TipRow label="Classed as" value={press ? 'High pressure' : 'Ordinary'} />
+                      <TipRow label="Classed as" value={press ? 'Pressure ball' : 'Normal ball'} />
                     </div>
                   ),
                 })
@@ -132,7 +132,7 @@ export function PhaseBars({
                           {r.phase}, innings {r.innings}
                         </div>
                         <TipRow label="High-pressure share" value={`${r.pressure_share}%`} />
-                        <TipRow label="Mean LI" value={r.li.toFixed(2)} />
+                        <TipRow label="Average stakes" value={`${r.li.toFixed(2)}×`} />
                         <TipRow label="Deliveries" value={fmt.int(r.balls)} />
                       </div>
                     ),

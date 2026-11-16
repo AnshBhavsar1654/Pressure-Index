@@ -4,6 +4,7 @@ import { scaleBand, scaleLinear } from 'd3-scale'
 import { useState } from 'react'
 import type { PlayerMatch, ScoredPlayer } from '@/lib/types'
 import { fmt } from '@/lib/format'
+import { betterThan } from '@/lib/terms'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 import { useZoom } from './Zoom'
 
@@ -73,7 +74,7 @@ export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'b
                       <TipRow label="Pressure balls" value={d.balls} />
                       <TipRow label={role === 'bat' ? 'Runs / out' : 'Runs / wkts'} value={`${d.r} / ${d.out}`} />
                       <TipRow label={role === 'bat' ? 'Runs added' : 'Runs saved'} value={fmt.signed(d.rv, 1)} />
-                      <TipRow label="Win prob. added" value={fmt.signed(d.wpa * 100, 1) + ' pts'} />
+                      <TipRow label="Win chance added" value={fmt.signed(d.wpa * 100, 1) + ' pts'} />
                     </div>
                   ),
                 })
@@ -126,9 +127,9 @@ export function RankRanges({ players, n = 15 }: { players: ScoredPlayer[]; n?: n
                   content: (
                     <div className="flex flex-col gap-1">
                       <div className="font-semibold">{p.name}</div>
-                      <TipRow label="Median bootstrap rank" value={p.boot!.rank_med} />
-                      <TipRow label="90% interval" value={`${p.boot!.rank_lo} to ${p.boot!.rank_hi}`} />
-                      <TipRow label="P(top 10)" value={fmt.pct(p.boot!.p_top10)} />
+                      <TipRow label="Typical rank" value={p.boot!.rank_med} />
+                      <TipRow label="Rank in 9 of 10 re-runs" value={`${p.boot!.rank_lo} to ${p.boot!.rank_hi}`} />
+                      <TipRow label="Top-10 confidence" value={fmt.pct(p.boot!.p_top10)} />
                     </div>
                   ),
                 })
@@ -176,17 +177,19 @@ export function ComponentBars({ z, labels }: { z: Record<string, number>; labels
                 }}
               />
             </div>
-            <span className="num text-right font-medium">{fmt.signed(v, 2)}</span>
+            <span className="num text-right font-medium" title={`Better than about ${betterThan(v)}% of qualified players`}>
+              {betterThan(v)}%
+            </span>
           </div>
         )
       })}
       <div className="grid grid-cols-[minmax(0,10rem)_1fr_3.2rem] gap-3 text-[11px] text-ink-3">
         <span />
         <div className="flex justify-between">
-          <span>below eligible average</span>
-          <span>above</span>
+          <span>worse than average</span>
+          <span>better</span>
         </div>
-        <span className="text-right">z</span>
+        <span className="text-right">beats</span>
       </div>
     </div>
   )

@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { PageHead, SectionHead } from '@/components/kit'
-import { getRole, getRR, getSummary } from '@/lib/data'
+import { getExample, getRole, getRR, getSummary } from '@/lib/data'
+import { WorkedExample } from '@/views/WorkedExample'
+import { TERMS } from '@/lib/terms'
 import { fmt } from '@/lib/format'
 import { CalibrationPair, ShrinkCurve, StabilityPair } from '@/views/MethodCharts'
 
@@ -20,7 +22,7 @@ export default function MethodPage() {
   const steps: { t: string; d: ReactNode; e: ReactNode }[] = [
     {
       t: 'Find the moments that matter',
-      d: 'A win-probability model reads the scoreboard before every ball. We ask how much the next ball could move it. The 20% of balls that could move it most are pressure moments.',
+      d: 'A win-probability model reads the scoreboard before every ball. I ask how much the next ball could move it. The 20% of balls that could move it most are pressure moments.',
       e: (
         <>
           {mo.match}, {fmt.date(mo.date)}: <b>{mo.state}</b>. The chasing side’s chance stood at {fmt.pct(mo.wp)}, and one ball
@@ -30,7 +32,7 @@ export default function MethodPage() {
     },
     {
       t: 'Judge each ball against the situation',
-      d: 'A single off the last ball and a single in the fifth over are not worth the same. We compare what happened with what an average player gets from the same overs left and wickets down, and charge each wicket at the runs it costs from there.',
+      d: 'A single off the last ball and a single in the fifth over are not worth the same. I compare what happened with what an average player gets from the same overs left and wickets down, and charge each wicket at the runs it costs from there.',
       e: (
         <>
           At the death an average batter makes about 1.4 runs a ball. A four is worth <b>+2.6</b>; a dot is <b>−1.4</b>. Getting
@@ -41,7 +43,7 @@ export default function MethodPage() {
     },
     {
       t: 'Compare players fairly',
-      d: 'Players are measured in pressure moments and in ordinary moments, so we can see who rises and who fades. Results are weighted for the strength of the competition and how recent they are, and small samples are treated with caution.',
+      d: 'Players are measured in pressure moments and in normal moments, so I can see who lifts and who fades. Results are weighted for the strength of the competition and how recent they are, and small samples are treated with caution.',
       e: (
         <>
           A batter with 120 brilliant pressure balls is pulled partway back towards their normal level. One with 500 brilliant
@@ -51,7 +53,7 @@ export default function MethodPage() {
     },
     {
       t: 'Blend four ingredients and stress-test',
-      d: `The rating is ${pct(w.pressure)} output under pressure, ${pct(w.impact)} match-winning impact, ${pct(w.delta)} rise above their own normal and ${pct(w.consistency)} consistency. Then we re-run the whole ranking 400 times on reshuffled matches to see which ranks are solid.`,
+      d: `The rating is ${pct(w.pressure)} under-pressure output, ${pct(w.impact)} win impact, ${pct(w.delta)} lift above their own normal and ${pct(w.consistency)} consistency. Then I re-run the whole ranking 400 times on reshuffled matches to see which ranks are solid.`,
       e: (
         <>
           A player who stays in the top 10 in 380 of 400 re-runs is a safe pick. One who makes it in 120 is a close call, and the
@@ -61,17 +63,13 @@ export default function MethodPage() {
     },
   ]
 
+  // one vocabulary for the whole dashboard (lib/terms.ts); the same words appear on every page
   const terms: [string, ReactNode][] = [
-    ['Pressure moment', 'One of the 20% of balls where the next delivery could change the result the most.'],
-    ['Stakes', 'How much the next ball can move a team’s chance of winning, compared with a typical ball (1.0). Also called the leverage index.'],
-    ['Win probability', 'The chance a team wins from the current score, wickets, balls left and target, learned from 867 real matches.'],
-    ['Runs added', 'Runs scored (or saved, for bowlers) above what an average player would manage in exactly the same situation. 0 is average.'],
-    ['Per 100 balls', 'Runs added scaled to 100 balls, so players with different workloads can be compared.'],
-    ['Match-winning impact', 'How much a player’s pressure balls raised (or lowered) their team’s chance of winning.'],
-    ['Rise above own normal', 'Their level in pressure moments minus their level in ordinary moments. Positive means they rise to the occasion.'],
-    ['Consistency', 'Share of their pressure innings or spells (6 balls or more) that beat the average.'],
-    ['Stays top 10', 'How often the player is still top 10 when we re-run everything 400 times on reshuffled matches.'],
-    ['Phase', 'Powerplay is overs 1 to 6, the middle overs are 7 to 15, and the death is overs 16 to 20.'],
+    ...(['pressureBall', 'stakes'] as const).map((k) => [TERMS[k].label, TERMS[k].def] as [string, ReactNode]),
+    ['Win probability', `The chance a team wins from the current score, wickets, balls left and target, learned from ${s.n_matches} real matches.`],
+    ...(['underPressure', 'normal', 'lift', 'winImpact', 'consistency', 'confidence', 'rankRange', 'rank', 'roleFit', 'phase'] as const).map(
+      (k) => [TERMS[k].label, TERMS[k].def] as [string, ReactNode],
+    ),
   ]
 
   return (
@@ -97,6 +95,11 @@ export default function MethodPage() {
         ))}
       </ol>
 
+      <SectionHead title={`Worked example: how ${getExample().name} gets to number 1`} id="example">
+        Every step above, done by hand for one player with the real numbers. Anyone can follow the sums and check them.
+      </SectionHead>
+      <WorkedExample e={getExample()} />
+
       <SectionHead title="Words used on this dashboard" />
       <dl className="grid gap-px overflow-hidden rounded-[10px] border border-line bg-line sm:grid-cols-2">
         {terms.map(([t, d]) => (
@@ -111,7 +114,7 @@ export default function MethodPage() {
       <ul className="grid gap-3 text-[14.5px] leading-relaxed text-ink-2 md:grid-cols-2 [&_b]:text-ink">
         <li className="panel p-4">
           <b>Enough evidence.</b> At least {bat.eligibility.min_pressure_balls} pressure balls across {bat.eligibility.min_pressure_matches}{' '}
-          matches: {bat.eligibility.n_eligible} batters and {bowl.eligibility.n_eligible} bowlers qualify.
+          matches: {bat.eligibility.n_eligible} batters and {bowl.eligibility.n_eligible} bowlers qualify. RR’s own players and Pakistani players are rated but left out of my ranking, since RR cannot sign them: that leaves {bat.eligibility.n_ranked} and {bowl.eligibility.n_ranked}.
         </li>
         <li className="panel p-4">
           <b>Era-aware.</b> Scoring jumped in the 2024 to 2026 IPL. Every comparison is made within the same competition and season,
@@ -127,7 +130,7 @@ export default function MethodPage() {
         </li>
       </ul>
 
-      <SectionHead title="How sure are we?">
+      <SectionHead title="How sure am I?">
         Honest answers, with the evidence one click away.
       </SectionHead>
       <ul className="mb-4 flex max-w-[78ch] flex-col gap-2.5 pl-5 text-[14.5px] leading-relaxed text-ink-2 marker:text-pink [&_b]:text-ink" style={{ listStyle: 'disc' }}>

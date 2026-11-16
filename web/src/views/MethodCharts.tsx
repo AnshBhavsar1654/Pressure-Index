@@ -6,7 +6,11 @@ import { Calibration, RankRanges } from '@/components/charts/Profile'
 import { rescore, type Player, type RoleData, type Summary } from '@/lib/types'
 
 // default-pool players in their submitted order, with z-scores filled in
-const asScored = (ps: Player[]) => rescore(ps, { pressure: 0.4, impact: 0.2, delta: 0.2, consistency: 0.2 }).map((p) => ({ ...p, liveRank: p.rank ?? p.liveRank })).toSorted((a, b) => a.liveRank - b.liveRank)
+const asScored = (ps: Player[]) =>
+  rescore(ps, { pressure: 0.4, impact: 0.2, delta: 0.2, consistency: 0.2 })
+    .filter((p) => p.rank != null)
+    .map((p) => ({ ...p, liveRank: p.rank! }))
+    .toSorted((a, b) => a.liveRank - b.liveRank)
 
 export function CalibrationPair({ s }: { s: Summary }) {
   return (

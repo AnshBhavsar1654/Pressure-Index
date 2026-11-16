@@ -1,5 +1,6 @@
 import { CaretLeftIcon, CaretRightIcon, ScalesIcon } from '@phosphor-icons/react/dist/ssr'
 import type { Metadata } from 'next'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PlayerAvatar, RankRibbon, signed } from '@/components/kit'
@@ -9,7 +10,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { getRanked, getRole, getSummary } from '@/lib/data'
+import { Term } from '@/components/Term'
+import { getQualified, getRole, getSummary } from '@/lib/data'
+import { EXCLUDED_LONG } from '@/lib/terms'
 import { fmt } from '@/lib/format'
 import { rescore, type Player, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -30,8 +33,8 @@ function find(role: Role, id: string) {
 
 /** Rating ingredients as z-scores against the default pool (the player is added if outside it). */
 function zFor(role: Role, p: Player) {
-  const pool = getRanked(role)
-  const scored = rescore(p.rank != null ? pool : [...pool, p], getSummary().weights)
+  const pool = getQualified(role)
+  const scored = rescore(p.merit_rank != null ? pool : [...pool, p], getSummary().weights)
   return scored.find((x) => x.id === p.id)!.z
 }
 
@@ -46,7 +49,7 @@ function story(p: Player, role: Role) {
   const last = p.name.split(' ').slice(-1)[0]
   if (role === 'bat') {
     const up = (p.press.sr ?? 0) >= (p.norm.sr ?? 0)
-    return `Under pressure ${last} strikes at ${fmt.dec(p.press.sr, 0)}, ${up ? 'up from' : 'down from'} ${fmt.dec(p.norm.sr, 0)} in ordinary moments, and averages ${fmt.dec(p.press.avg, 1)} runs per dismissal. Allowing for how hard those situations were, that is ${signed(p.p_rv100)} runs per 100 balls against an average batter.`
+    return `Under pressure ${last} strikes at ${fmt.dec(p.press.sr, 0)}, ${up ? 'up from' : 'down from'} ${fmt.dec(p.norm.sr, 0)} in normal moments, and averages ${fmt.dec(p.press.avg, 1)} runs per dismissal. Allowing for how hard those situations were, that is ${signed(p.p_rv100)} runs per 100 balls against an average batter.`
   }
   const up = (p.press.econ ?? 99) <= (p.norm.econ ?? 99)
   return `Under pressure ${last} concedes ${fmt.dec(p.press.econ, 2)} an over (${up ? 'tighter than' : 'looser than'} ${fmt.dec(p.norm.econ, 2)} normally) and takes a wicket every ${fmt.dec(p.press.sr, 0)} balls. Allowing for the situations, that saves ${signed(p.p_rv100)} runs per 100 balls against an average bowler.`
@@ -78,12 +81,12 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
         ['Boundaries conceded', `${fmt.dec(p.press.bnd_pct)}%`, `${fmt.dec(p.norm.bnd_pct)}%`, cmp(p.press.bnd_pct, p.norm.bnd_pct, -1)],
         ['Balls, runs, wickets', `${p.press.balls}, ${p.press.runs}, ${p.press.outs}`, `${p.norm.balls}, ${p.norm.runs}, ${p.norm.outs}`, null],
       ]
-  const bannerStats: [string, string][] = [
+  const bannerStats: [ReactNode, string][] = [
     [isBat ? 'Strike rate under pressure' : 'Economy under pressure', isBat ? fmt.dec(p.press.sr, 0) : fmt.dec(p.press.econ, 2)],
-    [isBat ? 'Runs added per 100' : 'Runs saved per 100', signed(p.p_rv100)],
+    [<Term key="u" k="underPressure" role={role}>{isBat ? 'Runs added per 100' : 'Runs saved per 100'}</Term>, signed(p.p_rv100)],
     ['Pressure balls', fmt.int(p.p_balls)],
-    ['Stays in top 10', p.boot ? fmt.pct(p.boot.p_top10) : '–'],
-    ['Likely rank range', p.boot ? `${p.boot.rank_lo}–${p.boot.rank_hi}` : '–'],
+    [<Term key="c" k="confidence" />, p.boot ? fmt.pct(p.boot.p_top10) : '–'],
+    [<Term key="r" k="rankRange" />, p.boot ? `${p.boot.rank_lo}–${p.boot.rank_hi}` : '–'],
     ['Matches with pressure', String(p.p_matches)],
   ]
 
@@ -151,13 +154,15 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
           <p className="max-w-[60ch] text-[15px] leading-relaxed text-white/85">{story(p, role)}</p>
           <p className="text-[13px] text-white/65">
             {p.rank != null
-              ? `Ranked ${p.rank} of ${total} ${isBat ? 'batters' : 'bowlers'} in the submitted ranking.`
-              : `Below the default bar (${bar.min_pressure_balls}+ pressure balls, ${bar.min_pressure_matches}+ matches), so outside the submitted ranking. Lower the bar on the rankings page to compare.`}
+              ? `Ranked ${p.rank} of the ${total} qualified ${isBat ? 'batters' : 'bowlers'} RR could sign.`
+              : p.excluded
+                ? `${EXCLUDED_LONG[p.excluded]}${p.merit_rank != null ? ` On the numbers alone, they would rank ${p.merit_rank} of ${bar.n_eligible} qualified ${isBat ? 'batters' : 'bowlers'}.` : ''}`
+                : `Fewer than ${bar.min_pressure_balls} pressure balls across ${bar.min_pressure_matches} matches, so not enough evidence to rank them yet. Treat these numbers as an early read.`}
           </p>
         </div>
         <dl className="grid grid-cols-2 gap-2.5 self-end sm:grid-cols-3">
-          {bannerStats.map(([k, v]) => (
-            <div key={k} className="rounded-lg bg-black/20 px-4 py-3">
+          {bannerStats.map(([k, v], i) => (
+            <div key={i} className="rounded-lg bg-black/20 px-4 py-3">
               <dt className="text-[12.5px] text-white/70">{k}</dt>
               <dd className="display num mt-1 text-[2rem] text-white">{v}</dd>
             </div>
@@ -167,7 +172,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
 
       <Card className="gap-0 pb-0">
         <CardHeader className="border-b pb-4">
-          <CardTitle>Pressure moments against ordinary moments</CardTitle>
+          <CardTitle>Pressure moments against normal moments</CardTitle>
           <CardDescription>Raw numbers, no adjustment. Pink marks the better column.</CardDescription>
         </CardHeader>
         <Table className="min-w-[520px] text-[14px]">
@@ -175,7 +180,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
             <TableRow className="hover:bg-transparent">
               <TableHead className="pl-5" />
               <TableHead className="text-right text-ink-3">Under pressure</TableHead>
-              <TableHead className="pr-5 text-right text-ink-3">Ordinary</TableHead>
+              <TableHead className="pr-5 text-right text-ink-3">Normal</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

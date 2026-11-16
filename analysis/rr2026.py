@@ -103,6 +103,16 @@ def team_phase(d: pd.DataFrame, team: str, n_matches: dict):
     return out
 
 
+def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[set, list]:
+    """Player ids named in auction_pool.json `retained` (ids or names); also returns names not found."""
+    raw = cfg.get("retained", [])
+    ids = {int(x) for x in raw if str(x).strip().isdigit()}
+    names = {str(x).strip().lower(): str(x).strip() for x in raw if not str(x).strip().isdigit()}
+    lookup = mp.assign(key=mp.player_name.str.strip().str.lower()).groupby("key").player_id.first()
+    ids |= {int(lookup[k]) for k in names if k in lookup.index}
+    return ids, [v for k, v in names.items() if k not in lookup.index]
+
+
 def main():
     b, mp, bat_json, bowl_json, pool = load()
     d = b[(b.is_ipl == 1) & (b.season_yr == SEASON)].copy()
@@ -303,7 +313,13 @@ def main():
     core = pd.DataFrame({"team": pd.Series(ipl26_team), "net": imp}).dropna()
     core["core_rank"] = core.groupby("team").net.rank(ascending=False, method="first")
     released = set(pool.get("released_ids", []))
-    pool_known = bool(pool.get("released_ids"))
+    retained, unmatched = retained_ids(mp, pool)
+    if unmatched:
+        print("WARNING retained names not found in the data:", unmatched)
+    know_retained = bool(pool.get("retained"))
+    pool_known = bool(released) or know_retained
+    # RR players RR keeps are never targets; once the list is out, the ones it lets go can be bought back
+    off_limits = (squad_ids & retained) if know_retained else squad_ids
 
     def role_table(disc, ph, min_balls):
         if disc == "bat":
@@ -356,13 +372,13 @@ def main():
             else:
                 c["econ"] = r1(6 * r.runs / max(r.legal, 1), 2)
                 c["bpw"] = r1(r.legal / r.wkt) if r.wkt else None
-            c["status"] = ("in auction pool" if pid in released else
+            c["status"] = ("in auction pool" if pid in released or (know_retained and pid not in retained) else
                            ("retained elsewhere" if pool_known else "check retention list"))
             return c
 
         # Pakistani players cannot register for the IPL auction, so they are never recommended
-        external = [cand(pid, r) for pid, r in g.iterrows() if pid not in squad_ids and nat(pid) != "Pakistan"
-                    and (not pool_known or pid in released)][:CAND_EXPORT_TOP]
+        external = [cand(pid, r) for pid, r in g.iterrows() if pid not in off_limits and nat(pid) != "Pakistan"
+                    and pid not in retained and (not released or pid in released)][:CAND_EXPORT_TOP]
         internal = [cand(pid, r) for pid, r in g.iterrows() if pid in squad_ids][:8]
         # benchmark: league-average and RR's own 2026 usage in this role
         recs.append({"gap": gp, "role": ROLE[gp["key"]][0], "role_desc": ROLE[gp["key"]][1],

@@ -8,7 +8,7 @@ export default function PrivacyPage() {
     <article className="max-w-[70ch]">
       <PageHead title="Privacy" summary="Pressure Index does not collect any information about you." />
       <div className="panel flex flex-col gap-4 p-6 text-[15px] leading-relaxed text-ink-2 [&_h2]:text-[16px] [&_h2]:font-semibold [&_h2]:text-foreground">
-        <h2>What we collect</h2>
+        <h2>What I collect</h2>
         <p>Nothing. There are no accounts, sign-ups, forms, cookies, analytics or advertising trackers on this site.</p>
         <h2>What is stored on your device</h2>
         <p>

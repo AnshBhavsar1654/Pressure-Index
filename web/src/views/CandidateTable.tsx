@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import type { Candidate } from '@/lib/types'
+import { Term } from '@/components/Term'
 import { cn } from '@/lib/utils'
 
 type Exp = 'any' | 'ipl'
@@ -39,6 +40,7 @@ export function CandidateTable({
   const retained = (c: Candidate) => !poolKnown && c.core_rank != null && c.core_rank <= keep
   const floor = Math.min(...candidates.map((c) => c.balls))
   const maxFit = Math.max(...candidates.map((c) => c.fit))
+  const minFit = Math.min(...candidates.map((c) => c.fit))
   // candidates arrive best fit first; filters keep that order and the top three get the crown
   const matching = useMemo(
     () => candidates.filter((c) => c.balls >= minBalls && natMatch(nat, c.nat, c.overseas) && (exp === 'any' || c.ipl_balls > 0) && (avail === 'all' || !retained(c))),
@@ -114,13 +116,21 @@ export function CandidateTable({
               <TableHead className="w-10 pl-5 text-ink-3">#</TableHead>
               <TableHead className="text-ink-3">Player</TableHead>
               <TableHead className="text-ink-3" title="Team in the IPL 2026 squad lists; empty means no IPL 2026 squad">2026 team</TableHead>
-              <TableHead className="text-right text-ink-3" title={`Runs added per 100 balls in the ${phase.toLowerCase()}`}>
-                In this role
+              <TableHead className="text-right text-ink-3">
+                <span title={`Runs ${isBat ? 'added' : 'saved'} per 100 balls in the ${phase === 'Middle' ? 'middle overs' : phase.toLowerCase()} (all balls, not only pressure), against an average player. Small samples are pulled towards 0.`} className="cursor-help underline decoration-dotted underline-offset-[3px]">
+                  In this role
+                </span>
               </TableHead>
               <TableHead className="text-right text-ink-3">{isBat ? 'Strike rate' : 'Economy'}</TableHead>
               <TableHead className="text-right text-ink-3">Balls</TableHead>
-              <TableHead className="text-right text-ink-3">Pressure rank</TableHead>
-              <TableHead className="pr-5 text-ink-3">Fit score</TableHead>
+              <TableHead className="text-right text-ink-3">
+                <span title="Place in my pressure ranking. 'Not ranked' means fewer than 120 pressure balls, not a bad record." className="cursor-help underline decoration-dotted underline-offset-[3px]">
+                  Pressure ranking
+                </span>
+              </TableHead>
+              <TableHead className="pr-5 text-ink-3">
+                <Term k="roleFit" />
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -163,10 +173,7 @@ export function CandidateTable({
                   <TableCell className="num text-right text-ink-2">{c.balls}</TableCell>
                   <TableCell className="num text-right text-ink-2">{c.press_rank ?? 'not ranked'}</TableCell>
                   <TableCell className="pr-5">
-                    <span className="flex items-center gap-2">
-                      <Meter value={c.fit / maxFit} tone={pick ? 'gold' : 'blue'} className="w-14" />
-                      <span className="num text-[12.5px] text-ink-3">{c.fit.toFixed(2)}</span>
-                    </span>
+                    <Meter value={(c.fit - minFit) / (maxFit - minFit || 1)} tone={pick ? 'gold' : 'blue'} className="w-20" />
                   </TableCell>
                 </TableRow>
               )

@@ -1,0 +1,114 @@
+{
+ "id": 47,
+ "name": "Virat Kohli",
+ "role": "bat",
+ "ball": {
+  "match": "India v Australia",
+  "comp": "Australia in India T20I Series 2022",
+  "date": "2022-09-25",
+  "over": "19.1",
+  "score": "176/3",
+  "need": 11,
+  "balls_left": 6,
+  "wp": 0.821,
+  "stakes": 7.8,
+  "runs": 6,
+  "out": 0,
+  "expected": 2.2,
+  "wkt_cost": 0.0,
+  "rv": 3.91,
+  "centre": 0.12
+ },
+ "steps": {
+  "p_balls": 456,
+  "p_matches": 37,
+  "n_balls": 2000,
+  "p_weighted": 357.5,
+  "n_weighted": 1553.4,
+  "p_raw100": 32.99,
+  "n_raw100": 1.29,
+  "league100": 1.25,
+  "kn": 600.0,
+  "kp": 250.0,
+  "n_keep": 0.721,
+  "n_rv100": 1.28,
+  "gap100": 31.7,
+  "p_keep": 0.588,
+  "delta100": 18.65,
+  "p_rv100": 19.93,
+  "wpa_raw100": 0.288,
+  "wpa100": 0.169,
+  "c_n": 24,
+  "c_pos": 18,
+  "c_prior": 0.548,
+  "cons": 0.7
+ },
+ "blend": [
+  {
+   "key": "pressure",
+   "value": 19.93,
+   "mean": 2.841,
+   "sd": 9.027,
+   "z": 1.89,
+   "weight": 0.4,
+   "part": 0.757
+  },
+  {
+   "key": "impact",
+   "value": 0.169,
+   "mean": -0.0,
+   "sd": 0.147,
+   "z": 1.15,
+   "weight": 0.2,
+   "part": 0.23
+  },
+  {
+   "key": "delta",
+   "value": 18.65,
+   "mean": -1.701,
+   "sd": 8.331,
+   "z": 2.44,
+   "weight": 0.2,
+   "part": 0.489
+  },
+  {
+   "key": "consistency",
+   "value": 0.7,
+   "mean": 0.567,
+   "sd": 0.079,
+   "z": 1.68,
+   "weight": 0.2,
+   "part": 0.336
+  }
+ ],
+ "score": 1.81,
+ "rank": 1,
+ "n_qualified": 109,
+ "n_ranked": 96,
+ "boot": {
+  "p_top10": 0.708,
+  "rank_med": 6,
+  "rank_lo": 1,
+  "rank_hi": 27
+ },
+ "press": {
+  "balls": 456,
+  "runs": 685,
+  "outs": 11,
+  "dot_pct": 33.1,
+  "bnd_pct": 22.6,
+  "rv100": 27.6,
+  "sr": 150.2,
+  "avg": 62.3
+ },
+ "norm": {
+  "balls": 2000,
+  "runs": 2882,
+  "outs": 64,
+  "dot_pct": 28.9,
+  "bnd_pct": 18.2,
+  "rv100": 0.6,
+  "sr": 144.1,
+  "avg": 45.0
+ }
+}

@@ -17,7 +17,7 @@ export default function PressurePage() {
     },
     {
       t: 'Ask what the next ball could change',
-      d: 'We imagine every possible outcome (a dot, a single, a four, a six, a wicket, a wide) and see how much each would move that chance. A big possible swing means big stakes.',
+      d: 'I imagine every possible outcome (a dot, a single, a four, a six, a wicket, a wide) and see how much each would move that chance. A big possible swing means big stakes.',
     },
     {
       t: 'Keep the top fifth',
@@ -55,7 +55,7 @@ export default function PressurePage() {
         rise.
       </SectionHead>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        <Stat label="Wickets per 100 balls" value={c.pressure.wkt_pct.toFixed(1)} tone="pink" note={`against ${c.normal.wkt_pct.toFixed(1)} in ordinary moments`} />
+        <Stat label="Wickets per 100 balls" value={c.pressure.wkt_pct.toFixed(1)} tone="pink" note={`against ${c.normal.wkt_pct.toFixed(1)} in normal moments`} />
         <Stat label="Wides and no-balls" value={`${c.pressure.extras_pct.toFixed(1)}%`} tone="pink" note={`against ${c.normal.extras_pct.toFixed(1)}%: bowlers feel it too`} />
         <Stat label="Dot balls" value={`${c.pressure.dot_pct.toFixed(0)}%`} tone="pink" note={`against ${c.normal.dot_pct.toFixed(0)}%`} />
         <Stat label="Pressure moments found" value={fmt.int(c.pressure.balls)} note={`out of ${fmt.int(s.n_balls)} deliveries`} />

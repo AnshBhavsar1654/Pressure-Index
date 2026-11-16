@@ -50,7 +50,7 @@ export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; w
                     </div>
                     <TipRow label="Required rate" value={(need / ov).toFixed(1)} />
                     <TipRow label="Chase win probability" value={fmt.pct(wp)} />
-                    <TipRow label="Stakes (× typical ball)" value={li.toFixed(2)} />
+                    <TipRow label="Stakes" value={`${li.toFixed(1)}× a typical ball`} />
                   </div>
                 ),
               })

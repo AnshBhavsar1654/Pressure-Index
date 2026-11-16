@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpenTextIcon, CrownIcon, GaugeIcon, HouseIcon, ScalesIcon, ShoppingBagIcon, UsersThreeIcon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, CrownIcon, GaugeIcon, HouseIcon, ScalesIcon, TrophyIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ComponentType } from 'react'
@@ -10,14 +10,15 @@ import { cn } from '@/lib/utils'
 type Item = { href: string; label: string; icon: ComponentType<{ size?: number | string; weight?: 'regular' | 'fill' }> }
 const GROUPS: { title: string; items: Item[] }[] = [
   {
-    title: 'Pressure',
+    title: 'Start here',
     items: [
       { href: '/', label: 'Overview', icon: HouseIcon },
+      { href: '/picks/', label: 'My picks', icon: TrophyIcon },
       { href: '/pressure/', label: 'What is pressure', icon: GaugeIcon },
     ],
   },
   {
-    title: 'Rankings',
+    title: 'Explore',
     items: [
       { href: '/rankings/bat/', label: 'Batters', icon: BatIcon },
       { href: '/rankings/bowl/', label: 'Bowlers', icon: BallIcon },
@@ -29,7 +30,6 @@ const GROUPS: { title: string; items: Item[] }[] = [
     title: 'Rajasthan Royals',
     items: [
       { href: '/rajasthan/', label: 'IPL 2026 review', icon: CrownIcon },
-      { href: '/auction/', label: 'Auction targets', icon: ShoppingBagIcon },
     ],
   },
   {

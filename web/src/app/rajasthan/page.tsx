@@ -165,12 +165,12 @@ export default function RajasthanPage() {
           <h2 className="display text-[1.7rem]">What to fix for 2027</h2>
           <p className="text-[14px] text-ink-2">
             RR leaked runs against an average side, or trailed the top four, in {rr.recommendations.length} roles:{' '}
-            {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. The auction page ranks the players who fill each
+            {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. My picks page ranks the players who fill each
             one best.
           </p>
         </div>
-        <Link href="/auction/" className="flex min-h-11 items-center rounded-lg bg-pink px-4 font-semibold text-white hover:bg-pink-ink">
-          See auction targets
+        <Link href="/picks/#roles" className="flex min-h-11 items-center rounded-lg bg-pink px-4 font-semibold text-white hover:bg-pink-ink">
+          See the shortlist
         </Link>
       </section>
 
@@ -209,7 +209,7 @@ export default function RajasthanPage() {
               <tr className="border-b border-line">
                 <th className="px-5 py-2 text-left font-medium">Figure</th>
                 <th className="px-2 py-2 text-right font-medium">Public record</th>
-                <th className="px-2 py-2 text-right font-medium">Our data</th>
+                <th className="px-2 py-2 text-right font-medium">My figure</th>
                 <th className="px-5 py-2 text-right font-medium">
                   <span className="sr-only">Match</span>
                 </th>

@@ -14,7 +14,7 @@ import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 
-export type RoleLine = { rank: number | null; balls: number; matches: number; rv100: number; rate: number | null }
+export type RoleLine = { rank: number | null; balls: number; rv100: number }
 export type DirRow = {
   id: number
   name: string
@@ -144,7 +144,7 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
               onChange={(v) => (setRanked(v), setShown(PAGE))}
               options={[
                 { value: 'all', label: 'Everyone' },
-                { value: 'ranked', label: 'In the submitted ranking' },
+                { value: 'ranked', label: 'In my ranking' },
               ]}
             />
             <div className="flex min-w-80 items-center gap-3 rounded-lg border border-line bg-panel-2 px-3 py-1.5">
@@ -179,9 +179,9 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
                 <TableHead className="h-11 text-[12.5px] font-medium text-ink-3">Country, team</TableHead>
                 <TableHead className="h-11 text-[12.5px] font-medium text-ink-3">Role</TableHead>
                 {head('balls', 'Pressure balls', 'Batting and bowling combined')}
-                {head('batRank', 'Batting rank', 'Rank in the submitted batting ranking')}
+                {head('batRank', 'Batting rank', 'Rank in my batting ranking of players RR could sign')}
                 {head('batRv', 'Batting, runs added', 'Runs added per 100 pressure balls faced')}
-                {head('bowlRank', 'Bowling rank', 'Rank in the submitted bowling ranking')}
+                {head('bowlRank', 'Bowling rank', 'Rank in my bowling ranking of players RR could sign')}
                 {head('bowlRv', 'Bowling, runs saved', 'Runs saved per 100 pressure balls bowled')}
                 <TableHead className="h-11 pr-5 text-right text-[12.5px] font-medium text-ink-3">Profiles</TableHead>
               </TableRow>

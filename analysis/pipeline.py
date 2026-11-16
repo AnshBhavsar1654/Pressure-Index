@@ -29,6 +29,7 @@ from sklearn.model_selection import GroupKFold
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "Data Pack"
 OUT = ROOT / "web" / "data"
+POOL = ROOT / "analysis" / "auction_pool.json"
 OUT.mkdir(parents=True, exist_ok=True)
 
 RNG = np.random.default_rng(27)
@@ -463,27 +464,34 @@ def rate(pm: pd.DataFrame, role: str, k=None):
     return t, k
 
 
-def score(t: pd.DataFrame, eligible: pd.Index, weights=DEFAULT_WEIGHTS):
+def score(t: pd.DataFrame, eligible: pd.Index, weights=DEFAULT_WEIGHTS, excluded=frozenset()):
+    """Standardise within the whole eligible pool, then rank.
+    merit_rank ranks everyone; rank (the submitted list) skips players RR cannot sign
+    (its own squad, and Pakistani players, who cannot enter the IPL auction)."""
     e = t.loc[t.index.intersection(eligible)].copy()
     comps = {"pressure": "p_rv", "impact": "wpa100", "delta": "delta", "consistency": "cons"}
     for name, col in comps.items():
         e[f"z_{name}"] = (e[col] - e[col].mean()) / e[col].std(ddof=0)
     e["score"] = sum(weights[n] * e[f"z_{n}"] for n in comps)
-    e["rank"] = e.score.rank(ascending=False, method="first").astype(int)
+    e["merit_rank"] = e.score.rank(ascending=False, method="first").astype(int)
+    ok = ~e.index.isin(list(excluded))
+    e["rank"] = np.nan
+    e.loc[ok, "rank"] = e.loc[ok, "score"].rank(ascending=False, method="first")
     return e
 
 
-def bootstrap(pm: pd.DataFrame, role: str, eligible: pd.Index, k: dict):
-    """Resample matches with replacement; re-rate; record each player's rank."""
+def bootstrap(pm: pd.DataFrame, role: str, eligible: pd.Index, k: dict, excluded=frozenset()):
+    """Resample matches with replacement; re-rate; record each player's rank
+    (submitted rank, or merit rank for players outside the submitted list)."""
     matches = pm.match_id.unique()
     codes = pd.Index(matches).get_indexer(pm.match_id)
     ranks = {pid: [] for pid in eligible}
     for i in range(N_BOOT):
         counts = np.bincount(RNG.integers(0, len(matches), len(matches)), minlength=len(matches))
         t, _ = rate(pm.assign(mult=counts[codes]), role, k)
-        s = score(t, eligible)
-        for pid, r in s["rank"].items():
-            ranks[pid].append(r)
+        s = score(t, eligible, excluded=excluded)
+        for pid in s.index:
+            ranks[pid].append(s.at[pid, "merit_rank"] if pid in excluded else s.at[pid, "rank"])
         if i % 100 == 0:
             log(f"  bootstrap {role} {i}/{N_BOOT}")
     out = {}
@@ -542,6 +550,16 @@ def player_meta(mp: pd.DataFrame, m: pd.DataFrame, b: pd.DataFrame):
     return ipl, intl, bat_hand, bowl_type, pace
 
 
+def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[set, list]:
+    """Player ids named in auction_pool.json `retained` (ids or names); also returns names not found."""
+    raw = cfg.get("retained", [])
+    ids = {int(x) for x in raw if str(x).strip().isdigit()}
+    names = {str(x).strip().lower(): str(x).strip() for x in raw if not str(x).strip().isdigit()}
+    lookup = mp.assign(key=mp.player_name.str.strip().str.lower()).groupby("key").player_id.first()
+    ids |= {int(lookup[k]) for k in names if k in lookup.index}
+    return ids, [v for k, v in names.items() if k not in lookup.index]
+
+
 def main():
     b, m, mp = load()
     log("loaded", b.shape)
@@ -562,22 +580,39 @@ def main():
     b[keep].to_parquet(cache / "balls.parquet", index=False)
 
     ipl_meta, intl_meta, bat_hand, bowl_type, pace = player_meta(mp, m, b)
+    overrides = json.loads((ROOT / "analysis" / "nationality_overrides.json").read_text())["overrides"]
+    pool_cfg = json.loads(POOL.read_text()) if POOL.exists() else {}
+    retained, unmatched = retained_ids(mp, pool_cfg)
+    if unmatched:
+        log("WARNING retained names not found in the data:", unmatched)
+    know_retained = bool(pool_cfg.get("retained"))
+
+    def exclusion(pid, name):
+        """Why a player is left out of the submitted top 10, if he is."""
+        if (overrides.get(name) or intl_meta.team_name.get(pid)) == "Pakistan":
+            return "pakistan"  # cannot register for the IPL auction
+        at_rr = ipl_meta.team_name.get(pid) == "Rajasthan Royals"
+        if know_retained:  # official list: only retained players are out of reach
+            return ("rr" if at_rr else "retained") if pid in retained else None
+        return "rr" if at_rr else None  # before the list: RR's own squad is left out
 
     results = {}
     for role in ("bat", "bowl"):
         pm, d = player_match_table(b, role)
         t, k = rate(pm, role)
+        names = d.groupby("pid").pname.agg(lambda x: x.mode().iat[0])
+        why = {pid: r for pid in t.index if (r := exclusion(pid, names.get(pid)))}
+        excluded = frozenset(why)
         min_balls = MIN_PRESSURE_BALLS_BAT if role == "bat" else MIN_PRESSURE_BALLS_BOWL
         eligible = t[(t.pn >= min_balls) & (t.pmatches >= MIN_PRESSURE_MATCHES)].index
-        s = score(t, eligible)
+        s = score(t, eligible, excluded=excluded)
         log(f"{role}: k={k}, eligible={len(eligible)}")
-        boot = bootstrap(pm, role, eligible, k)
+        boot = bootstrap(pm, role, eligible, k, excluded)
         sh = split_half(pm, role, eligible, k)
         log(f"{role} split-half: {sh}")
-        names = d.groupby("pid").pname.agg(lambda x: x.mode().iat[0])
         pool = t[t.pn >= PROFILE_MIN_BALLS].index
         s_all = score(t, pool)
-        order = list(s.sort_values("rank").index) + [
+        order = list(s.sort_values("score", ascending=False).index) + [
             pid for pid in s_all.sort_values("score", ascending=False).index if pid not in s.index]
         players = []
         for pid in order:
@@ -609,7 +644,9 @@ def main():
             ipl_season = int(ipl_meta.season_yr.get(pid)) if pid in ipl_meta.index else None
             players.append({
                 "id": int(pid), "name": names[pid],
-                "rank": int(s.loc[pid, "rank"]) if pid in s.index else None,
+                "rank": int(s.loc[pid, "rank"]) if pid in s.index and pd.notna(s.loc[pid, "rank"]) else None,
+                "merit_rank": int(s.loc[pid, "merit_rank"]) if pid in s.index else None,
+                "excluded": why.get(pid),
                 "score": round(float(s.loc[pid, "score"]), 3) if pid in s.index else None,
                 "country": intl_meta.team_name.get(pid) if pid in intl_meta.index else None,
                 "ipl_team": ipl_team, "ipl_season": ipl_season,
@@ -625,6 +662,7 @@ def main():
                          "eligibility": {"min_pressure_balls": min_balls,
                                          "min_pressure_matches": MIN_PRESSURE_MATCHES,
                                          "n_eligible": int(len(eligible)),
+                                         "n_ranked": int(s["rank"].notna().sum()),
                                          "export_min_balls": EXPORT_MIN_BALLS,
                                          "export_min_matches": EXPORT_MIN_MATCHES,
                                          "n_exported": int(len(pool)),

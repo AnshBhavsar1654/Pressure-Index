@@ -1,6 +1,7 @@
 import 'server-only'
 import fs from 'node:fs'
 import path from 'node:path'
+import type { Example } from '@/views/WorkedExample'
 import type { ChaseGrid, RoleData, RRData, Summary } from './types'
 
 // All data is read from ./data at build time (static export), never in the browser.
@@ -14,6 +15,8 @@ function read<T>(file: string): T {
 }
 
 export const getSummary = () => read<Summary>('summary.json')
+/** One player's rating rebuilt step by step (analysis/worked_example.py). */
+export const getExample = () => read<Example>('example.json')
 // Nationality fixes shared with the RR analysis: players with no T20Is in the window
 // (analysis/nationality_overrides.json), and IPL players with no cap, who are Indian.
 const overrides: Record<string, string> = (() => {
@@ -39,5 +42,7 @@ export const getRole = (role: 'bat' | 'bowl') => {
 export const getGrid = () => read<ChaseGrid>('chase_grid.json')
 export const getRR = () => read<RRData>('rr2026.json')
 
-/** Players inside the default bar (they carry the submitted rank and bootstrap figures). */
+/** My ranking: qualified players RR can sign, best first. */
 export const getRanked = (role: 'bat' | 'bowl') => getRole(role).players.filter((p) => p.rank != null)
+/** Everyone who clears the bar, signable or not: the pool every rating is measured against. */
+export const getQualified = (role: 'bat' | 'bowl') => getRole(role).players.filter((p) => p.merit_rank != null)

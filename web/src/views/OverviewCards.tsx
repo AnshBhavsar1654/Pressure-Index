@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
+import { Term } from '@/components/Term'
 import { fmt } from '@/lib/format'
 
 export type Lite = {
@@ -20,8 +21,6 @@ export type Lite = {
   p_balls: number
   stay: number
   rate: number | null
-  rateNormal: number | null
-  extra: string
 }
 
 /** The number one batter or bowler, as a team-sheet card. */
@@ -64,11 +63,15 @@ export function Spotlight({ bat, bowl }: { bat: Lite; bowl: Lite }) {
             <dd className="display num text-[1.7rem] text-white">{role === 'bat' ? fmt.dec(p.rate, 0) : fmt.dec(p.rate, 2)}</dd>
           </div>
           <div className="rounded-xl bg-black/25 px-3 py-2.5">
-            <dt className="text-[12px] text-white/70">Runs added</dt>
+            <dt className="text-[12px] text-white/70">
+              <Term k="underPressure" role={role}>{role === 'bat' ? 'Runs added' : 'Runs saved'}</Term>
+            </dt>
             <dd className="display num text-[1.7rem] text-white">{signed(p.p_rv100)}</dd>
           </div>
           <div className="rounded-xl bg-black/25 px-3 py-2.5">
-            <dt className="text-[12px] text-white/70">Stays top 10</dt>
+            <dt className="text-[12px] text-white/70">
+              <Term k="confidence">Top-10 confidence</Term>
+            </dt>
             <dd className="display num text-[1.7rem] text-white">{fmt.pct(p.stay)}</dd>
           </div>
         </dl>
@@ -108,7 +111,7 @@ export function TopTen({ bat, bowl }: { bat: Lite[]; bowl: Lite[] }) {
     <section className="panel flex h-full flex-col p-4" aria-label="Top 10 under pressure">
       <Tabs defaultValue="bat" className="flex h-full flex-col gap-3">
         <div className="flex items-center justify-between gap-2 px-1">
-          <h2 className="display text-[1.5rem]">Top 10</h2>
+          <h2 className="display text-[1.5rem]">My top 10</h2>
           <TabsList className="rounded-lg">
             <TabsTrigger value="bat" className="rounded-lg px-3">
               Batters
@@ -120,7 +123,7 @@ export function TopTen({ bat, bowl }: { bat: Lite[]; bowl: Lite[] }) {
         </div>
         <div className="flex items-center justify-between px-2 text-[12px] text-ink-3">
           <span>Player</span>
-          <span>Stays top 10</span>
+          <Term k="confidence" />
         </div>
         {(['bat', 'bowl'] as const).map((role) => (
           <TabsContent key={role} value={role} className="mt-0">

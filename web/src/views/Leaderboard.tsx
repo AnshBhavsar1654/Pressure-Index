@@ -2,7 +2,7 @@
 
 import { ArrowCounterClockwiseIcon, MagnifyingGlassIcon } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
-import { useDeferredValue, useMemo, useState } from 'react'
+import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
 import { ChartFrame, Legend } from '@/components/charts/core'
 import { NAT_OPTIONS, natMatch, Pick, Segmented, type Nat } from '@/components/filters'
 import { PressureScatter } from '@/components/charts/Scatter'
@@ -15,7 +15,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import { fmt } from '@/lib/format'
-import { COMPONENT_HINT, COMPONENT_LABEL, rescore, type ComponentKey, type Player, type Role, type ScoredPlayer, type Weights } from '@/lib/types'
+import { Term } from '@/components/Term'
+import { EXCLUDED_NOTE, term, winPts } from '@/lib/terms'
+import { COMPONENT_LABEL, COMPONENT_TERM, rescore, type ComponentKey, type Player, type Role, type ScoredPlayer, type Weights } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type SortKey = 'liveRank' | 'p_rv100' | 'n_rv100' | 'delta100' | 'wpa100' | 'cons' | 'p_balls' | 'p_top10' | 'trad'
@@ -48,13 +50,15 @@ export function Leaderboard({
   const [nat, setNat] = useState<Nat>('all')
   const [team, setTeam] = useState('all')
   const [country, setCountry] = useState('all')
+  const [who, setWho] = useState<'signable' | 'all'>('signable')
   const teams = useMemo(() => [...new Set(all.map((p) => p.ipl_team).filter((t): t is string => !!t))].sort(), [all])
   const countries = useMemo(() => [...new Set(all.map((p) => p.country).filter((t): t is string => !!t))].sort(), [all])
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'liveRank', dir: 1 })
   // keep slider dragging smooth: the scatter and table re-rank from a deferred copy
   const deferred = useDeferredValue(weights)
   const players = useMemo(() => rescore(raw, deferred), [raw, deferred])
-  const top10 = useMemo(() => new Set(players.slice(0, 10).map((p) => p.id)), [players])
+  const top10 = useMemo(() => new Set(players.filter((p) => p.liveRank != null && p.liveRank <= 10).map((p) => p.id)), [players])
+  const signable = players.filter((p) => p.liveRank != null).length
   const noun = role === 'bat' ? 'batters' : 'bowlers'
   const open = (id: number) => router.push(`/players/${role}/${id}/`)
   const total = KEYS.reduce((a, k) => a + weights[k], 0) || 1
@@ -63,15 +67,17 @@ export function Leaderboard({
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase()
     const val = (p: ScoredPlayer): number =>
-      sort.key === 'p_top10' ? (p.boot?.p_top10 ?? -1) : sort.key === 'trad' ? ((role === 'bat' ? p.press.sr : p.press.econ) ?? 0) : (p[sort.key] as number)
+      // rank order follows the score, so players RR cannot sign sit where their score puts them
+      sort.key === 'liveRank' ? -p.liveScore : sort.key === 'p_top10' ? (p.boot?.p_top10 ?? -1) : sort.key === 'trad' ? ((role === 'bat' ? p.press.sr : p.press.econ) ?? 0) : (p[sort.key] as number)
     return players
       .filter((p) => !term || [p.name, p.country ?? '', p.ipl_team ?? ''].some((s) => s.toLowerCase().includes(term)))
       .filter((p) => natMatch(nat, p.country) && (team === 'all' || p.ipl_team === team) && (country === 'all' || p.country === country))
+      .filter((p) => who === 'all' || p.liveRank != null)
       .toSorted((a, b) => (val(a) - val(b)) * sort.dir)
-  }, [players, q, sort, role, nat, team, country])
+  }, [players, q, sort, role, nat, team, country, who])
 
-  const head = (key: SortKey, label: string, title?: string, left = false) => (
-    <TableHead className={cn('h-11 text-[12.5px] font-medium text-ink-3', !left && 'text-right')} title={title} aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+  const head = (key: SortKey, label: ReactNode, left = false) => (
+    <TableHead className={cn('h-11 text-[12.5px] font-medium text-ink-3', !left && 'text-right')} aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
       <button
         className={cn('hover:text-foreground', sort.key === key && 'text-foreground')}
         onClick={() => setSort((s) => ({ key, dir: s.key === key ? ((-s.dir) as 1 | -1) : key === 'liveRank' ? 1 : -1 }))}
@@ -88,7 +94,7 @@ export function Leaderboard({
         <CardHeader>
           <CardTitle>Who qualifies</CardTitle>
           <CardDescription>
-            The submitted ranking needs {bar.balls}+ high-pressure balls across {bar.matches}+ matches. Lower the bar to widen the
+            My ranking needs {bar.balls}+ pressure balls across {bar.matches}+ matches. Lower the bar to widen the
             shortlist, for example when retentions take players out of the auction. Small samples are pulled towards each
             player’s normal level, so short records cannot run away with the top spots.
           </CardDescription>
@@ -150,7 +156,7 @@ export function Leaderboard({
           <CardAction>
             <Button variant="outline" className="rounded-lg" disabled={!changed} onClick={() => setWeights(defaults)}>
               <ArrowCounterClockwiseIcon data-icon="inline-start" />
-              Reset to submitted
+              Reset to my weights
             </Button>
           </CardAction>
         </CardHeader>
@@ -171,7 +177,7 @@ export function Leaderboard({
                 value={[weights[k]]}
                 onValueChange={([v]) => setWeights((w) => ({ ...w, [k]: v }))}
               />
-              <span className="text-[12.5px] leading-snug text-ink-3">{k === 'pressure' && role === 'bowl' ? COMPONENT_HINT[k].replace('Runs added', 'Runs saved') : COMPONENT_HINT[k]}</span>
+              <span className="text-[12.5px] leading-snug text-ink-3">{term(COMPONENT_TERM[k], role).def}</span>
             </div>
           ))}
         </CardContent>
@@ -179,7 +185,7 @@ export function Leaderboard({
 
       <ChartFrame
         title="Normal level against pressure level"
-        subtitle={`Every eligible ${role === 'bat' ? 'batter' : 'bowler'}. Right is better in ordinary moments, up is better under pressure, and above the diagonal means they rise when it matters. Dot size is pressure balls played. Click any dot to open the player.`}
+        subtitle={`Every qualified ${role === 'bat' ? 'batter' : 'bowler'}. Further right means better in normal moments, higher means better under pressure. Above the diagonal line, a player gets better when it matters. Bigger dots have more pressure balls behind them. Click a dot to open the player.`}
         legend={
           <Legend
             items={[
@@ -196,13 +202,24 @@ export function Leaderboard({
       <Card className="gap-0 pb-0">
         <CardHeader className="border-b pb-4">
           <CardTitle>
-            {rows.length === players.length ? `All ${players.length} eligible ${noun}` : `${rows.length} of ${players.length} ${noun}`}
+            {who === 'signable' && rows.length === signable
+              ? `All ${signable} qualified ${noun} RR can sign`
+              : `${rows.length} of ${who === 'signable' ? signable : players.length} ${noun}`}
           </CardTitle>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <label className="relative block">
               <MagnifyingGlassIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
               <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name" className="h-10 w-56 rounded-lg pl-9" aria-label={`Search ${noun}`} />
             </label>
+            <Segmented
+              label="Who to show"
+              value={who}
+              onChange={setWho}
+              options={[
+                { value: 'signable', label: 'Players RR can sign' },
+                { value: 'all', label: 'Everyone' },
+              ]}
+            />
             <Segmented label="Nationality" value={nat} onChange={setNat} options={NAT_OPTIONS} />
             <Pick label="IPL team" value={team} onChange={setTeam} options={teams} allLabel="All IPL teams" />
             <Pick label="Country" value={country} onChange={setCountry} options={countries} allLabel="All countries" />
@@ -216,25 +233,31 @@ export function Leaderboard({
         <Table className="min-w-[1040px] text-[13.5px]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              {head('liveRank', 'Rank', undefined, true)}
+              {head('liveRank', <Term k="rank" />, true)}
               <TableHead className="h-11 text-[12.5px] font-medium text-ink-3">Player</TableHead>
               <TableHead className="h-11 text-[12.5px] font-medium text-ink-3">Country, team</TableHead>
-              {head('p_balls', 'Pressure balls')}
-              {head('trad', role === 'bat' ? 'Strike rate' : 'Economy', 'Under pressure, normal figure after the slash')}
-              {head('p_rv100', 'Under pressure', `Runs ${role === 'bat' ? 'added' : 'saved'} per 100 pressure balls`)}
-              {head('n_rv100', 'Normally', `Runs ${role === 'bat' ? 'added' : 'saved'} per 100 ordinary balls`)}
-              {head('delta100', 'Rise', 'Pressure level minus normal level')}
-              {head('wpa100', 'Impact', 'Win probability added per 100 pressure balls')}
-              {head('cons', 'Consistency', 'Share of pressure innings or spells above average')}
-              {head('p_top10', 'Stays top 10', 'Share of 400 reshuffled re-runs that keep the player in the top 10')}
+              {head('p_balls', <Term k="pressureBalls" />)}
+              {head('trad', <Term k="rate" role={role} />)}
+              {head('p_rv100', <Term k="underPressure" role={role} />)}
+              {head('n_rv100', <Term k="normal" />)}
+              {head('delta100', <Term k="lift" />)}
+              {head('wpa100', <Term k="winImpact" />)}
+              {head('cons', <Term k="consistency" role={role} />)}
+              {head('p_top10', <Term k="confidence" />)}
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((p) => (
               <TableRow key={p.id} onClick={() => open(p.id)} className="cursor-pointer border-line">
                 <TableCell className="py-2.5 pl-5">
-                  <span className={cn('display num text-[1.4rem]', top10.has(p.id) ? 'text-pink' : 'text-ink-3')}>{p.liveRank}</span>
-                  {p.rank != null && p.liveRank !== p.rank && <span className="num ml-1.5 text-[11.5px] text-ink-3">was {p.rank}</span>}
+                  {p.liveRank != null ? (
+                    <>
+                      <span className={cn('display num text-[1.4rem]', top10.has(p.id) ? 'text-pink' : 'text-ink-3')}>{p.liveRank}</span>
+                      {p.rank != null && p.liveRank !== p.rank && <span className="num ml-1.5 text-[11.5px] text-ink-3">was {p.rank}</span>}
+                    </>
+                  ) : (
+                    <span className="block max-w-[7rem] text-[11.5px] leading-tight text-ink-3">{p.excluded ? EXCLUDED_NOTE[p.excluded] : '–'}</span>
+                  )}
                 </TableCell>
                 <TableCell className="py-2.5">
                   <span className="flex items-center gap-3">
@@ -263,7 +286,7 @@ export function Leaderboard({
                 <TableCell className="num text-right font-semibold">{fmt.signed(p.p_rv100)}</TableCell>
                 <TableCell className="num text-right text-ink-2">{fmt.signed(p.n_rv100)}</TableCell>
                 <TableCell className={cn('num text-right', p.delta100 >= 0 ? 'text-pink-ink' : 'text-blue')}>{fmt.signed(p.delta100)}</TableCell>
-                <TableCell className="num text-right">{fmt.signed(p.wpa100, 2)}</TableCell>
+                <TableCell className="num text-right">{winPts(p.wpa100)}</TableCell>
                 <TableCell className="num text-right">{fmt.pct(p.cons)}</TableCell>
                 <TableCell className="pr-5">
                   <span className="flex items-center justify-end gap-2">

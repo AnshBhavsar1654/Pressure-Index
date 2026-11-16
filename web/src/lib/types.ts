@@ -1,3 +1,5 @@
+import type { TermKey } from './terms'
+
 export type Role = 'bat' | 'bowl'
 export type ComponentKey = 'pressure' | 'impact' | 'delta' | 'consistency'
 export type Weights = Record<ComponentKey, number>
@@ -30,8 +32,12 @@ export interface PlayerMatch {
 export interface Player {
   id: number
   name: string
-  /** rank in the default ranking (120+ pressure balls, 8+ matches); null below that bar */
+  /** rank in the submitted ranking (120+ pressure balls, 8+ matches, and signable by RR); null otherwise */
   rank: number | null
+  /** rank among every qualified player, including those RR cannot sign */
+  merit_rank: number | null
+  /** why the player is outside the submitted ranking despite qualifying */
+  excluded: 'rr' | 'pakistan' | 'retained' | null
   score: number | null
   country: string | null
   ipl_team: string | null
@@ -65,6 +71,8 @@ export interface RoleData {
     min_pressure_balls: number
     min_pressure_matches: number
     n_eligible: number
+    /** qualified players RR can sign: the submitted ranking */
+    n_ranked: number
     n_players: number
     export_min_balls: number
     export_min_matches: number
@@ -145,27 +153,28 @@ export function rescore(players: Player[], w: Weights) {
     return { ...p, z, liveScore: keys.reduce((a, k) => a + w[k] * z[k], 0) / total }
   })
   scored.sort((a, b) => b.liveScore - a.liveScore)
-  return scored.map((p, i) => ({ ...p, liveRank: i + 1 }))
+  // players RR cannot sign stay in the pool (they shape the averages) but take no rank
+  let n = 0
+  return scored.map((p) => ({ ...p, liveRank: p.excluded ? null : ++n }))
 }
-
-/** The default bar used for the submitted rankings. */
-export const inDefaultPool = (p: Player) => p.rank != null
 
 export type ScoredPlayer = ReturnType<typeof rescore>[number]
 
 export const COMPONENT_LABEL: Record<ComponentKey, string> = {
-  pressure: 'Output under pressure',
-  impact: 'Match-winning impact',
-  delta: 'Rise above own normal',
+  pressure: 'Under pressure',
+  impact: 'Win impact',
+  delta: 'Lift under pressure',
   consistency: 'Consistency',
 }
 
-export const COMPONENT_HINT: Record<ComponentKey, string> = {
-  pressure: 'Runs added per 100 high-pressure balls, compared with an average player in the same situations',
-  impact: 'How much each pressure ball moved the team’s chance of winning',
-  delta: 'How much better (or worse) the player is under pressure than in ordinary moments',
-  consistency: 'Share of pressure innings or spells that beat the average',
+/** The vocabulary entry that explains each rating ingredient. */
+export const COMPONENT_TERM: Record<ComponentKey, TermKey> = {
+  pressure: 'underPressure',
+  impact: 'winImpact',
+  delta: 'lift',
+  consistency: 'consistency',
 }
+
 
 /* ----------------------------------------------------------------- RR 2026 */
 export interface PhaseStats {

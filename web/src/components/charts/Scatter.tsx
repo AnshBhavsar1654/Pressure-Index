@@ -66,7 +66,7 @@ export function PressureScatter({ players, highlight, selected, onSelect, role =
           worse under pressure ↓
         </text>
         <text x={(m.l + width - m.r) / 2} y={height - 6} textAnchor="middle" {...AXIS.label}>
-          Normally: runs {role === 'bat' ? 'added' : 'saved'} per 100 ordinary balls
+          Normal moments: runs {role === 'bat' ? 'added' : 'saved'} per 100 balls
         </text>
         <text transform={`translate(13 ${(m.t + height - m.b) / 2}) rotate(-90)`} textAnchor="middle" {...AXIS.label}>
           Under pressure: runs {role === 'bat' ? 'added' : 'saved'} per 100 pressure balls
@@ -96,12 +96,13 @@ export function PressureScatter({ players, highlight, selected, onSelect, role =
                   content: (
                     <div className="flex flex-col gap-1">
                       <div className="font-semibold">
-                        #{p.liveRank} {p.name}
+                        {p.liveRank != null ? `#${p.liveRank} ` : ''}
+                        {p.name}
                       </div>
                       <TipRow label="Under pressure" value={fmt.signed(p.p_rv100)} />
-                      <TipRow label="Normally" value={fmt.signed(p.n_rv100)} />
+                      <TipRow label="Normal" value={fmt.signed(p.n_rv100)} />
                       <TipRow label="Pressure balls" value={fmt.int(p.p_balls)} />
-                      {p.boot && <TipRow label="Stays top 10" value={fmt.pct(p.boot.p_top10)} />}
+                      {p.boot && <TipRow label="Top-10 confidence" value={fmt.pct(p.boot.p_top10)} />}
                     </div>
                   ),
                 })

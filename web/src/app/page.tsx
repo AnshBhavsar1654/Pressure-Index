@@ -21,8 +21,6 @@ const lite = (p: Player, role: Role): Lite => ({
   p_balls: p.p_balls,
   stay: p.boot?.p_top10 ?? 0,
   rate: role === 'bat' ? p.press.sr : (p.press.econ ?? null),
-  rateNormal: role === 'bat' ? p.norm.sr : (p.norm.econ ?? null),
-  extra: '',
 })
 
 const phaseName = (g: Gap) => `${g.phase === 'Middle' ? 'middle-overs' : g.phase.toLowerCase()} ${g.discipline === 'bat' ? 'batting' : 'bowling'}`
@@ -64,10 +62,10 @@ export default function Overview() {
           </dl>
           <div className="flex flex-wrap gap-2">
             <Button asChild size="lg" className="rounded-lg bg-white px-5 text-royal hover:bg-white/90">
-              <Link href="/rankings/bat/">See the rankings</Link>
+              <Link href="/picks/">My picks</Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="rounded-lg border-white/40 bg-transparent px-5 text-white hover:bg-white/10 hover:text-white">
-              <Link href="/auction/">RR auction plan</Link>
+              <Link href="/rankings/bat/">Full rankings</Link>
             </Button>
           </div>
         </div>
@@ -114,8 +112,8 @@ export default function Overview() {
             <Link href="/rajasthan/" className="text-pink-ink hover:underline">
               Season review
             </Link>
-            <Link href="/auction/" className="text-pink-ink hover:underline">
-              Auction targets
+            <Link href="/picks/#roles" className="text-pink-ink hover:underline">
+              Shortlist by role
             </Link>
           </div>
         </div>

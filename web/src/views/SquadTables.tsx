@@ -1,12 +1,13 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { NAT_OPTIONS, natMatch, Segmented, type Nat } from '@/components/filters'
 import { OverseasMark, PlayerAvatar, signed } from '@/components/kit'
 import { Slider } from '@/components/ui/slider'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { SquadPlayer } from '@/lib/types'
+import { Term } from '@/components/Term'
 import { cn } from '@/lib/utils'
 
 type Kind = 'bat' | 'bowl'
@@ -67,7 +68,7 @@ function SquadTable({ title, rows: base, kind }: { title: string; rows: SquadPla
     () => base.toSorted((a, b) => (score(b, kind, sort.col) - score(a, kind, sort.col)) * (sort.best ? 1 : -1)),
     [base, kind, sort],
   )
-  const head = (col: Col, label: string, last = false) => (
+  const head = (col: Col, label: ReactNode, last = false) => (
     <TableHead
       className={cn('text-right text-ink-3', last && 'pr-5')}
       aria-sort={sort.col === col ? (sort.best ? 'descending' : 'ascending') : 'none'}
@@ -99,7 +100,7 @@ function SquadTable({ title, rows: base, kind }: { title: string; rows: SquadPla
               {head('rate', kind === 'bat' ? 'Strike rate' : 'Economy')}
               {head('death', 'Death')}
               {head('pressure', 'Pressure')}
-              {head('rv', 'Runs added', true)}
+              {head('rv', <Term k="seasonRuns" />, true)}
             </TableRow>
           </TableHeader>
           <TableBody>
