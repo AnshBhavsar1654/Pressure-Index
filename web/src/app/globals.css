@@ -11,7 +11,7 @@
    crown gold = recommended auction targets. Light theme is a stepped variant.
 ---------------------------------------------------------------------------- */
 :root {
-  --radius: 1rem;
+  --radius: 0.625rem;
 
   /* light variant */
   --canvas: #eef0f8;
@@ -34,7 +34,6 @@
   --rail: #ffffff;
   --rail-ink: #0c1338;
   --rail-dim: #6a7396;
-  --glow: rgba(43, 47, 143, 0.06);
   --surface: var(--panel);
   --surface-2: var(--panel-2);
 
@@ -79,7 +78,6 @@
   --rail: #0b1130;
   --rail-ink: #eef1fb;
   --rail-dim: #7f8ab2;
-  --glow: rgba(109, 124, 255, 0.07);
 }
 
 @theme inline {
@@ -143,9 +141,6 @@
   }
   body {
     @apply bg-background text-foreground antialiased;
-    background-image: radial-gradient(1100px 600px at 85% -10%, var(--glow), transparent 70%),
-      radial-gradient(900px 500px at -10% 110%, var(--glow), transparent 70%);
-    background-attachment: fixed;
   }
   /* grids default to one shrinkable column so wide charts never force sideways scrolling */
   .grid {
@@ -164,26 +159,22 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Surface used by every card: a hairline frame and a faint top light */
+/* Surface used by every card: flat colour and a hairline frame, no shadow */
 .panel {
-  background: linear-gradient(180deg, color-mix(in oklab, var(--panel) 92%, white 8%) 0%, var(--panel) 38%);
-  border: 1px solid var(--line);
-  border-radius: 1.25rem;
-}
-:root:not(.dark) .panel {
   background: var(--panel);
-  box-shadow: 0 1px 2px rgba(12, 19, 56, 0.04);
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
 }
 
 /* ---- Jersey motif -----------------------------------------------------------
-   The diamond print from the RR shirt: a grid of small rotated squares that
-   thickens towards one corner. Used only on hero banners and player headers. */
+   The diamond print from the RR shirt on a flat kit colour: a grid of small
+   rotated squares that thickens towards one corner. Banners only. */
 .jersey {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   color: #fff;
-  background: linear-gradient(118deg, #e0237f 0%, #c21a78 38%, #5b2a9a 72%, #2b2f8f 100%);
+  background: #d81f7c; /* RR shirt pink */
 }
 .jersey::before {
   content: "";
@@ -208,7 +199,7 @@
   mask-image: radial-gradient(60% 90% at 100% 100%, #000, transparent 70%);
 }
 .jersey-royal {
-  background: linear-gradient(118deg, #2b2f8f 0%, #3a2f9a 45%, #8a2390 85%, #d4207f 100%);
+  background: #2b2f8f; /* RR sleeve royal */
 }
 
 input[type="range"] {
