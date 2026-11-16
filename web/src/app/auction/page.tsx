@@ -11,16 +11,16 @@ export const metadata: Metadata = { title: 'IPL 2027 auction targets' }
 export default function AuctionPage() {
   const rr = getRR()
   const recs = rr.recommendations
-  const lost = recs.reduce((a, r) => a + Math.min(0, r.gap.gap_vs_avg), 0)
+  const behind = recs.reduce((a, r) => a + r.gap.gap_vs_top4, 0)
   return (
     <>
       <PageHead
         title="IPL 2027 auction targets"
         takeaway={
           <>
-            RR’s three weakest areas in 2026 cost about <b className="text-ink">{Math.abs(lost).toFixed(1)} runs a match</b>{' '}
-            against an average side. For each one we list the players, outside the RR squad, who have done that exact job best
-            since 2024, and who also stand up under pressure.
+            To go from fourth to champions, RR need to match the top four. In three areas they trailed them by a combined{' '}
+            <b className="text-ink">{Math.abs(behind).toFixed(1)} runs a match</b>. For each one we list the players outside the
+            RR squad who have done that exact job best since 2024, and who also stand up under pressure.
           </>
         }
       >
@@ -81,14 +81,14 @@ function RoleBlock({ r, n }: { r: Recommendation; n: number }) {
             </div>
           </div>
           <div className="text-right">
-            <div className="display num text-[2rem] text-blue">{signed(g.gap_vs_avg)} runs</div>
+            <div className="display num text-[2rem] text-blue">{signed(g.gap_vs_top4)} runs</div>
             <div className="text-[12.5px] text-ink-3">
-              per match in 2026, {g.rank}th of 10. Top four: {signed(g.top4_rv_pm)}
+              a match behind the top four in 2026. RR {signed(g.gap_vs_avg)} against an average side, {g.rank}th of 10
             </div>
           </div>
         </header>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-[13.5px]">
+          <table className="w-full min-w-[760px] text-[13.5px]">
             <thead className="text-[12.5px] text-ink-3">
               <tr className="border-b border-line">
                 <th className="px-5 py-2.5 text-left font-medium">Player</th>
@@ -99,7 +99,7 @@ function RoleBlock({ r, n }: { r: Recommendation; n: number }) {
                 <th className="px-2 py-2.5 text-right font-medium">{isBat ? 'Strike rate' : 'Economy'}</th>
                 <th className="px-2 py-2.5 text-right font-medium">Balls</th>
                 <th className="px-2 py-2.5 text-right font-medium">Pressure rank</th>
-                <th className="px-5 py-2.5 text-left font-medium">Fit</th>
+                <th className="py-2.5 pl-2 pr-5 text-left font-medium">Fit score</th>
               </tr>
             </thead>
             <tbody>
@@ -126,9 +126,9 @@ function RoleBlock({ r, n }: { r: Recommendation; n: number }) {
           </ul>
         </div>
         <Plain title="Why this role">
-          RR were {g.rank}th of 10 here, {Math.abs(g.gap_vs_top4).toFixed(1)} runs a match {g.gap_vs_top4 < 0 ? 'behind' : 'ahead of'} the
-          top four. Closing that gap over 14 league games is worth roughly {Math.abs(g.gap_vs_top4 * 14).toFixed(0)} runs: often the
-          margin between fourth and second.
+          RR were {g.rank}th of 10 here and {Math.abs(g.gap_vs_top4).toFixed(1)} runs a match behind the top four. Over 14 league
+          games that is roughly {Math.abs(g.gap_vs_top4 * 14).toFixed(0)} runs: often the margin between fourth and a home
+          qualifier.
         </Plain>
       </aside>
     </section>
@@ -160,9 +160,9 @@ function CandidateRow({ c, i, isBat, maxFit }: { c: Candidate; i: number; isBat:
       <td className="num px-2 py-2.5 text-right">{isBat ? c.sr : c.econ}</td>
       <td className="num px-2 py-2.5 text-right text-ink-2">{c.balls}</td>
       <td className="num px-2 py-2.5 text-right text-ink-2">{c.press_rank ?? 'not ranked'}</td>
-      <td className="px-5 py-2.5">
+      <td className="py-2.5 pl-2 pr-5">
         <div className="flex items-center gap-2">
-          <span className="h-1.5 w-20 overflow-hidden rounded-full bg-panel-2">
+          <span className="h-1.5 w-14 overflow-hidden rounded-full bg-panel-2">
             <span className={`block h-full rounded-full ${i < 3 ? 'bg-gold' : 'bg-blue'}`} style={{ width: `${Math.max(8, (c.fit / maxFit) * 100)}%` }} />
           </span>
           <span className="num text-[12.5px] text-ink-3">{c.fit.toFixed(2)}</span>

@@ -96,8 +96,8 @@ export function WinWorm({
           ))}
         </g>
         <g clipPath={`url(#clip-${n}-${height})`}>
-          <path d={fillUp} fill="var(--pink)" opacity={0.13} className={animate ? 'worm-fade' : undefined} />
-          <path d={fillDn} fill="var(--blue)" opacity={0.13} className={animate ? 'worm-fade' : undefined} />
+          <path d={fillUp} fill="var(--pink)" fillOpacity={0.16} className={animate ? 'worm-fade' : undefined} />
+          <path d={fillDn} fill="var(--blue)" fillOpacity={0.16} className={animate ? 'worm-fade' : undefined} />
         </g>
         {split > 0 && (
           <g>

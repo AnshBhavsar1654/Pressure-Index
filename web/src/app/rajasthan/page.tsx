@@ -133,8 +133,9 @@ export default function RajasthanPage() {
         <div className="max-w-[70ch]">
           <h2 className="display text-[1.7rem]">What to fix for 2027</h2>
           <p className="text-[14px] text-ink-2">
-            The three biggest leaks are {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. The auction page ranks
-            the players who fill each role best.
+            Measured against the top four, RR fell furthest behind in three roles:{' '}
+            {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. The auction page ranks the players who fill each
+            one best.
           </p>
         </div>
         <Link href="/auction/" className="flex min-h-11 items-center rounded-lg bg-pink px-4 font-semibold text-white hover:bg-pink-ink">
