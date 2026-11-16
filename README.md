@@ -23,6 +23,8 @@ A win-probability model reads the scoreboard before every ball. A ball is **high
 - **RR's IPL 2026 figures are checked against the public record**: league position, record, net run rate, playoff results, and the top five run-scorers and wicket-takers all match [Wikipedia: 2026 Rajasthan Royals season](https://en.wikipedia.org/wiki/2026_Rajasthan_Royals_season) exactly (15 of 15 checks). The dashboard shows the check table on the IPL 2026 review page.
 - `analysis/nationality_overrides.json` corrects nationality for a few players with no T20Is in the window (for example Sunil Narine), so the overseas labels are right.
 - Team crests are kit-colour roundels with each side's short code. Official logos are trademarked, so they are not bundled; to use them, place the files in `web/public/logos/` and set the `logo` path for each team in `web/src/lib/teams.ts`.
+- Country flags are SVGs from the MIT-licensed `country-flag-icons` package, copied into `web/public/flags/`.
+- Every cut-off can be changed in the dashboard: minimum pressure balls and matches on the rankings pages (default 120 and 8, down to 30 and 3), minimum balls in a role on the auction page (default 90 batting, 120 bowling, down to 30), and minimum balls in the RR squad tables.
 - `analysis/auction_pool.json` takes the official released-player list once the retention deadline passes (17 November 2026). The auction page then only shows players RR can actually buy.
 
 ## Repo layout
