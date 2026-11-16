@@ -2,6 +2,8 @@ import { CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PhaseGaps, SeasonExplorer, TeamDots } from '@/components/charts/RRCharts'
+import { TeamBadge } from '@/components/TeamBadge'
+import { OPPONENTS } from '@/lib/teams'
 import { Tag, PageHead, Note, SectionHead, Stat, signed } from '@/components/kit'
 import { getRR } from '@/lib/data'
 import { fmt } from '@/lib/format'
@@ -97,7 +99,7 @@ export default function RajasthanPage() {
       </div>
 
       <SectionHead title="Pace, spin and pressure">
-        Where RR sit among the ten IPL sides. Each grey dot is another team; zero is the league average.
+        Where RR sit among the ten IPL sides. Every other team is a dot in its kit colour (hover for the name); zero is the league average.
       </SectionHead>
       <section className="panel grid gap-x-10 gap-y-5 p-5 md:grid-cols-2">
         <TeamDots title="Batting against pace" rows={mu.teams.map((t) => ({ team: t.team, v: t.bat_vs_pace }))} />
@@ -107,6 +109,18 @@ export default function RajasthanPage() {
         <TeamDots title="Batting in pressure moments" rows={rr.pressure.teams.map((t) => ({ team: t.team, v: t.bat }))} />
         <TeamDots title="Bowling in pressure moments" rows={rr.pressure.teams.map((t) => ({ team: t.team, v: t.bowl }))} />
       </section>
+      <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-2 px-1 text-[12.5px] text-ink-2" aria-label="Team colours">
+        <li className="flex items-center gap-1.5">
+          <TeamBadge team="Rajasthan Royals" size={20} />
+          <b className="text-foreground">Rajasthan Royals</b>
+        </li>
+        {OPPONENTS.map((t) => (
+          <li key={t.code} className="flex items-center gap-1.5">
+            <TeamBadge team={t.name} size={20} />
+            {t.code}
+          </li>
+        ))}
+      </ul>
       <div className="mt-4 grid gap-4 md:grid-cols-3">
         {rr.order.map((o) => (
           <div key={o.band} className="panel p-4">

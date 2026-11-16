@@ -3,12 +3,15 @@
 import { scaleLinear } from 'd3-scale'
 import { useState } from 'react'
 import { signed } from '@/components/kit'
+import { TeamBadge } from '@/components/TeamBadge'
 import { fmt, iplCode } from '@/lib/format'
+import { teamOf } from '@/lib/teams'
 import type { RRMatch, RRPhase } from '@/lib/types'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 import { WinWorm } from './WinWorm'
 
 const RR = 'Rajasthan Royals'
+
 
 /** Sixteen tiles (one per match) that open the full win-probability story below. */
 export function SeasonExplorer({ matches }: { matches: RRMatch[] }) {
@@ -29,7 +32,7 @@ export function SeasonExplorer({ matches }: { matches: RRMatch[] }) {
           >
             <span className="flex items-center justify-between gap-1">
               <span className={`display text-[1.25rem] ${x.won ? 'text-pink' : 'text-blue'}`}>{x.won ? 'W' : 'L'}</span>
-              <span className="text-[12px] font-semibold text-ink-2">{iplCode(x.opp)}</span>
+              <TeamBadge team={x.opp} size={22} />
             </span>
             <WinWorm worm={x.worm} compact height={34} />
             <span className="text-[11px] text-ink-3">
@@ -224,9 +227,10 @@ export function TeamDots({
                 cx={x(r.v)}
                 cy={36}
                 r={6}
-                fill="var(--neutral-mark)"
-                stroke="var(--panel)"
-                strokeWidth={2}
+                fill={teamOf(r.team)?.color ?? 'var(--neutral-mark)'}
+                stroke="var(--ink-3)"
+                strokeOpacity={0.55}
+                strokeWidth={1.25}
                 onPointerEnter={(e) => {
                   const rect = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect()
                   setTip({ x: e.clientX - rect.left, y: e.clientY - rect.top, content: <TipRow label={r.team} value={`${signed(r.v)} ${unit}`} /> })
