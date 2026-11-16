@@ -46,7 +46,6 @@ export interface Player {
   delta100: number
   wpa100: number
   cons: number
-  cons_n: number
   z: Record<ComponentKey, number>
   boot: { p_top10: number; rank_med: number; rank_lo: number; rank_hi: number }
   press: TradStats
@@ -54,7 +53,6 @@ export interface Player {
   seasons: { season: number; p_balls: number; p_rv100: number | null; n_rv100: number | null }[]
   phases: { phase: string; balls: number; rv100: number | null }[]
   matches: PlayerMatch[]
-  tiers: Record<string, number>
 }
 
 export interface RoleData {
@@ -88,7 +86,6 @@ export interface Summary {
   n_matches: number
   n_ipl_matches: number
   n_t20i_matches: number
-  n_emerging_matches: number
   seasons: number[]
   pressure_threshold: number
   pressure_pctl: number
@@ -100,24 +97,13 @@ export interface Summary {
   contrast: { pressure: LeagueSlice; normal: LeagueSlice }
   by_phase: { innings: number; phase: string; balls: number; pressure_share: number; li: number }[]
   by_over: { innings: number; over: number; li: number; share: number }[]
-  by_wkts: { innings: number; wkts: number; li: number; n: number }[]
   li_hist: { x: number; n: number; p: number }[]
   moments: { match: string; comp: string; date: string; over: string; state: string; striker: string; bowler: string; li: number; wp: number; result: string }[]
-  outcome_probs: Record<string, Record<string, number>>
-  re_ipl: number[][]
-  re_t20i: number[][]
 }
 
 export interface ChaseGrid {
   cols: string[]
   rows: [number, number, number, number, number][] // wkts, overs_left, need, wp, li
-}
-
-export interface AppData {
-  summary: Summary
-  bat: RoleData
-  bowl: RoleData
-  grid: ChaseGrid
 }
 
 /** Re-score players client-side from their component z-scores. */
@@ -152,7 +138,6 @@ export const COMPONENT_HINT: Record<ComponentKey, string> = {
 /* ----------------------------------------------------------------- RR 2026 */
 export interface PhaseStats {
   bat_rv_pm: number; bowl_rv_pm: number; bat_rpo: number; bowl_rpo: number
-  bat_bpw: number; bowl_bpw: number; bat_dot: number; bowl_dot: number; bat_bnd: number; bowl_bnd: number
 }
 export interface RRPhase {
   phase: string; overs: string; rr: PhaseStats; league: PhaseStats; top4: PhaseStats
@@ -182,7 +167,7 @@ export interface Candidate {
   ipl26_balls: number; ipl_balls: number; sr?: number; avg?: number | null; econ?: number; bpw?: number | null; status: string
 }
 export interface Recommendation {
-  gap: Gap; role: string; role_desc: string; candidates: Candidate[]; internal: Candidate[]; pool_size: number
+  gap: Gap; role: string; role_desc: string; candidates: Candidate[]; internal: Candidate[]
 }
 export interface RRData {
   season: number
@@ -191,17 +176,16 @@ export interface RRData {
   table: { pos: number; team: string; played: number; won: number; lost: number; nr: number; points: number; nrr: number }[]
   top4: string[]
   phases: RRPhase[]
-  matchups: { bat_vs_pace: number; bat_vs_spin: number; bowl_pace: number; bowl_spin: number; bowl_pace_share: number
-    league_pace_share: number; teams: { team: string; bat_vs_pace: number; bat_vs_spin: number; bowl_pace: number; bowl_spin: number }[] }
+  matchups: { bat_vs_pace: number; bat_vs_spin: number; bowl_pace: number; bowl_spin: number
+    teams: { team: string; bat_vs_pace: number; bat_vs_spin: number; bowl_pace: number; bowl_spin: number }[] }
   order: { band: string; balls_pm: number; rv_pm: number; sr: number; league_sr: number; rv100: number; league_rv100: number }[]
   pressure: { bat: { balls_pm: number; rv_pm: number; rv100: number }; bowl: { balls_pm: number; rv_pm: number; rv100: number }
     league: { bat_rv100: number; bowl_rv100: number }; teams: { team: string; bat: number; bowl: number }[] }
   matches: RRMatch[]
   squad: SquadPlayer[]
   gaps: Gap[]
-  strengths: Gap[]
   recommendations: Recommendation[]
-  pool: { known: boolean; note: string | null; updated: string | null }
+  pool: { known: boolean; updated: string | null }
   provenance: Provenance
 }
 

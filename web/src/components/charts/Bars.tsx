@@ -164,7 +164,7 @@ export function PhaseBars({
   )
 }
 
-export function roundedTop(x: number, y: number, w: number, h: number, r: number) {
+function roundedTop(x: number, y: number, w: number, h: number, r: number) {
   if (h <= 0) return ''
   const rr = Math.min(r, w / 2, h)
   return `M${x},${y + h} V${y + rr} Q${x},${y} ${x + rr},${y} H${x + w - rr} Q${x + w},${y} ${x + w},${y + rr} V${y + h} Z`

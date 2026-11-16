@@ -18,7 +18,7 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
   const data = getRole(role)
   const s = getSummary()
   // the list page only needs summary fields: drop per-match detail to keep the page light
-  const players = data.players.map(({ matches: _m, seasons: _s, phases: _p, ...rest }) => ({ ...rest, matches: [], seasons: [], phases: [] }))
+  const players = data.players.map((p) => ({ ...p, matches: [], seasons: [], phases: [] }))
   const top = data.players.slice(0, 3).map((p) => p.name)
   const noun = role === 'bat' ? 'batters' : 'bowlers'
   return (

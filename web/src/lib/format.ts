@@ -8,10 +8,6 @@ export const fmt = {
     new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
 }
 
-export function teamLine(p: { ipl_team: string | null; country: string | null }) {
-  return [p.country, p.ipl_team].filter(Boolean).join(' · ')
-}
-
 /** Short IPL franchise codes for compact tables. */
 const IPL_CODES: Record<string, string> = {
   'Rajasthan Royals': 'RR',
