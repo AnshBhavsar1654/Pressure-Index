@@ -97,12 +97,6 @@ def team_phase(d: pd.DataFrame, team: str, n_matches: dict):
             "bowl_rv_pm": bowl.rv_bowl.sum() / nm,
             "bat_rpo": 6 * bat.tot.sum() / max(legal_b, 1),
             "bowl_rpo": 6 * bowl.tot.sum() / max(legal_w, 1),
-            "bat_bpw": legal_b / max(bat.wkt.sum(), 1),
-            "bowl_bpw": legal_w / max(bowl.wkt.sum(), 1),
-            "bat_dot": 100 * ((bat.tot == 0) & bat.legal).sum() / max(legal_b, 1),
-            "bowl_dot": 100 * ((bowl.tot == 0) & bowl.legal).sum() / max(legal_w, 1),
-            "bat_bnd": 100 * (bat.is_four | bat.is_six).sum() / max(legal_b, 1),
-            "bowl_bnd": 100 * (bowl.is_four | bowl.is_six).sum() / max(legal_w, 1),
         })
     return out
 
@@ -111,7 +105,6 @@ def main():
     b, mp, bat_json, bowl_json, pool = load()
     d = b[(b.is_ipl == 1) & (b.season_yr == SEASON)].copy()
     d["bat_team"] = d.team_name
-    m26 = d.drop_duplicates(["match_id", "innings"])
     teams = sorted(d.team_name.unique())
     n_matches = {t: d[(d.team_name == t) | (d.opp_name == t)].match_id.nunique() for t in teams}
 
@@ -144,17 +137,12 @@ def main():
     def per100(x, col):
         return 100 * x[col].mean() if len(x) else None
 
-    lg_bat_pace = d[d.pace_or_spin == "Pace"].rv_bat.mean() * 100
     matchups = {
         "bat_vs_pace": r1(per100(rr_bat[(rr_bat.pace_or_spin == "Pace") & ~rr_bat.is_wide], "rv_bat")),
         "bat_vs_spin": r1(per100(rr_bat[(rr_bat.pace_or_spin == "Spin") & ~rr_bat.is_wide], "rv_bat")),
         "bowl_pace": r1(per100(rr_bowl[rr_bowl.pace_or_spin == "Pace"], "rv_bowl")),
         "bowl_spin": r1(per100(rr_bowl[rr_bowl.pace_or_spin == "Spin"], "rv_bowl")),
-        "bowl_pace_share": r1(100 * (rr_bowl.pace_or_spin == "Pace").mean()),
-        "league_pace_share": r1(100 * (d.pace_or_spin == "Pace").mean() / 1),
-        "bat_vs_lhb_bowl": None,
     }
-    del lg_bat_pace
     # league reference per team for matchups
     mu_teams = []
     for t in teams:
@@ -363,11 +351,8 @@ def main():
         internal = [cand(pid, r) for pid, r in g.iterrows() if pid in squad_ids][:4]
         # benchmark: league-average and RR's own 2026 usage in this role
         recs.append({"gap": gp, "role": ROLE[gp["key"]][0], "role_desc": ROLE[gp["key"]][1],
-                     "candidates": external, "internal": internal,
-                     "pool_size": int(len(g))})
+                     "candidates": external, "internal": internal})
 
-    # strengths too (for balance)
-    strengths = [g for g in gaps[::-1][:2]]
 
     rr_row = table[table.team == RR].iloc[0]
     out = {
@@ -386,9 +371,8 @@ def main():
         "matches": matches,
         "squad": squad,
         "gaps": gaps,
-        "strengths": strengths,
         "recommendations": recs,
-        "pool": {"known": pool_known, "note": pool.get("note"), "updated": pool.get("updated")},
+        "pool": {"known": pool_known, "updated": pool.get("updated")},
     }
     # ------------------------------------------------------------ provenance + cross-checks
     # Reference figures from the public record (Wikipedia, "2026 Rajasthan Royals season",

@@ -98,7 +98,6 @@ def build_state(b: pd.DataFrame, m: pd.DataFrame) -> pd.DataFrame:
     b["wkts_before"] = g.wkt.cumsum() - b.wkt
     b["legal_before"] = g.legal.cumsum() - b.legal.astype(int)
 
-    mm = m.set_index("match_id")
     inn_tot = b.groupby(["match_id", "innings"]).tot.sum().unstack()
     b = b.merge(
         m[["match_id", "season_yr", "is_ipl", "comp_tier", "comp_weight", "is_knockout",
@@ -121,7 +120,6 @@ def build_state(b: pd.DataFrame, m: pd.DataFrame) -> pd.DataFrame:
                             (b.win_team_id == b.batting_team_id).astype(float))
     b["opp_name"] = np.where(b.bowling_team_id == b.home_team_id, b.home_team, b.away_team)
     b["team_name"] = np.where(b.batting_team_id == b.home_team_id, b.home_team, b.away_team)
-    del mm
     return b
 
 
@@ -241,12 +239,6 @@ OUTCOMES = [("0", 0, 1, 0), ("1", 1, 1, 0), ("2", 2, 1, 0), ("3", 3, 1, 0),
 
 def leverage(b: pd.DataFrame, models):
     """Expected |dWP| from the next delivery, over the empirical outcome mix per phase."""
-    def outcome_label(r):
-        if r.is_wide:
-            return "Wd"
-        if r.wkt:
-            return "W"
-        return str(min(int(r.tot), 6)) if int(r.tot) != 5 else "4"
     lab = np.where(b.is_wide, "Wd", np.where(b.wkt == 1, "W",
                    np.clip(b.tot, 0, 6).astype(int).astype(str)))
     lab = np.where(lab == "5", "4", lab)
@@ -614,12 +606,10 @@ def main():
                 "p_balls": int(row.pn), "p_matches": int(row.pmatches), "n_balls": int(row.nn),
                 "p_rv100": round(100 * row.p_rv, 2), "n_rv100": round(100 * row.n_rv, 2),
                 "delta100": round(100 * row.delta, 2), "wpa100": round(float(row.wpa100), 3),
-                "cons": round(float(row.cons), 3), "cons_n": int(row.c_n),
+                "cons": round(float(row.cons), 3),
                 "z": {c: round(float(row[f"z_{c}"]), 3) for c in DEFAULT_WEIGHTS},
                 "boot": boot[pid], "press": press, "norm": norm,
                 "seasons": seasons, "phases": phases, "matches": matches,
-                "tiers": {tier: int((dp[dp.P == 1].comp_tier == tier).sum())
-                          for tier in ["IPL", "T20I Full", "T20I Assoc", "Emerging"]},
             })
         results[role] = {"players": players, "k": k, "split_half": sh,
                          "eligibility": {"min_pressure_balls": min_balls,
@@ -654,10 +644,6 @@ def main():
                .reset_index())
     by_over = [{"innings": int(r.innings), "over": int(r.over), "li": round(float(r.li), 3),
                 "share": round(100 * float(r.share), 1)} for r in by_over.itertuples()]
-    by_wkts = (lb.groupby(["innings", "wkts_before"]).agg(li=("li", "mean"), n=("li", "size"))
-               .reset_index())
-    by_wkts = [{"innings": int(r.innings), "wkts": int(r.wkts_before), "li": round(float(r.li), 3),
-                "n": int(r.n)} for r in by_wkts.itertuples()]
     li_hist = np.histogram(np.clip(lb.li, 0, 6), bins=60, range=(0, 6))
     hist = [{"x": round(float(li_hist[1][i]), 2), "n": int(li_hist[0][i]),
              "p": int(lb[(lb.li >= li_hist[1][i]) & (lb.li < li_hist[1][i + 1])].pressure.mean() > 0.5)
@@ -694,18 +680,13 @@ def main():
         "n_balls": int(len(b)), "n_matches": int(b.match_id.nunique()),
         "n_ipl_matches": int(b[b.is_ipl == 1].match_id.nunique()),
         "n_t20i_matches": int(b[b.comp_tier.str.startswith("T20I")].match_id.nunique()),
-        "n_emerging_matches": int(b[b.comp_tier == "Emerging"].match_id.nunique()),
         "seasons": sorted(int(x) for x in b.season_yr.unique()),
         "pressure_threshold": round(float(thr), 3), "pressure_pctl": PRESSURE_PCTL,
         "knockout_mult": KNOCKOUT_MULT, "season_weights": SEASON_WEIGHT,
         "comp_weights": {"IPL": 1.0, "T20I Full": 1.0, "T20I Assoc": 0.75, "Emerging": 0.6},
         "weights": DEFAULT_WEIGHTS, "wp_model": wp_metrics,
-        "contrast": contrast, "by_phase": by_phase, "by_over": by_over, "by_wkts": by_wkts,
+        "contrast": contrast, "by_phase": by_phase, "by_over": by_over,
         "li_hist": hist, "moments": moments,
-        "outcome_probs": {ph: {k2: round(float(v), 4) for k2, v in row.items()}
-                          for ph, row in outcome_probs.iterrows()},
-        "re_ipl": [[round(float(x), 1) for x in re[(1, 2025)][bl]] for bl in range(0, 121, 6)],
-        "re_t20i": [[round(float(x), 1) for x in re[(0, 2025)][bl]] for bl in range(0, 121, 6)],
     }
     (OUT / "summary.json").write_text(json.dumps(summary, separators=(",", ":")))
     (OUT / "batters.json").write_text(json.dumps(results["bat"], separators=(",", ":"), default=str))
