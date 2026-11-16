@@ -17,7 +17,10 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
   const { role } = await params
   const data = getRole(role)
   // the list never shows per-match detail, so it is not sent to the browser
-  const players = data.players.map((p) => ({ ...p, matches: [], seasons: [], phases: [] }))
+  const floor = data.eligibility
+  const players = data.players
+    .filter((p) => p.p_balls >= floor.export_min_balls && p.p_matches >= floor.export_min_matches)
+    .map((p) => ({ ...p, matches: [], seasons: [], phases: [] }))
   const [a, b, c] = data.players
   const noun = role === 'bat' ? 'batters' : 'bowlers'
   return (
