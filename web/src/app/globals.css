@@ -1,0 +1,180 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Pressure Index design tokens
+   RR royal blue carries structure (rail, data), RR pink carries "pressure" and
+   action, crown gold is reserved for recommended auction targets.
+   Canvas is a cool stadium grey, never cream. Dark mode is its own stepped set.
+---------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --canvas: #eceff6;
+  --panel: #ffffff;
+  --panel-2: #f5f7fb;
+  --line: #dbe0eb;
+  --line-strong: #c3cadb;
+  --ink: #0b1640;
+  --ink-2: #48527a;
+  --ink-3: #737d9e;
+  --rail: #0a1a4f;
+  --rail-2: #13266a;
+  --rail-ink: #e9edfa;
+  --rail-dim: #9aa6cf;
+  --pink: #d8137a;
+  --pink-ink: #b10f64;
+  --pink-soft: #fbe1ee;
+  --blue: #2b52c4;
+  --blue-soft: #dde5fa;
+  --gold: #a87a12;
+  --gold-soft: #f6ecd2;
+  --neutral-mark: #b8bfd2;
+  --surface: var(--panel);
+  --surface-2: var(--panel-2);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) {
+    color-scheme: dark;
+    --canvas: #060b1f;
+    --panel: #0d1532;
+    --panel-2: #121c40;
+    --line: #202c55;
+    --line-strong: #2f3d6e;
+    --ink: #eef1fa;
+    --ink-2: #b0b8d4;
+    --ink-3: #7f89ab;
+    --rail: #040817;
+    --rail-2: #0c1433;
+    --rail-ink: #eef1fa;
+    --rail-dim: #7f89ab;
+    --pink: #f2489f;
+    --pink-ink: #f77db9;
+    --pink-soft: #3d1530;
+    --blue: #7d9cf6;
+    --blue-soft: #1a2858;
+    --gold: #e3b54b;
+    --gold-soft: #3a2f12;
+    --neutral-mark: #3d4a78;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #060b1f;
+  --panel: #0d1532;
+  --panel-2: #121c40;
+  --line: #202c55;
+  --line-strong: #2f3d6e;
+  --ink: #eef1fa;
+  --ink-2: #b0b8d4;
+  --ink-3: #7f89ab;
+  --rail: #040817;
+  --rail-2: #0c1433;
+  --rail-ink: #eef1fa;
+  --rail-dim: #7f89ab;
+  --pink: #f2489f;
+  --pink-ink: #f77db9;
+  --pink-soft: #3d1530;
+  --blue: #7d9cf6;
+  --blue-soft: #1a2858;
+  --gold: #e3b54b;
+  --gold-soft: #3a2f12;
+  --neutral-mark: #3d4a78;
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-surface: var(--panel);
+  --color-surface-2: var(--panel-2);
+  --color-paper: var(--panel-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rail: var(--rail);
+  --color-rail-2: var(--rail-2);
+  --color-rail-ink: var(--rail-ink);
+  --color-rail-dim: var(--rail-dim);
+  --color-navy: var(--rail);
+  --color-navy-ink: var(--rail-ink);
+  --color-pink: var(--pink);
+  --color-pink-ink: var(--pink-ink);
+  --color-pink-soft: var(--pink-soft);
+  --color-blue: var(--blue);
+  --color-blue-soft: var(--blue-soft);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display-face), ui-sans-serif, sans-serif;
+}
+
+html,
+body {
+  background: var(--canvas);
+  color: var(--ink);
+}
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Display type: stadium-signage condensed, for headings and big numbers */
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: 0.005em;
+  line-height: 0.95;
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+input[type="range"] {
+  accent-color: var(--pink);
+}
+::selection {
+  background: var(--pink-soft);
+}
+:focus-visible {
+  outline: 2px solid var(--pink);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The one orchestrated motion: the hero win-probability line draws itself once. */
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.worm-draw {
+  stroke-dasharray: 1;
+  animation: draw 1.8s cubic-bezier(0.3, 0.7, 0.2, 1) both;
+}
+@keyframes fadein {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.worm-fade {
+  animation: fadein 0.6s 1.2s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .worm-draw,
+  .worm-fade {
+    animation: none;
+  }
+}
