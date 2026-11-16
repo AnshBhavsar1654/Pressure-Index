@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 }
 
 // Dark is the home theme; a stored "light" choice is applied before paint.
-const themeScript = `try{if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}`
+const themeScript = `try{var q=new URLSearchParams(location.search).get('theme');if(q==='light'||q==='dark')localStorage.setItem('theme',q);if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Only what the search box needs is sent to the browser.

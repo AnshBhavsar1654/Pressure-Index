@@ -169,7 +169,8 @@
 /* ---- Jersey motif -----------------------------------------------------------
    The diamond print from the RR shirt on a flat kit colour: a grid of small
    rotated squares that thickens towards one corner. Banners only. */
-.jersey {
+.jersey,
+.panel.jersey {
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -198,7 +199,8 @@
   -webkit-mask-image: radial-gradient(60% 90% at 100% 100%, #000, transparent 70%);
   mask-image: radial-gradient(60% 90% at 100% 100%, #000, transparent 70%);
 }
-.jersey-royal {
+.jersey-royal,
+.panel.jersey-royal {
   background: #2b2f8f; /* RR sleeve royal */
 }
 
