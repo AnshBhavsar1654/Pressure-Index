@@ -22,6 +22,7 @@ A win-probability model reads the scoreboard before every ball. A ball is **high
 - **Only the official SupeRR Selector Season 2 data pack is used**: `ball_by_ball.csv`, `matches.csv`, `competitions.csv`, `competition_team_player_mapping.csv` and `playing_eleven.csv` (IPL and T20I, 2022 to 2026). The pack is not redistributed in this repo; place the unzipped files in `Data Pack/`.
 - **RR's IPL 2026 figures are checked against the public record**: league position, record, net run rate, playoff results, and the top five run-scorers and wicket-takers all match [Wikipedia: 2026 Rajasthan Royals season](https://en.wikipedia.org/wiki/2026_Rajasthan_Royals_season) exactly (15 of 15 checks). The dashboard shows the check table on the IPL 2026 review page.
 - `analysis/nationality_overrides.json` corrects nationality for a few players with no T20Is in the window (for example Sunil Narine), so the overseas labels are right.
+- Team crests are kit-colour roundels with each side's short code. Official logos are trademarked, so they are not bundled; to use them, place the files in `web/public/logos/` and set the `logo` path for each team in `web/src/lib/teams.ts`.
 - `analysis/auction_pool.json` takes the official released-player list once the retention deadline passes (17 November 2026). The auction page then only shows players RR can actually buy.
 
 ## Repo layout
