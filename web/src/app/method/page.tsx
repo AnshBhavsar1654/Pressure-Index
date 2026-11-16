@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { PageHead, SectionHead } from '@/components/ui'
+import { PageHead, SectionHead } from '@/components/kit'
 import { getRole, getRR, getSummary } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import { CalibrationPair, ShrinkCurve, StabilityPair } from '@/views/MethodCharts'
 
-export const metadata: Metadata = { title: 'The method in plain words' }
+export const metadata: Metadata = { title: 'Methodology' }
 
 export default function MethodPage() {
   const s = getSummary()
@@ -77,8 +77,8 @@ export default function MethodPage() {
   return (
     <>
       <PageHead
-        title="The method in plain words"
-        takeaway="Three questions, asked of every ball since 2022: how much was at stake, how well did the player do given the situation, and does it hold up across many matches?"
+        title="Methodology"
+        summary="Three questions, asked of every ball since 2022: how much was at stake, how well did the player do given the situation, and does it hold up across many matches?"
       />
 
       <ol className="flex flex-col gap-px overflow-hidden rounded-[10px] border border-line bg-line">
