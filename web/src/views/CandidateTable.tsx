@@ -6,7 +6,7 @@ import { useMemo, useState } from 'react'
 import { NAT_OPTIONS, natMatch, Segmented, type Nat } from '@/components/filters'
 import { Meter, PlayerAvatar, signed, Tag } from '@/components/kit'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { iplCode } from '@/lib/format'
+import { TeamBadge } from '@/components/TeamBadge'
 import type { Candidate } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -81,7 +81,7 @@ export function CandidateTable({ candidates, isBat, phase }: { candidates: Candi
                       </span>
                     </span>
                   </TableCell>
-                  <TableCell className="text-ink-2">{c.ipl_team_2026 ? iplCode(c.ipl_team_2026) : '–'}</TableCell>
+                  <TableCell className="text-ink-2">{c.ipl_team_2026 ? <TeamBadge team={c.ipl_team_2026} size={28} /> : '–'}</TableCell>
                   <TableCell className={cn('num text-right font-semibold', c.rv100 >= 0 ? 'text-pink-ink' : 'text-blue')}>{signed(c.rv100)}</TableCell>
                   <TableCell className="num text-right">{isBat ? c.sr : c.econ}</TableCell>
                   <TableCell className="num text-right text-ink-2">{c.balls}</TableCell>

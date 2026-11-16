@@ -5,7 +5,8 @@ import { useState } from 'react'
 import { Meter, PlayerAvatar, RankRibbon, signed } from '@/components/kit'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { fmt, iplCode } from '@/lib/format'
+import { TeamBadge } from '@/components/TeamBadge'
+import { fmt } from '@/lib/format'
 
 export type Lite = {
   id: number
@@ -50,7 +51,10 @@ export function Spotlight({ bat, bowl }: { bat: Lite; bowl: Lite }) {
           <PlayerAvatar name={p.name} rr size={68} className="from-white to-white/40" />
           <div className="min-w-0">
             <div className="display text-[2rem] text-white">{p.name}</div>
-            <div className="text-[13.5px] text-white/75">{[p.country, p.team].filter(Boolean).join(', ')}</div>
+            <div className="mt-1 flex items-center gap-2 text-[13.5px] text-white/75">
+              <TeamBadge team={p.team} size={24} />
+              {p.country}
+            </div>
           </div>
         </div>
         <dl className="grid grid-cols-3 gap-2">
@@ -83,10 +87,9 @@ function Row({ p, role }: { p: Lite; role: 'bat' | 'bowl' }) {
         <PlayerAvatar name={p.name} rr={p.rr} size={38} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14.5px] font-medium">{p.name}</span>
-          <span className="block truncate text-[12px] text-ink-3">
-            {[p.country, iplCode(p.team)].filter(Boolean).join(', ')}
-          </span>
+          <span className="block truncate text-[12px] text-ink-3">{p.country}</span>
         </span>
+        <TeamBadge team={p.team} size={26} />
         <span className="flex w-16 flex-col items-end gap-1">
           <span className="num text-[13px] font-semibold">{fmt.pct(p.stay)}</span>
           <Meter value={p.stay} className="w-14" />

@@ -30,7 +30,7 @@ const themeScript = `try{if(localStorage.getItem('theme')==='light')document.doc
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   // Only what the search box needs is sent to the browser.
   const index = (['bat', 'bowl'] as const).flatMap((role) =>
-    getRole(role).players.map((p) => ({ id: p.id, name: p.name, role, rank: p.rank, team: p.ipl_team ?? p.country ?? '' })),
+    getRole(role).players.map((p) => ({ id: p.id, name: p.name, role, rank: p.rank, ipl: p.ipl_team, country: p.country })),
   )
   return (
     <html lang="en" className={cn('dark', display.variable, body.variable)} suppressHydrationWarning>

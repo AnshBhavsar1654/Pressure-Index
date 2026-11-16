@@ -12,7 +12,8 @@ import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { fmt, iplCode } from '@/lib/format'
+import { TeamBadge } from '@/components/TeamBadge'
+import { fmt } from '@/lib/format'
 import { COMPONENT_HINT, COMPONENT_LABEL, rescore, type ComponentKey, type Player, type Role, type ScoredPlayer, type Weights } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -158,11 +159,14 @@ export function Leaderboard({ role, players: raw, defaults }: { role: Role; play
                   <span className="flex items-center gap-3">
                     <PlayerAvatar name={p.name} rr={p.ipl_team === 'Rajasthan Royals'} size={34} />
                     <span>
-                      <a href={`/players/${role}/${p.id}/`} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
-                        {p.name}
-                      </a>
+                      <span className="flex items-center gap-2">
+                        <a href={`/players/${role}/${p.id}/`} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
+                          {p.name}
+                        </a>
+                        <TeamBadge team={p.ipl_team} size={20} />
+                      </span>
                       <span className="block text-[12px] text-ink-3">
-                        {[p.country, iplCode(p.ipl_team), role === 'bowl' ? p.bowl_type : p.hand].filter(Boolean).join(', ')}
+                        {[p.country, role === 'bowl' ? p.bowl_type : p.hand].filter(Boolean).join(', ')}
                       </span>
                     </span>
                   </span>

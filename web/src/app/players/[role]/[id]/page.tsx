@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PlayerAvatar, RankRibbon, signed } from '@/components/kit'
+import { TeamBadge } from '@/components/TeamBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -117,8 +118,9 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {p.country && <Badge className="rounded-full bg-black/25 text-white">{p.country}</Badge>}
                   {p.ipl_team && (
-                    <Badge className="rounded-full bg-black/25 text-white">
-                      {p.ipl_team}, IPL {p.ipl_season}
+                    <Badge className="rounded-full bg-black/25 pl-0.5 text-white">
+                      <TeamBadge team={p.ipl_team} size={18} />
+                      IPL {p.ipl_season}
                     </Badge>
                   )}
                   <Badge className="rounded-full bg-black/25 text-white">{isBat ? p.hand : p.bowl_type}</Badge>

@@ -25,15 +25,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { TeamBadge } from "@/components/TeamBadge";
 import { Mark, NAV } from "./Sidebar";
 
-type Entry = {
-  id: number;
-  name: string;
-  role: "bat" | "bowl";
-  rank: number;
-  team: string;
-};
+type Entry = { id: number; name: string; role: 'bat' | 'bowl'; rank: number; ipl: string | null; country: string | null };
 
 export function Topbar({ players }: { players: Entry[] }) {
   const router = useRouter();
@@ -174,8 +169,9 @@ export function Topbar({ players }: { players: Entry[] }) {
                         {p.rank}
                       </span>
                       <span className="font-medium">{p.name}</span>
-                      <span className="ml-auto text-[12px] text-ink-3">
-                        {p.team}
+                      <span className="ml-auto flex items-center gap-2 text-[12px] text-ink-3">
+                        {p.country}
+                        <TeamBadge team={p.ipl} size={22} />
                       </span>
                     </CommandItem>
                   ))}
