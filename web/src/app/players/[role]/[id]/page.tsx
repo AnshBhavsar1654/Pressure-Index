@@ -1,10 +1,16 @@
+import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react/dist/ssr'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { Badge, Stat, StatRow, signed } from '@/components/ui'
+import { PlayerAvatar, RankRibbon, signed } from '@/components/kit'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { getRole } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import type { Player, Role } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { ProfileCharts } from '@/views/Profile'
 
 type Params = { role: Role; id: string }
@@ -25,7 +31,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   return { title: p ? `${p.name}, ${role === 'bat' ? 'batting' : 'bowling'} under pressure` : 'Player' }
 }
 
-/** One plain-English sentence summarising the player, generated from the numbers. */
+/** One sentence that sums the player up, generated from the numbers. */
 function story(p: Player, role: Role) {
   const last = p.name.split(' ').slice(-1)[0]
   if (role === 'bat') {
@@ -36,11 +42,17 @@ function story(p: Player, role: Role) {
   return `Under pressure ${last} concedes ${fmt.dec(p.press.econ, 2)} an over (${up ? 'tighter than' : 'looser than'} ${fmt.dec(p.norm.econ, 2)} normally) and takes a wicket every ${fmt.dec(p.press.sr, 0)} balls. Allowing for the situations, that saves ${signed(p.p_rv100)} runs per 100 balls against an average bowler.`
 }
 
+function cmp(a: number | null | undefined, b: number | null | undefined, dir: 1 | -1): boolean | null {
+  if (a == null || b == null || a === b) return null
+  return (a - b) * dir > 0
+}
+
 export default async function PlayerPage({ params }: { params: Promise<Params> }) {
   const { role, id } = await params
   const { p, prev, next, total } = find(role, id)
   if (!p) notFound()
   const isBat = role === 'bat'
+  const rr = p.ipl_team === 'Rajasthan Royals'
   const rows: [string, string, string, boolean | null][] = isBat
     ? [
         ['Strike rate', fmt.dec(p.press.sr), fmt.dec(p.norm.sr), cmp(p.press.sr, p.norm.sr, 1)],
@@ -56,93 +68,114 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
         ['Boundaries conceded', `${fmt.dec(p.press.bnd_pct)}%`, `${fmt.dec(p.norm.bnd_pct)}%`, cmp(p.press.bnd_pct, p.norm.bnd_pct, -1)],
         ['Balls, runs, wickets', `${p.press.balls}, ${p.press.runs}, ${p.press.outs}`, `${p.norm.balls}, ${p.norm.runs}, ${p.norm.outs}`, null],
       ]
+  const bannerStats: [string, string][] = [
+    [isBat ? 'Strike rate under pressure' : 'Economy under pressure', isBat ? fmt.dec(p.press.sr, 0) : fmt.dec(p.press.econ, 2)],
+    ['Runs added per 100', signed(p.p_rv100)],
+    ['Pressure balls', fmt.int(p.p_balls)],
+    ['Stays in top 10', fmt.pct(p.boot.p_top10)],
+    ['Likely rank range', `${p.boot.rank_lo}–${p.boot.rank_hi}`],
+    ['Matches with pressure', String(p.p_matches)],
+  ]
 
   return (
-    <div className="flex flex-col gap-6">
-      <nav className="flex flex-wrap items-center justify-between gap-2 text-[13.5px]" aria-label="Player navigation">
-        <Link href={`/rankings/${role}/`} className="font-semibold text-pink-ink hover:underline">
-          All {isBat ? 'batters' : 'bowlers'}
-        </Link>
-        <span className="flex gap-4">
+    <div className="flex flex-col gap-5">
+      <nav className="flex flex-wrap items-center justify-between gap-2" aria-label="Player navigation">
+        <Button asChild variant="ghost" className="rounded-full px-3">
+          <Link href={`/rankings/${role}/`}>
+            <CaretLeftIcon data-icon="inline-start" />
+            All {isBat ? 'batters' : 'bowlers'}
+          </Link>
+        </Button>
+        <span className="flex gap-2">
           {prev && (
-            <Link href={`/players/${role}/${prev.id}/`} className="text-ink-2 hover:text-ink">
-              Previous: {prev.name}
-            </Link>
+            <Button asChild variant="outline" size="sm" className="rounded-full">
+              <Link href={`/players/${role}/${prev.id}/`}>
+                <CaretLeftIcon data-icon="inline-start" />
+                {prev.name}
+              </Link>
+            </Button>
           )}
           {next && (
-            <Link href={`/players/${role}/${next.id}/`} className="text-ink-2 hover:text-ink">
-              Next: {next.name}
-            </Link>
+            <Button asChild variant="outline" size="sm" className="rounded-full">
+              <Link href={`/players/${role}/${next.id}/`}>
+                {next.name}
+                <CaretRightIcon data-icon="inline-end" />
+              </Link>
+            </Button>
           )}
         </span>
       </nav>
 
-      <header className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:items-end">
-        <div className="flex flex-col gap-3">
-          <div className="flex items-end gap-4">
-            <span className="display num text-[4.6rem] leading-[0.8] text-pink">{p.rank}</span>
-            <div>
-              <h1 className="display text-[2.8rem] sm:text-[3.3rem]">{p.name}</h1>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {p.country && <Badge>{p.country}</Badge>}
-                {p.ipl_team && <Badge tone="blue">{p.ipl_team}, IPL {p.ipl_season}</Badge>}
-                <Badge>{isBat ? p.hand : p.bowl_type}</Badge>
-                {p.ipl_team === 'Rajasthan Royals' && <Badge tone="pink">RR player</Badge>}
+      <section className={cn('panel jersey grid gap-6 p-6 sm:p-7 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]', !rr && 'jersey-royal')}>
+        <div className="flex flex-col gap-5">
+          <div className="flex items-start gap-4">
+            <RankRibbon rank={p.rank} className="-mt-7 shrink-0" />
+            <div className="flex min-w-0 items-center gap-4">
+              <PlayerAvatar name={p.name} rr size={76} className="from-white to-white/40" />
+              <div className="min-w-0">
+                <h1 className="display text-[2.6rem] text-white sm:text-[3.2rem]">{p.name}</h1>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {p.country && <Badge className="rounded-full bg-black/25 text-white">{p.country}</Badge>}
+                  {p.ipl_team && (
+                    <Badge className="rounded-full bg-black/25 text-white">
+                      {p.ipl_team}, IPL {p.ipl_season}
+                    </Badge>
+                  )}
+                  <Badge className="rounded-full bg-black/25 text-white">{isBat ? p.hand : p.bowl_type}</Badge>
+                </div>
               </div>
             </div>
           </div>
-          <p className="max-w-[68ch] text-[15.5px] leading-relaxed text-ink-2">{story(p, role)}</p>
+          <p className="max-w-[60ch] text-[15px] leading-relaxed text-white/85">{story(p, role)}</p>
+          <p className="text-[13px] text-white/65">
+            Ranked {p.rank} of {total} eligible {isBat ? 'batters' : 'bowlers'}.
+          </p>
         </div>
-        <StatRow cols={2}>
-          <Stat label={`Rank of ${total}`} value={`#${p.rank}`} tone="pink" note={`Stays top 10 in ${fmt.pct(p.boot.p_top10)} of 400 re-runs`} />
-          <Stat label="Likely rank range" value={`${p.boot.rank_lo}–${p.boot.rank_hi}`} note="9 times in 10 the rank lands here" />
-          <Stat label="Pressure balls" value={fmt.int(p.p_balls)} note={`across ${p.p_matches} matches`} />
-          <Stat label="Runs added per 100, under pressure" value={signed(p.p_rv100)} note={`${signed(p.n_rv100)} in ordinary moments`} tone={p.p_rv100 >= 0 ? 'pink' : 'blue'} />
-        </StatRow>
-      </header>
+        <dl className="grid grid-cols-2 gap-2.5 self-end sm:grid-cols-3">
+          {bannerStats.map(([k, v]) => (
+            <div key={k} className="rounded-2xl bg-black/25 px-4 py-3 backdrop-blur-[2px]">
+              <dt className="text-[12.5px] text-white/70">{k}</dt>
+              <dd className="display num mt-1 text-[2rem] text-white">{v}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
-      <section className="panel overflow-hidden">
-        <div className="border-b border-line px-5 py-3.5">
-          <h2 className="display text-[1.5rem]">Pressure moments against ordinary moments</h2>
-          <p className="text-[13px] text-ink-3">Raw numbers, no adjustment. Pink marks the better column.</p>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-[14px]">
-            <thead className="text-[12.5px] text-ink-3">
-              <tr className="border-b border-line">
-                <th className="px-5 py-2 text-left font-medium" />
-                <th className="px-3 py-2 text-right font-medium">Under pressure</th>
-                <th className="px-5 py-2 text-right font-medium">Ordinary</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(([label, a, b, better]) => (
-                <tr key={label} className="border-b border-line last:border-0">
-                  <td className="px-5 py-2.5 text-ink-2">{label}</td>
-                  <td className={`num px-3 py-2.5 text-right font-semibold ${better === true ? 'text-pink-ink' : ''}`}>{a}</td>
-                  <td className={`num px-5 py-2.5 text-right ${better === false ? 'font-semibold text-pink-ink' : 'text-ink-2'}`}>{b}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="grid grid-cols-3 gap-px border-t border-line bg-line">
+      <Card className="gap-0 pb-0">
+        <CardHeader className="border-b pb-4">
+          <CardTitle>Pressure moments against ordinary moments</CardTitle>
+          <CardDescription>Raw numbers, no adjustment. Pink marks the better column.</CardDescription>
+        </CardHeader>
+        <Table className="min-w-[520px] text-[14px]">
+          <TableHeader>
+            <TableRow className="hover:bg-transparent">
+              <TableHead className="pl-5" />
+              <TableHead className="text-right text-ink-3">Under pressure</TableHead>
+              <TableHead className="pr-5 text-right text-ink-3">Ordinary</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.map(([label, a, b, better]) => (
+              <TableRow key={label}>
+                <TableCell className="py-2.5 pl-5 text-ink-2">{label}</TableCell>
+                <TableCell className={cn('num text-right font-semibold', better === true && 'text-pink-ink')}>{a}</TableCell>
+                <TableCell className={cn('num pr-5 text-right', better === false ? 'font-semibold text-pink-ink' : 'text-ink-2')}>{b}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        <CardContent className="grid grid-cols-3 gap-3 border-t py-4">
           {p.phases.map((ph) => (
-            <div key={ph.phase} className="bg-panel px-5 py-3">
+            <div key={ph.phase} className="rounded-xl bg-panel-2/70 px-4 py-3">
               <div className="text-[12.5px] text-ink-3">{ph.phase === 'Middle' ? 'Middle overs' : ph.phase} pressure</div>
-              <div className="num text-[16px] font-semibold">{signed(ph.rv100)}</div>
+              <div className="display num text-[1.6rem]">{signed(ph.rv100)}</div>
               <div className="num text-[12px] text-ink-3">{ph.balls} balls</div>
             </div>
           ))}
-        </div>
-      </section>
+        </CardContent>
+      </Card>
 
       <ProfileCharts p={p} role={role} />
     </div>
   )
-}
-
-function cmp(a: number | null | undefined, b: number | null | undefined, dir: 1 | -1): boolean | null {
-  if (a == null || b == null || a === b) return null
-  return (a - b) * dir > 0
 }
