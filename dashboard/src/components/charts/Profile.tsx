@@ -25,7 +25,7 @@ export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'b
     return acc
   }, [])
   return (
-    <div ref={ref} className="relative w-full">
+    <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label="Run value in each match with pressure exposure">
         {y.ticks(4).map((t) => (
           <g key={t}>
@@ -91,22 +91,22 @@ export function RankRanges({ players, n = 15 }: { players: ScoredPlayer[]; n?: n
   const [tip, setTip] = useState<TipState | null>(null)
   const rows = players.slice(0, n)
   const rowH = 24
-  const m = { t: 22, r: 16, b: 8, l: 140 }
+  const m = { t: 22, r: 16, b: 18, l: 150 }
   const height = m.t + rows.length * rowH + m.b
   const maxR = Math.max(30, ...rows.map((p) => p.boot.rank_hi))
   const x = scaleLinear().domain([1, maxR]).range([m.l, width - m.r])
   return (
-    <div ref={ref} className="relative w-full">
+    <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label="Bootstrap rank intervals">
         <rect x={x(1)} y={m.t - 6} width={x(10.5) - x(1)} height={rows.length * rowH + 4} fill="var(--pink-soft)" opacity={0.5} />
-        <text x={x(1) + 4} y={m.t - 10} {...AXIS.label} fill="var(--pink)" fontWeight={600}>
+        <text x={x(10.5) - 4} y={height - 2} textAnchor="end" {...AXIS.label} fill="var(--pink)" fontWeight={600}>
           top-10 zone
         </text>
         {[1, 10, 20, 30, 40, 50].filter((t) => t <= maxR).map((t) => (
           <g key={t}>
             <line x1={x(t)} x2={x(t)} y1={m.t - 4} y2={height - m.b} stroke={AXIS.grid} />
             <text x={x(t)} y={m.t - 10} textAnchor="middle" {...AXIS.tick} className="num">
-              {t > 1 ? t : ''}
+              {t === 1 ? 'rank 1' : t}
             </text>
           </g>
         ))}

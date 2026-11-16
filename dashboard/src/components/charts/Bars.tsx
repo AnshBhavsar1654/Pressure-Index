@@ -24,7 +24,7 @@ export function LiHistogram({
     .range([height - m.b, m.t])
   const bw = Math.max(1, x(step) - x(0) - 2)
   return (
-    <div ref={ref} className="relative w-full">
+    <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label="Distribution of Leverage Index across all deliveries">
         {y.ticks(4).map((t) => (
           <g key={t}>
@@ -97,12 +97,14 @@ export function PhaseBars({
   const phases = ['Powerplay', 'Middle', 'Death']
   const x0 = scaleBand<string>().domain(phases).range([m.l, width - m.r]).paddingInner(0.3).paddingOuter(0.1)
   const x1 = scaleBand<number>().domain([1, 2]).range([0, x0.bandwidth()]).paddingInner(0.08)
-  const y = scaleLinear().domain([0, 40]).range([height - m.b, m.t])
+  const yMax = Math.ceil(Math.max(40, ...rows.map((r) => r.pressure_share)) / 10) * 10
+  const ticks = Array.from({ length: yMax / 10 + 1 }, (_, i) => i * 10)
+  const y = scaleLinear().domain([0, yMax]).range([height - m.b, m.t])
   const color = (inn: number) => (inn === 1 ? 'var(--blue)' : 'var(--pink)')
   return (
-    <div ref={ref} className="relative w-full">
+    <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label="Share of high-pressure deliveries by phase">
-        {[0, 10, 20, 30, 40].map((t) => (
+        {ticks.map((t) => (
           <g key={t}>
             <line x1={m.l} x2={width - m.r} y1={y(t)} y2={y(t)} stroke={AXIS.grid} />
             <text x={m.l - 8} y={y(t)} dy="0.32em" textAnchor="end" {...AXIS.tick} className="num">
