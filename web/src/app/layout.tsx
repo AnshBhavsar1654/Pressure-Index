@@ -1,10 +1,14 @@
 import type { Metadata } from 'next'
-import { Big_Shoulders, Public_Sans } from 'next/font/google'
+import { Big_Shoulders, Outfit } from 'next/font/google'
 import { Sidebar } from '@/components/shell/Sidebar'
+import { Topbar } from '@/components/shell/Topbar'
+import { TooltipProvider } from '@/components/ui/tooltip'
+import { getRole } from '@/lib/data'
+import { cn } from '@/lib/utils'
 import './globals.css'
 
-// Next.js has no fallback metrics for Big Shoulders, so skip the generated fallback
-// (this is what produced the build warning) and name a condensed system stack instead.
+// Next.js ships no fallback metrics for Big Shoulders, so skip the generated
+// fallback (that caused the build warning) and name a condensed system stack.
 const display = Big_Shoulders({
   subsets: ['latin'],
   variable: '--font-display-face',
@@ -12,7 +16,7 @@ const display = Big_Shoulders({
   adjustFontFallback: false,
   fallback: ['Arial Narrow', 'Roboto Condensed', 'sans-serif'],
 })
-const body = Public_Sans({ subsets: ['latin'], variable: '--font-body' })
+const body = Outfit({ subsets: ['latin'], variable: '--font-body' })
 
 export const metadata: Metadata = {
   title: { default: 'Pressure Index', template: '%s | Pressure Index' },
@@ -20,28 +24,37 @@ export const metadata: Metadata = {
     'Who delivers when the match is on the line? Pressure-adjusted ratings of IPL and T20I players, and an IPL 2027 auction plan for Rajasthan Royals.',
 }
 
-// Apply a stored theme before paint so the wrong palette never flashes.
-const themeScript = `try{var t=localStorage.getItem('theme');if(t)document.documentElement.dataset.theme=t}catch(e){}`
+// Dark is the home theme; a stored "light" choice is applied before paint.
+const themeScript = `try{if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Only what the search box needs is sent to the browser.
+  const index = (['bat', 'bowl'] as const).flatMap((role) =>
+    getRole(role).players.map((p) => ({ id: p.id, name: p.name, role, rank: p.rank, team: p.ipl_team ?? p.country ?? '' })),
+  )
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
+    <html lang="en" className={cn('dark', display.variable, body.variable)} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="min-h-dvh">
-        <a
-          href="#main"
-          className="sr-only z-50 rounded bg-pink px-3 py-2 font-semibold text-white focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
-        >
-          Skip to content
-        </a>
-        <div className="lg:grid lg:grid-cols-[252px_1fr]">
-          <Sidebar />
-          <main id="main" className="min-w-0 px-4 pb-16 pt-6 sm:px-8 lg:px-10 lg:pt-10">
-            <div className="mx-auto max-w-[1280px]">{children}</div>
-          </main>
-        </div>
+      <body className="min-h-dvh font-sans">
+        <TooltipProvider delayDuration={150}>
+          <a
+            href="#main"
+            className="sr-only z-50 rounded-lg bg-primary px-3 py-2 font-semibold text-primary-foreground focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
+          >
+            Skip to content
+          </a>
+          <div className="mx-auto flex max-w-[1560px] gap-5 p-3 sm:p-4 lg:p-5">
+            <Sidebar />
+            <div className="flex min-w-0 flex-1 flex-col gap-5">
+              <Topbar players={index} />
+              <main id="main" className="min-w-0 pb-12">
+                {children}
+              </main>
+            </div>
+          </div>
+        </TooltipProvider>
       </body>
     </html>
   )

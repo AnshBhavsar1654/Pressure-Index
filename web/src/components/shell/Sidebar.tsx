@@ -1,53 +1,49 @@
 'use client'
 
-import {
-  BookOpenText,
-  ChartLineUp,
-  Crown,
-  Gauge,
-  House,
-  Moon,
-  Sun,
-  Target,
-  type Icon,
-} from '@phosphor-icons/react'
+import { BookOpenTextIcon, ChartLineUpIcon, CrownIcon, GaugeIcon, HouseIcon, ShoppingBagIcon, TargetIcon, type Icon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
 
 type Item = { href: string; label: string; icon: Icon }
 const GROUPS: { title: string; items: Item[] }[] = [
   {
-    title: 'The question',
+    title: 'Pressure',
     items: [
-      { href: '/', label: 'Overview', icon: House },
-      { href: '/pressure/', label: 'How pressure works', icon: Gauge },
+      { href: '/', label: 'Overview', icon: HouseIcon },
+      { href: '/pressure/', label: 'What is pressure', icon: GaugeIcon },
     ],
   },
   {
     title: 'Rankings',
     items: [
-      { href: '/rankings/bat/', label: 'Batters', icon: ChartLineUp },
-      { href: '/rankings/bowl/', label: 'Bowlers', icon: Target },
+      { href: '/rankings/bat/', label: 'Batters', icon: ChartLineUpIcon },
+      { href: '/rankings/bowl/', label: 'Bowlers', icon: TargetIcon },
     ],
   },
   {
     title: 'Rajasthan Royals',
     items: [
-      { href: '/rajasthan/', label: 'IPL 2026 review', icon: Crown },
-      { href: '/auction/', label: 'Auction targets', icon: Target },
+      { href: '/rajasthan/', label: 'IPL 2026 review', icon: CrownIcon },
+      { href: '/auction/', label: 'Auction targets', icon: ShoppingBagIcon },
     ],
   },
   {
     title: 'About',
-    items: [{ href: '/method/', label: 'Method in plain words', icon: BookOpenText }],
+    items: [{ href: '/method/', label: 'Methodology', icon: BookOpenTextIcon }],
   },
 ]
 
-function Mark() {
+export function Mark({ size = 34 }: { size?: number }) {
   return (
-    <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden>
-      <rect width="32" height="32" rx="7" fill="var(--pink)" />
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden className="shrink-0">
+      <defs>
+        <linearGradient id="mk" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#ec2a8e" />
+          <stop offset="1" stopColor="#4b2fa0" />
+        </linearGradient>
+      </defs>
+      <rect width="32" height="32" rx="9" fill="url(#mk)" />
       <path d="M5 21 C9 21 10 12 14 12 S18 24 22 18 S25 9 27 8" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
     </svg>
   )
@@ -55,88 +51,58 @@ function Mark() {
 
 export function Sidebar() {
   const path = usePathname()
-  const [dark, setDark] = useState(false)
-
-  useEffect(() => {
-    const t = document.documentElement.dataset.theme
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDark(t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches)
-  }, [])
-
-  const toggle = () => {
-    const next = dark ? 'light' : 'dark'
-    document.documentElement.dataset.theme = next
-    try {
-      localStorage.setItem('theme', next)
-    } catch {
-      /* storage unavailable: theme still applies for this visit */
+  const active = (href: string) => {
+    if (href === '/') return path === '/'
+    if (href.startsWith('/rankings/')) {
+      const role = href.split('/')[2]
+      return path.startsWith(href) || path.startsWith(`/players/${role}/`)
     }
-    setDark(!dark)
+    return path.startsWith(href)
   }
 
-  const isActive = (href: string) => (href === '/' ? path === '/' : path.startsWith(href.replace(/\/$/, '')))
-  const isPlayer = path.startsWith('/players/')
-
   return (
-    <aside className="sticky top-0 z-30 bg-rail text-rail-ink lg:h-dvh lg:overflow-y-auto">
-      <div className="flex items-center gap-3 px-4 py-3.5 lg:px-5 lg:pb-6 lg:pt-6">
+    <aside className="panel sticky top-5 hidden h-[calc(100dvh-2.5rem)] w-[236px] shrink-0 flex-col overflow-y-auto bg-rail! p-4 lg:flex">
+      <Link href="/" className="flex items-center gap-3 px-1 pb-6 pt-1" aria-label="Pressure Index home">
         <Mark />
-        <div className="leading-tight">
-          <div className="display text-[1.55rem] uppercase">Pressure Index</div>
-          <div className="text-[12px] text-rail-dim">For Rajasthan Royals, IPL 2027</div>
-        </div>
-        <button
-          onClick={toggle}
-          className="ml-auto grid h-10 w-10 place-items-center rounded-lg text-rail-dim hover:bg-rail-2 hover:text-rail-ink lg:hidden"
-          aria-label={dark ? 'Use light theme' : 'Use dark theme'}
-        >
-          {dark ? <Sun size={19} weight="bold" /> : <Moon size={19} weight="bold" />}
-        </button>
-      </div>
-
-      <nav aria-label="Sections" className="overflow-x-auto px-2 pb-2 lg:overflow-visible lg:px-3 lg:pb-0">
-        <ul className="flex gap-1 lg:flex-col lg:gap-5">
-          {GROUPS.map((g) => (
-            <li key={g.title} className="contents lg:block">
-              <div className="hidden px-3 pb-1.5 text-[12px] font-medium text-rail-dim lg:block">{g.title}</div>
-              <ul className="contents lg:flex lg:flex-col lg:gap-0.5">
-                {g.items.map((it) => {
-                  const active = isActive(it.href) || (isPlayer && it.href.startsWith('/rankings') && path.includes(it.href.split('/')[2]))
-                  const I = it.icon
-                  return (
-                    <li key={it.href} className="shrink-0">
-                      <Link
-                        href={it.href}
-                        aria-current={active ? 'page' : undefined}
-                        className={`relative flex min-h-10 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 text-[14px] font-medium transition-colors ${
-                          active ? 'bg-rail-2 text-rail-ink' : 'text-rail-dim hover:bg-rail-2/60 hover:text-rail-ink'
-                        }`}
-                      >
-                        {active && <span className="absolute inset-y-2 left-0 hidden w-[3px] rounded-full bg-pink lg:block" />}
-                        <I size={18} weight={active ? 'fill' : 'regular'} className={active ? 'text-pink' : ''} />
-                        {it.label}
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            </li>
-          ))}
-        </ul>
+        <span className="leading-none">
+          <span className="display block text-[1.5rem] uppercase">Pressure Index</span>
+          <span className="mt-1 block text-[12px] text-rail-dim">Rajasthan Royals, IPL 2027</span>
+        </span>
+      </Link>
+      <nav aria-label="Sections" className="flex flex-col gap-5">
+        {GROUPS.map((g) => (
+          <div key={g.title} className="flex flex-col gap-1">
+            <span className="px-3 pb-1 text-[12px] font-medium text-rail-dim">{g.title}</span>
+            {g.items.map((it) => {
+              const on = active(it.href)
+              const I = it.icon
+              return (
+                <Link
+                  key={it.href}
+                  href={it.href}
+                  aria-current={on ? 'page' : undefined}
+                  className={cn(
+                    'flex min-h-11 items-center gap-3 rounded-xl px-3 text-[14.5px] font-medium transition-colors',
+                    on
+                      ? 'bg-gradient-to-r from-pink to-[#a3248f] text-white shadow-[0_8px_24px_-10px_rgba(236,42,142,0.7)]'
+                      : 'text-rail-dim hover:bg-panel-2 hover:text-rail-ink',
+                  )}
+                >
+                  <I size={19} weight={on ? 'fill' : 'regular'} />
+                  {it.label}
+                </Link>
+              )
+            })}
+          </div>
+        ))}
       </nav>
-
-      <div className="mt-8 hidden border-t border-white/10 px-5 py-5 lg:block">
-        <button
-          onClick={toggle}
-          className="flex min-h-10 w-full items-center gap-2.5 rounded-lg px-3 text-[14px] text-rail-dim hover:bg-rail-2 hover:text-rail-ink"
-        >
-          {dark ? <Sun size={18} /> : <Moon size={18} />}
-          {dark ? 'Light theme' : 'Dark theme'}
-        </button>
-        <p className="mt-4 px-3 text-[12px] leading-relaxed text-rail-dim">
-          SupeRR Selector Season 2, Round 1. Built only from the supplied IPL and T20I ball-by-ball data, 2022 to 2026.
-        </p>
+      <div className="mt-auto rounded-2xl border border-line bg-panel-2 p-4 text-[12.5px] leading-relaxed text-ink-3">
+        <span className="font-semibold text-ink">SupeRR Selector Season 2</span>
+        <br />
+        Built only from the official IPL and T20I ball-by-ball data, 2022 to 2026.
       </div>
     </aside>
   )
 }
+
+export const NAV = GROUPS.flatMap((g) => g.items)
