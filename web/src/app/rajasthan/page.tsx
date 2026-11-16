@@ -9,6 +9,7 @@ import { Tag, PageHead, Note, SectionHead, Stat, signed } from '@/components/kit
 import { getRR } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import type { Gap, SquadPlayer } from '@/lib/types'
+import { NewFaces } from '@/views/NewFaces'
 import { SquadTables } from '@/views/SquadTables'
 
 export const metadata: Metadata = { title: 'Rajasthan Royals, IPL 2026 review' }
@@ -148,6 +149,11 @@ export default function RajasthanPage() {
         </table>
       </section>
 
+      <SectionHead title="New faces for 2026">
+        Players who joined Rajasthan Royals for this season, with where they came from and what they delivered.
+      </SectionHead>
+      <NewFaces joined={rr.joined} squad={rr.squad} />
+
       <SectionHead title="The squad, player by player">
         Runs added compared with an average IPL 2026 player in the same situations, over the whole season. Sorted from most to
         least valuable.
@@ -158,7 +164,7 @@ export default function RajasthanPage() {
         <div className="max-w-[70ch]">
           <h2 className="display text-[1.7rem]">What to fix for 2027</h2>
           <p className="text-[14px] text-ink-2">
-            Measured against the top four, RR fell furthest behind in three roles:{' '}
+            RR leaked runs against an average side, or trailed the top four, in {rr.recommendations.length} roles:{' '}
             {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. The auction page ranks the players who fill each
             one best.
           </p>

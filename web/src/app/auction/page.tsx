@@ -10,14 +10,16 @@ export const metadata: Metadata = { title: 'IPL 2027 auction targets' }
 export default function AuctionPage() {
   const rr = getRR()
   const recs = rr.recommendations
-  const behind = recs.reduce((a, r) => a + r.gap.gap_vs_top4, 0)
+  // areas where RR trailed the top four, added up; areas that only leaked against an average side do not count here
+  const behind = recs.reduce((a, r) => a + Math.min(0, r.gap.gap_vs_top4), 0)
+  const count = ['no', 'one', 'two', 'three', 'four', 'five', 'six'][recs.length] ?? String(recs.length)
   return (
     <>
       <PageHead
         title="IPL 2027 auction targets"
         summary={
           <>
-            To go from fourth to champions, RR need to match the top four. In three areas they trailed them by a combined{' '}
+            To go from fourth to champions, RR need to match the top four. In {count} areas RR either leaked runs against an average side or fell short of them, and where they trailed the top four it was by a combined{' '}
             <b className="text-ink">{Math.abs(behind).toFixed(1)} runs a match</b>. For each one we list the players outside the
             RR squad who have done that exact job best since 2024, and who also stand up under pressure.
           </>
@@ -79,10 +81,21 @@ function RoleBlock({ r, n }: { r: Recommendation; n: number }) {
             </div>
           </div>
           <div className="ml-auto text-right">
-            <div className="display num text-[2rem] text-blue">{signed(g.gap_vs_top4)} runs</div>
-            <div className="text-[12.5px] text-ink-3">
-              a match behind the top four in 2026. RR {signed(g.gap_vs_avg)} against an average side, {g.rank}th of 10
-            </div>
+            {g.gap_vs_top4 < 0 ? (
+              <>
+                <div className="display num text-[2rem] text-blue">{signed(g.gap_vs_top4)} runs</div>
+                <div className="text-[12.5px] text-ink-3">
+                  a match behind the top four in 2026. RR {signed(g.gap_vs_avg)} against an average side, {g.rank}th of 10
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="display num text-[2rem] text-blue">{signed(g.gap_vs_avg)} runs</div>
+                <div className="text-[12.5px] text-ink-3">
+                  a match against an average side in 2026, {g.rank}th of 10. Level with the top four ({signed(g.gap_vs_top4)}), but still a leak
+                </div>
+              </>
+            )}
           </div>
         </header>
         <CandidateTable candidates={r.candidates} isBat={isBat} phase={g.phase} defaultMin={r.default_min_balls} />

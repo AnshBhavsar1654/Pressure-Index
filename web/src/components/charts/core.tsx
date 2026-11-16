@@ -26,10 +26,21 @@ export interface TipState {
 
 /** Positioned tooltip, kept inside the chart's box. */
 export function Tooltip({ tip, width }: { tip: TipState | null; width: number }) {
+  const el = useRef<HTMLDivElement>(null)
+  // keep the box inside the chart vertically as well: a tooltip hanging past the bottom edge adds a
+  // scrollbar to the zoom viewport, which narrows the chart under the cursor and makes it flicker
+  useLayoutEffect(() => {
+    const t = el.current
+    const parent = t?.offsetParent as HTMLElement | null
+    if (!t || !parent || !tip) return
+    const room = parent.clientHeight - t.offsetHeight - 4
+    t.style.top = `${Math.max(0, Math.min(tip.y - 12, room))}px`
+  })
   if (!tip) return null
   const left = Math.min(Math.max(tip.x + 14, 4), width - 230)
   return (
     <div
+      ref={el}
       role="status"
       className="pointer-events-none absolute z-20 w-[220px] rounded-lg border border-line-strong bg-panel-2 px-3 py-2 text-[12.5px] leading-snug text-ink"
       style={{ left, top: Math.max(tip.y - 12, 0) }}

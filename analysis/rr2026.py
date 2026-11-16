@@ -317,8 +317,9 @@ def main():
         g = g[g.balls >= min_balls]
         return g
 
-    # Target the areas where RR trailed the top four most: the bar for winning the title.
-    targets = sorted([g for g in gaps if g["gap_vs_top4"] < 0], key=lambda g: g["gap_vs_top4"])[:3]
+    # Target every area that was a leak against an average side, or that left RR behind the top four
+    # (the bar for winning the title). Most behind the top four first.
+    targets = sorted([g for g in gaps if g["gap_vs_avg"] < 0 or g["gap_vs_top4"] < 0], key=lambda g: g["gap_vs_top4"])
     recs = []
     for gp in targets:
         disc, ph = gp["discipline"], gp["phase"]
@@ -428,6 +429,22 @@ def main():
         "checks_passed": int(sum(c["match"] for c in checks)),
     }
 
+    # Players in RR's registered IPL 2026 squad who were not in its IPL 2025 squad: the 2026 additions.
+    # The data pack does not say whether each came by trade or at the auction, nor the price paid.
+    ipl_map = mp[mp.comp_name.str.startswith("IPL")]
+    prev_squad = set(ipl_map[(ipl_map.comp_name == "IPL 2025") & (ipl_map.team_name == RR)].player_id)
+    joined = []
+    for pid, name in zip(sq.player_id, sq.player_name):
+        if pid in prev_squad:
+            continue
+        hist = ipl_map[(ipl_map.player_id == pid) & (ipl_map.comp_id != 3298)].copy()
+        hist["yr"] = hist.comp_name.str[-4:].astype(int)
+        hist = hist.sort_values("yr")
+        past = [{"season": int(r.yr), "team": r.team_name} for r in hist.itertuples()]
+        joined.append({"id": int(pid), "name": name, "from_team": past[-1]["team"] if past else None,
+                       "from_season": past[-1]["season"] if past else None,
+                       "returning": any(x["team"] == RR for x in past), "ipl_seasons": len({x["season"] for x in past})})
+    out["joined"] = joined
     out["provenance"] = provenance
     (OUT / "rr2026.json").write_text(json.dumps(out, separators=(",", ":"), default=str))
     # console digest

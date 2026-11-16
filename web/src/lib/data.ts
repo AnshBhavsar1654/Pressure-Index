@@ -8,7 +8,8 @@ const dir = path.join(process.cwd(), 'data')
 const cache = new Map<string, unknown>()
 
 function read<T>(file: string): T {
-  if (!cache.has(file)) cache.set(file, JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8')))
+  // in development the data files can be regenerated while the server runs, so re-read them
+  if (process.env.NODE_ENV !== 'production' || !cache.has(file)) cache.set(file, JSON.parse(fs.readFileSync(path.join(dir, file), 'utf8')))
   return cache.get(file) as T
 }
 

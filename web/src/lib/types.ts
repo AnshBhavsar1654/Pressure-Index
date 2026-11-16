@@ -215,6 +215,8 @@ export interface RRData {
     league: { bat_rv100: number; bowl_rv100: number }; teams: { team: string; bat: number; bowl: number }[] }
   matches: RRMatch[]
   squad: SquadPlayer[]
+  /** players in the IPL 2026 squad who were not in RR's 2025 squad */
+  joined: { id: number; name: string; from_team: string | null; from_season: number | null; returning: boolean; ipl_seasons: number }[]
   gaps: Gap[]
   recommendations: Recommendation[]
   pool: { known: boolean; updated: string | null }
