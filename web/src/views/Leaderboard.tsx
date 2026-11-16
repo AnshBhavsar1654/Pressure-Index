@@ -171,7 +171,7 @@ export function Leaderboard({
                 value={[weights[k]]}
                 onValueChange={([v]) => setWeights((w) => ({ ...w, [k]: v }))}
               />
-              <span className="text-[12.5px] leading-snug text-ink-3">{COMPONENT_HINT[k]}</span>
+              <span className="text-[12.5px] leading-snug text-ink-3">{k === 'pressure' && role === 'bowl' ? COMPONENT_HINT[k].replace('Runs added', 'Runs saved') : COMPONENT_HINT[k]}</span>
             </div>
           ))}
         </CardContent>
@@ -188,9 +188,9 @@ export function Leaderboard({
             ]}
           />
         }
-        footnote="Runs added per 100 balls, compared with an average player in exactly the same match situations."
+        footnote={`Runs ${role === 'bat' ? 'added' : 'saved'} per 100 balls, compared with an average ${role === 'bat' ? 'batter' : 'bowler'} in exactly the same match situations.`}
       >
-        <PressureScatter players={players} highlight={top10} onSelect={open} height={460} />
+        <PressureScatter role={role} players={players} highlight={top10} onSelect={open} height={460} />
       </ChartFrame>
 
       <Card className="gap-0 pb-0">
@@ -221,8 +221,8 @@ export function Leaderboard({
               <TableHead className="h-11 text-[12.5px] font-medium text-ink-3">Country, team</TableHead>
               {head('p_balls', 'Pressure balls')}
               {head('trad', role === 'bat' ? 'Strike rate' : 'Economy', 'Under pressure, normal figure after the slash')}
-              {head('p_rv100', 'Under pressure', 'Runs added per 100 pressure balls')}
-              {head('n_rv100', 'Normally', 'Runs added per 100 ordinary balls')}
+              {head('p_rv100', 'Under pressure', `Runs ${role === 'bat' ? 'added' : 'saved'} per 100 pressure balls`)}
+              {head('n_rv100', 'Normally', `Runs ${role === 'bat' ? 'added' : 'saved'} per 100 ordinary balls`)}
               {head('delta100', 'Rise', 'Pressure level minus normal level')}
               {head('wpa100', 'Impact', 'Win probability added per 100 pressure balls')}
               {head('cons', 'Consistency', 'Share of pressure innings or spells above average')}

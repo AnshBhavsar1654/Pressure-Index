@@ -80,7 +80,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
       ]
   const bannerStats: [string, string][] = [
     [isBat ? 'Strike rate under pressure' : 'Economy under pressure', isBat ? fmt.dec(p.press.sr, 0) : fmt.dec(p.press.econ, 2)],
-    ['Runs added per 100', signed(p.p_rv100)],
+    [isBat ? 'Runs added per 100' : 'Runs saved per 100', signed(p.p_rv100)],
     ['Pressure balls', fmt.int(p.p_balls)],
     ['Stays in top 10', p.boot ? fmt.pct(p.boot.p_top10) : '–'],
     ['Likely rank range', p.boot ? `${p.boot.rank_lo}–${p.boot.rank_hi}` : '–'],

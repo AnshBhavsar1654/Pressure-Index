@@ -72,7 +72,7 @@ export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'b
                       </div>
                       <TipRow label="Pressure balls" value={d.balls} />
                       <TipRow label={role === 'bat' ? 'Runs / out' : 'Runs / wkts'} value={`${d.r} / ${d.out}`} />
-                      <TipRow label="Run value" value={fmt.signed(d.rv, 1)} />
+                      <TipRow label={role === 'bat' ? 'Runs added' : 'Runs saved'} value={fmt.signed(d.rv, 1)} />
                       <TipRow label="Win prob. added" value={fmt.signed(d.wpa * 100, 1) + ' pts'} />
                     </div>
                   ),

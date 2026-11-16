@@ -8,6 +8,7 @@ import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 import { useZoom } from './Zoom'
 
 interface Props {
+  role?: 'bat' | 'bowl'
   players: ScoredPlayer[]
   highlight: Set<number>
   selected?: number | null
@@ -19,7 +20,7 @@ interface Props {
  * Baseline (x) vs pressure (y) run value per 100 balls. Points above the diagonal
  * lift under pressure; the top 10 by live score wear the pink accent.
  */
-export function PressureScatter({ players, highlight, selected, onSelect, height: baseHeight = 420 }: Props) {
+export function PressureScatter({ players, highlight, selected, onSelect, role = 'bat', height: baseHeight = 420 }: Props) {
   const height = baseHeight * useZoom()
   const [ref, width] = useWidth<HTMLDivElement>()
   const [tip, setTip] = useState<TipState | null>(null)
@@ -65,10 +66,10 @@ export function PressureScatter({ players, highlight, selected, onSelect, height
           worse under pressure ↓
         </text>
         <text x={(m.l + width - m.r) / 2} y={height - 6} textAnchor="middle" {...AXIS.label}>
-          Normally: runs added per 100 ordinary balls
+          Normally: runs {role === 'bat' ? 'added' : 'saved'} per 100 ordinary balls
         </text>
         <text transform={`translate(13 ${(m.t + height - m.b) / 2}) rotate(-90)`} textAnchor="middle" {...AXIS.label}>
-          Under pressure: runs added per 100 pressure balls
+          Under pressure: runs {role === 'bat' ? 'added' : 'saved'} per 100 pressure balls
         </text>
         {ordered.map((p) => {
           const top = highlight.has(p.id)

@@ -36,8 +36,7 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
         }
       >
         <Note title="Reading the numbers" className="max-w-md">
-          <b>+10</b> under pressure means 10 more runs per 100 pressure balls than an average player in the same situations
-          {role === 'bowl' ? ' (for bowlers, 10 runs saved)' : ''}. <b>0</b> is exactly average.
+          <b>+10</b> under pressure means {role === 'bat' ? '10 more runs scored' : '10 more runs saved'} per 100 pressure balls than an average {role === 'bat' ? 'batter' : 'bowler'} in the same situations. <b>0</b> is exactly average.
         </Note>
       </PageHead>
       <Leaderboard
