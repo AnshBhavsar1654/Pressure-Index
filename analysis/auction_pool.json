@@ -1,0 +1,5 @@
+{
+  "note": "Official IPL 2027 retention lists are due on 17 November 2026. Paste the player_ids of every player released into the auction pool into released_ids and rerun analysis/rr2026.py; recommendations will then only show players who can actually be bought.",
+  "updated": null,
+  "released_ids": []
+}
