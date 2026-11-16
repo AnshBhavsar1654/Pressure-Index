@@ -1,6 +1,7 @@
 'use client'
 
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Zoomable } from './Zoom'
 
 /** Measure a container's width so SVG charts stay crisp at any size. */
 export function useWidth<T extends HTMLElement>(fallback = 640) {
@@ -96,7 +97,7 @@ export function ChartFrame({
         {subtitle && <p className="max-w-[68ch] text-[13px] leading-relaxed text-ink-2">{subtitle}</p>}
       </figcaption>
       {legend}
-      <div className="relative min-w-0">{children}</div>
+      <Zoomable label={title}>{children}</Zoomable>
       {footnote && <p className="text-[12px] leading-relaxed text-ink-3">{footnote}</p>}
     </figure>
   )
