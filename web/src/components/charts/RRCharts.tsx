@@ -9,6 +9,7 @@ import { teamOf } from '@/lib/teams'
 import type { RRMatch, RRPhase } from '@/lib/types'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 import { WinWorm } from './WinWorm'
+import { Zoomable } from './Zoom'
 
 const RR = 'Rajasthan Royals'
 
@@ -50,7 +51,9 @@ export function SeasonExplorer({ matches }: { matches: RRMatch[] }) {
             </h3>
             <span className="text-[13.5px] text-ink-3">{fmt.date(m.date)}</span>
           </div>
-          <WinWorm worm={m.worm} height={250} labels={{ first: `${s1.team} batting`, second: `${s2.team} batting` }} />
+          <Zoomable label="match win probability">
+            <WinWorm worm={m.worm} height={250} labels={{ first: `${s1.team} batting`, second: `${s2.team} batting` }} />
+          </Zoomable>
         </div>
         <dl className="flex flex-col gap-3 text-[13.5px]">
           <div>

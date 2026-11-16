@@ -2,6 +2,7 @@ import { CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PhaseGaps, SeasonExplorer, TeamDots } from '@/components/charts/RRCharts'
+import { Zoomable } from '@/components/charts/Zoom'
 import { TeamBadge } from '@/components/TeamBadge'
 import { OPPONENTS } from '@/lib/teams'
 import { Tag, PageHead, Note, SectionHead, Stat, signed } from '@/components/kit'
@@ -58,7 +59,9 @@ export default function RajasthanPage() {
       </SectionHead>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <section className="panel p-5">
-          <PhaseGaps phases={rr.phases} />
+          <Zoomable label="runs won and lost by phase">
+            <PhaseGaps phases={rr.phases} />
+          </Zoomable>
         </section>
         <div className="flex flex-col gap-4">
           <Note title="Reading it">

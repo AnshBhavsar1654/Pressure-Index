@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { PlayerMatch, ScoredPlayer } from '@/lib/types'
 import { fmt } from '@/lib/format'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
+import { useZoom } from './Zoom'
 
 /**
  * One bar per match with pressure exposure: run value above (pink) or below (blue)
@@ -194,7 +195,7 @@ export function ComponentBars({ z, labels }: { z: Record<string, number>; labels
 /** Reliability diagram for the win-probability model. */
 export function Calibration({ bins }: { bins: { pred: number; actual: number; n: number }[] }) {
   const [ref, width] = useWidth<HTMLDivElement>()
-  const size = Math.min(width, 300)
+  const size = Math.min(width, 300 * useZoom())
   const m = { t: 10, r: 10, b: 34, l: 40 }
   const s = scaleLinear().domain([0, 1]).range([0, size - m.l - m.r])
   const h = size - m.t - m.b

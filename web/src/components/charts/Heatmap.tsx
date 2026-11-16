@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react'
 import type { ChaseGrid } from '@/lib/types'
 import { fmt } from '@/lib/format'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
+import { useZoom } from './Zoom'
 
 /**
  * Chase pressure map: overs left (x, counting down) by runs needed (y), shaded by
@@ -17,7 +18,7 @@ export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; w
   const rows = useMemo(() => grid.rows.filter((r) => r[0] === wkts && r[2] <= maxNeed), [grid, wkts, maxNeed])
   const overs = Array.from({ length: 20 }, (_, i) => 20 - i)
   const needs = [...new Set(rows.map((r) => r[2]))].sort((a, b) => b - a)
-  const height = 380
+  const height = 380 * useZoom()
   const m = { t: 8, r: 64, b: 40, l: 46 }
   const x = scaleBand<number>().domain(overs).range([m.l, width - m.r]).paddingInner(0.06)
   const y = scaleBand<number>().domain(needs).range([m.t, height - m.b]).paddingInner(0.06)

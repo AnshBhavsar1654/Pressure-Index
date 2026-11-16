@@ -5,6 +5,7 @@ import { useState } from 'react'
 import type { ScoredPlayer } from '@/lib/types'
 import { fmt } from '@/lib/format'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
+import { useZoom } from './Zoom'
 
 interface Props {
   players: ScoredPlayer[]
@@ -18,7 +19,8 @@ interface Props {
  * Baseline (x) vs pressure (y) run value per 100 balls. Points above the diagonal
  * lift under pressure; the top 10 by live score wear the pink accent.
  */
-export function PressureScatter({ players, highlight, selected, onSelect, height = 420 }: Props) {
+export function PressureScatter({ players, highlight, selected, onSelect, height: baseHeight = 420 }: Props) {
+  const height = baseHeight * useZoom()
   const [ref, width] = useWidth<HTMLDivElement>()
   const [tip, setTip] = useState<TipState | null>(null)
   const [hover, setHover] = useState<number | null>(null)

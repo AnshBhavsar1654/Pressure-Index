@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { WinWorm } from '@/components/charts/WinWorm'
+import { Zoomable } from '@/components/charts/Zoom'
 import { ordinal, signed } from '@/components/kit'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -88,7 +89,9 @@ export default function Overview() {
             {iplCode(first.team)} {first.runs}/{first.wkts}, {iplCode(second.team)} {second.runs}/{second.wkts}
           </Badge>
         </div>
-        <WinWorm worm={hero.worm} animate height={300} labels={{ first: `${first.team} batting`, second: `${second.team} batting` }} />
+        <Zoomable label="match win probability">
+          <WinWorm worm={hero.worm} animate height={300} labels={{ first: `${first.team} batting`, second: `${second.team} batting` }} />
+        </Zoomable>
         <p className="text-[13.5px] text-ink-2">
           <b className="text-foreground">{hero.result}.</b> GT needed 11 off the last over with three wickets left. Tushar
           Deshpande gave away four singles and took a wicket: the kind of moment the rankings are built on.
