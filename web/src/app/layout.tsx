@@ -3,7 +3,15 @@ import { Big_Shoulders, Public_Sans } from 'next/font/google'
 import { Sidebar } from '@/components/shell/Sidebar'
 import './globals.css'
 
-const display = Big_Shoulders({ subsets: ['latin'], variable: '--font-display-face', weight: ['700', '800', '900'] })
+// Next.js has no fallback metrics for Big Shoulders, so skip the generated fallback
+// (this is what produced the build warning) and name a condensed system stack instead.
+const display = Big_Shoulders({
+  subsets: ['latin'],
+  variable: '--font-display-face',
+  weight: ['700', '800', '900'],
+  adjustFontFallback: false,
+  fallback: ['Arial Narrow', 'Roboto Condensed', 'sans-serif'],
+})
 const body = Public_Sans({ subsets: ['latin'], variable: '--font-body' })
 
 export const metadata: Metadata = {
