@@ -366,7 +366,8 @@ def choose_k(pm: pd.DataFrame, role: str) -> dict:
                 pb, rsuffix="_b", how="inner")
             j = j[j.wn_b >= 30]
             base = (j.wrv_n + kn * mun) / (j.wn_n + kn)
-            est = (j.wrv + kp * base) / (j.wn + kp)
+            n_raw = np.where(j.wn_n > 0, j.wrv_n / np.maximum(j.wn_n, 1e-9), mun)
+            est = base + (j.wrv - j.wn * n_raw) / (j.wn + kp)
             err += (j.wn_b * (est - j.wrv_b / j.wn_b) ** 2).sum()
             wsum += j.wn_b.sum()
         res_p[kp] = err / wsum
@@ -429,11 +430,14 @@ def rate(pm: pd.DataFrame, role: str, k=None):
     t = p.join(n, how="left").join(cons, how="left").fillna(0)
     if k is None:
         k = choose_k(pm, role)
-    # baseline: shrink toward the league mean
+    # baseline (non-pressure) level: shrink toward the league mean
     t["n_rv"] = (t.nwrv + k["kn"] * k["mun"]) / (t.nwn + k["kn"])
-    # pressure: shrink toward the player's OWN baseline (hierarchical prior)
-    t["p_rv"] = (t.pwrv + k["kp"] * t.n_rv) / (t.pwn + k["kp"])
-    t["delta"] = t.p_rv - t.n_rv
+    # clutch deviation: pressure rate minus the player's OWN raw baseline,
+    # shrunk toward zero (no pressure effect) with prior strength kp
+    n_raw = np.where(t.nwn > 0, t.nwrv / np.maximum(t.nwn, 1e-9), k["mun"])
+    t["delta"] = (t.pwrv - t.pwn * n_raw) / (t.pwn + k["kp"])
+    # pressure level = baseline level + clutch deviation (hierarchical decomposition)
+    t["p_rv"] = t.n_rv + t.delta
     t["wpa100"] = t.pwwpa / np.maximum(t.pwn, 1) * 100 * (t.pwn / (t.pwn + k["kp"]))
     t["cons"] = (t.c_pos + 8 * k["c_prior"]) / (t.c_n + 8)
     return t, k
