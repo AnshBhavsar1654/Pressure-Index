@@ -178,3 +178,11 @@ input[type="range"] {
     animation: none;
   }
 }
+
+/* Grids default to one shrinkable column so wide charts never force horizontal
+   scrolling on phones; explicit grid-cols utilities still override this. */
+@layer base {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
