@@ -43,11 +43,12 @@ export function Methodology({ data, bat, bowl }: { data: AppData; bat: ScoredPla
         </p>
         <ul>
           <li>
-            <b>Win-probability model.</b> Two monotonic gradient-boosted classifiers (first innings: runs, balls left,
-            wickets in hand; chase: runs needed, balls left, wickets in hand, required rate), each also given competition and
-            season. Out-of-fold by match (5-fold grouped), then isotonic-calibrated. Chase AUC {wp2.auc}, Brier{' '}
-            {wp2.brier}. First innings AUC {wp1.auc}, Brier {wp1.brier}. The first innings is inherently harder to call before
-            a target exists.
+            <b>Win-probability model.</b> Two logistic models built on run-expectancy resources. Chase: log(runs needed ÷
+            runs still expected from the balls and wickets left), its interaction with time remaining, required rate and
+            wickets in hand. First innings: log(projected total ÷ season par), with the same time terms. Being smooth in runs
+            and balls matters, because leverage is a derivative of win probability: tree models gave step-shaped
+            probabilities and jagged leverage, so they were rejected. Validated out-of-fold by match (5-fold grouped).
+            Chase AUC {wp2.auc}, Brier {wp2.brier}. First innings AUC {wp1.auc}, Brier {wp1.brier}.
           </li>
           <li>
             <b>Leverage Index.</b> LI = Σ P(outcome | phase) × |WP(after outcome) − WP(now)|, divided by its mean across all
@@ -203,8 +204,10 @@ export function Methodology({ data, bat, bowl }: { data: AppData; bat: ScoredPla
             consistency is measured per spell, so bowlers used for one over at a time have fewer qualifying spells.
           </li>
           <li>
-            First-innings win probability is weaker (AUC {wp1.auc}), so first-innings leverage is less precise than in the
-            chase.
+            First-innings win probability is far less certain (AUC {wp1.auc}) before a target exists, so first-innings balls
+            rarely reach the pressure threshold and the high-pressure set leans heavily toward chases. Ranking each innings on
+            its own scale was tested and rejected, because it labelled about half of all first-innings powerplay balls as
+            pressure. A dedicated first-innings stress signal (collapse against par) is the main planned extension.
           </li>
         </ul>
       </Section>
@@ -219,7 +222,7 @@ function Section({ n, title, children }: { n: string; title: string; children: R
         <span className="display num text-[2.2rem] font-bold leading-none text-pink">{n}</span>
         <h2 className="display text-[1.5rem] font-semibold leading-tight">{title}</h2>
       </div>
-      <div className="prose-rr flex max-w-[82ch] flex-col gap-4 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink [&_code]:rounded-[2px] [&_code]:bg-surface-2 [&_code]:px-1 [&_li]:pl-1 [&_ul]:flex [&_ul]:list-disc [&_ul]:flex-col [&_ul]:gap-2 [&_ul]:pl-5">
+      <div className="prose-rr flex min-w-0 flex-col gap-4 [&>p]:max-w-[82ch] [&>ul]:max-w-[82ch] text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink [&_code]:rounded-[2px] [&_code]:bg-surface-2 [&_code]:px-1 [&_li]:pl-1 [&_ul]:flex [&_ul]:list-disc [&_ul]:flex-col [&_ul]:gap-2 [&_ul]:pl-5">
         {children}
       </div>
     </section>

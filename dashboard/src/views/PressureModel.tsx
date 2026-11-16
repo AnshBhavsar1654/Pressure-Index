@@ -37,9 +37,10 @@ export function PressureModel({ data }: { data: AppData }) {
         </div>
         <ol className="panel flex flex-col divide-y divide-line text-[13.5px] leading-relaxed">
           <Step n={1} title="Win probability model">
-            Gradient-boosted classifiers, one per innings, predict the batting side’s chance of winning from runs,
-            wickets in hand, balls left, required rate, competition and season. Constrained to behave sensibly (more
-            wickets never hurts) and calibrated on held-out matches.
+            Logistic models, one per innings, built on run-expectancy “resources” in the spirit of Duckworth–Lewis. In a
+            chase the key input is runs needed against the runs the side can still expect to make with its balls and wickets.
+            Batting first, it is the projected total against the season’s par score. The models are smooth by design and
+            validated on held-out matches.
           </Step>
           <Step n={2} title="Leverage of the next ball">
             For every delivery, the model scores all possible outcomes (dot, 1, 2, 3, 4, 6, wicket, wide) and weights the
@@ -105,7 +106,7 @@ export function PressureModel({ data }: { data: AppData }) {
         </ChartFrame>
         <ChartFrame
           title="Share of balls under pressure"
-          subtitle="By phase and innings. Pressure is not only a death-overs idea."
+          subtitle="By phase and innings. Chases dominate: once a target exists, each ball moves the result far more than anything batting first."
           legend={
             <Legend
               items={[
