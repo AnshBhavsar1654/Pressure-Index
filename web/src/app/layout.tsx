@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Big_Shoulders, Outfit } from 'next/font/google'
+import Link from 'next/link'
 import { Sidebar } from '@/components/shell/Sidebar'
 import { Topbar } from '@/components/shell/Topbar'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -49,9 +50,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Sidebar />
             <div className="flex min-w-0 flex-1 flex-col gap-5">
               <Topbar players={index} />
-              <main id="main" className="min-w-0 pb-12">
+              <main id="main" className="min-w-0">
                 {children}
               </main>
+              <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pb-6 pt-5 text-[13px] text-ink-3">
+                <div className="flex flex-col gap-1">
+                  <span>
+                    Submitted by <b className="font-semibold text-ink-2">Ansh Bhavsar</b>:{' '}
+                    <a href="mailto:anshbhavsar164@gmail.com" className="hover:text-foreground hover:underline">
+                      anshbhavsar164@gmail.com
+                    </a>
+                    ,{' '}
+                    <a href="tel:+919979306408" className="hover:text-foreground hover:underline">
+                      +91 99793 06408
+                    </a>
+                  </span>
+                  <span>Independent entry to SupeRR Selector Season 2. Not affiliated with Rajasthan Royals or the IPL.</span>
+                </div>
+                <nav aria-label="Legal" className="flex gap-5">
+                  <Link href="/method/" className="hover:text-foreground">
+                    Methodology
+                  </Link>
+                  <Link href="/privacy/" className="hover:text-foreground">
+                    Privacy
+                  </Link>
+                  <Link href="/terms/" className="hover:text-foreground">
+                    Terms of use
+                  </Link>
+                </nav>
+              </footer>
             </div>
           </div>
         </TooltipProvider>
