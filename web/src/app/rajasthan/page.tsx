@@ -121,17 +121,29 @@ export default function RajasthanPage() {
           </li>
         ))}
       </ul>
-      <div className="mt-4 grid gap-4 md:grid-cols-3">
-        {rr.order.map((o) => (
-          <div key={o.band} className="panel p-4">
-            <div className="text-[13px] text-ink-3">{o.band}</div>
-            <div className={`display num text-[2rem] ${o.rv_pm >= 0 ? 'text-pink' : 'text-blue'}`}>{signed(o.rv_pm)} runs</div>
-            <div className="text-[13px] text-ink-2">
-              per match. Strike rate {o.sr} against a league {o.league_sr}.
-            </div>
-          </div>
-        ))}
-      </div>
+      <section className="panel mt-4 overflow-x-auto">
+        <table className="w-full min-w-[560px] text-[13.5px]">
+          <caption className="px-5 pt-4 text-left text-[14px] font-semibold text-foreground">By batting position</caption>
+          <thead className="text-[12.5px] text-ink-3">
+            <tr className="border-b border-line">
+              <th className="px-5 py-2.5 text-left font-medium">Batting order</th>
+              <th className="px-3 py-2.5 text-right font-medium">Runs a match against average</th>
+              <th className="px-3 py-2.5 text-right font-medium">RR strike rate</th>
+              <th className="px-5 py-2.5 text-right font-medium">League strike rate</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rr.order.map((o) => (
+              <tr key={o.band} className="border-b border-line last:border-0">
+                <td className="px-5 py-2.5">{o.band}</td>
+                <td className={`num px-3 py-2.5 text-right font-semibold ${o.rv_pm >= 0 ? 'text-pink-ink' : 'text-blue'}`}>{signed(o.rv_pm)}</td>
+                <td className="num px-3 py-2.5 text-right">{o.sr}</td>
+                <td className="num px-5 py-2.5 text-right text-ink-2">{o.league_sr}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
 
       <SectionHead title="The squad, player by player">
         Runs added compared with an average IPL 2026 player in the same situations, over the whole season. Sorted from most to

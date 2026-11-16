@@ -28,7 +28,7 @@ export default function PressurePage() {
     <>
       <PageHead
         title="How pressure works"
-        summary="Pressure is not just the last over or a high asking rate. It is any moment where the next ball could change who wins. A tight chase is pressure; a chase that is already lost is not, however dramatic it looks."
+        summary="A ball is high pressure when it could change who wins. That covers a tight finish, an early collapse or a close chase in the middle overs, and it leaves out a chase that is already lost, however dramatic it looks."
       >
         <div className="max-w-sm">
           <Note title="The idea">

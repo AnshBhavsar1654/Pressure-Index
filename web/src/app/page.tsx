@@ -1,4 +1,3 @@
-import { CrownIcon, TrendDownIcon, TrendUpIcon } from '@phosphor-icons/react/dist/ssr'
 import Link from 'next/link'
 import { WinWorm } from '@/components/charts/WinWorm'
 import { ordinal, signed } from '@/components/kit'
@@ -42,7 +41,7 @@ export default function Overview() {
     <div className="grid gap-5 xl:grid-cols-12">
       <section className="panel jersey flex flex-col justify-between gap-8 p-6 sm:p-8 xl:col-span-8">
         <div className="flex max-w-[40rem] flex-col gap-4">
-          <Badge className="w-fit rounded-full bg-black/25 px-3 py-1 text-[12.5px] font-medium text-white">SupeRR Selector Season 2</Badge>
+          <Badge className="w-fit rounded-lg bg-black/25 px-3 py-1 text-[12.5px] font-medium text-white">SupeRR Selector Season 2</Badge>
           <h1 className="display text-[3rem] text-white sm:text-[4.2rem]">Who delivers when the match is on the line?</h1>
           <p className="max-w-[34rem] text-[16px] leading-relaxed text-white/85">
             Every one of {fmt.int(s.n_balls)} IPL and T20I deliveries since 2022 is scored for how much it could swing the
@@ -63,10 +62,10 @@ export default function Overview() {
             ))}
           </dl>
           <div className="flex flex-wrap gap-2">
-            <Button asChild size="lg" className="rounded-full bg-white px-5 text-royal hover:bg-white/90">
+            <Button asChild size="lg" className="rounded-lg bg-white px-5 text-royal hover:bg-white/90">
               <Link href="/rankings/bat/">See the rankings</Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="rounded-full border-white/40 bg-transparent px-5 text-white hover:bg-white/10 hover:text-white">
+            <Button asChild size="lg" variant="outline" className="rounded-lg border-white/40 bg-transparent px-5 text-white hover:bg-white/10 hover:text-white">
               <Link href="/auction/">RR auction plan</Link>
             </Button>
           </div>
@@ -85,7 +84,7 @@ export default function Overview() {
               v {hero.opp}, {fmt.date(hero.date)}. RR’s chance of winning before every ball; pink bands are pressure moments.
             </p>
           </div>
-          <Badge variant="secondary" className="rounded-full px-3 py-1 text-[12.5px]">
+          <Badge variant="secondary" className="rounded-lg px-3 py-1 text-[12.5px]">
             {iplCode(first.team)} {first.runs}/{first.wkts}, {iplCode(second.team)} {second.runs}/{second.wkts}
           </Badge>
         </div>
@@ -100,34 +99,36 @@ export default function Overview() {
         <TopTen bat={bat.slice(0, 10).map((p) => lite(p, 'bat'))} bowl={bowl.slice(0, 10).map((p) => lite(p, 'bowl'))} />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-3 xl:col-span-8">
-        <Link href="/rajasthan/" className="panel group flex flex-col gap-3 p-5 transition-colors hover:border-line-strong">
-          <span className="grid size-10 place-items-center rounded-xl bg-pink-soft text-pink">
-            <CrownIcon size={20} weight="fill" />
-          </span>
-          <span className="text-[13px] text-ink-3">RR in IPL 2026</span>
-          <span className="display text-[2.1rem]">
-            {ordinal(rr.summary.pos)}, {rr.summary.won} wins
-          </span>
-          <span className="text-[13.5px] leading-relaxed text-ink-2">{rr.summary.playoff_result}.</span>
-        </Link>
-        <Link href="/rajasthan/" className="panel group flex flex-col gap-3 p-5 transition-colors hover:border-line-strong">
-          <span className="grid size-10 place-items-center rounded-xl bg-blue-soft text-blue">
-            <TrendUpIcon size={20} weight="bold" />
-          </span>
-          <span className="text-[13px] text-ink-3">Biggest strength</span>
-          <span className="display num text-[2.1rem] text-pink">{signed(best.gap_vs_avg)} runs</span>
-          <span className="text-[13.5px] leading-relaxed text-ink-2">a match from {phaseName(best)}, best of all 10 teams.</span>
-        </Link>
-        <Link href="/auction/" className="panel group flex flex-col gap-3 p-5 transition-colors hover:border-gold/50">
-          <span className="grid size-10 place-items-center rounded-xl bg-gold-soft text-gold">
-            <TrendDownIcon size={20} weight="bold" />
-          </span>
-          <span className="text-[13px] text-ink-3">Biggest leak</span>
-          <span className="display num text-[2.1rem] text-blue">{signed(worst.gap_vs_avg)} runs</span>
-          <span className="text-[13.5px] leading-relaxed text-ink-2">a match in {phaseName(worst)}. See who fixes it.</span>
-        </Link>
-      </div>
+      <section className="panel grid gap-5 p-5 sm:p-6 xl:col-span-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-center">
+        <div className="flex flex-col gap-2">
+          <h2 className="display text-[1.6rem]">Rajasthan Royals in 2026</h2>
+          <p className="text-[14.5px] leading-relaxed text-ink-2">
+            {ordinal(rr.summary.pos)} in the league with {rr.summary.won} wins from {rr.summary.played}, then{' '}
+            {(rr.summary.playoff_result ?? '').replace(/^./, (c) => c.toLowerCase())}. The top order carried the side; the last five overs, with bat and ball,
+            are where the title slipped away.
+          </p>
+          <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[14px] font-semibold">
+            <Link href="/rajasthan/" className="text-pink-ink hover:underline">
+              Season review
+            </Link>
+            <Link href="/auction/" className="text-pink-ink hover:underline">
+              Auction targets
+            </Link>
+          </div>
+        </div>
+        <dl className="grid grid-cols-2 divide-x divide-line rounded-lg border border-line">
+          <div className="px-4 py-3">
+            <dt className="text-[12.5px] text-ink-3">Gained in {phaseName(best)}</dt>
+            <dd className="display num text-[2.2rem] text-pink">{signed(best.gap_vs_avg)}</dd>
+            <dd className="text-[12px] text-ink-3">runs a match, best in the league</dd>
+          </div>
+          <div className="px-4 py-3">
+            <dt className="text-[12.5px] text-ink-3">Lost in {phaseName(worst)}</dt>
+            <dd className="display num text-[2.2rem] text-blue">{signed(worst.gap_vs_avg)}</dd>
+            <dd className="text-[12px] text-ink-3">runs a match, {ordinal(worst.rank)} of 10</dd>
+          </div>
+        </dl>
+      </section>
     </div>
   )
 }

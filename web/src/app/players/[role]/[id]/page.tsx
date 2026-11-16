@@ -81,7 +81,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
   return (
     <div className="flex flex-col gap-5">
       <nav className="flex flex-wrap items-center justify-between gap-2" aria-label="Player navigation">
-        <Button asChild variant="ghost" className="rounded-full px-3">
+        <Button asChild variant="ghost" className="rounded-lg px-3">
           <Link href={`/rankings/${role}/`}>
             <CaretLeftIcon data-icon="inline-start" />
             All {isBat ? 'batters' : 'bowlers'}
@@ -89,7 +89,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
         </Button>
         <span className="flex gap-2">
           {prev && (
-            <Button asChild variant="outline" size="sm" className="rounded-full">
+            <Button asChild variant="outline" size="sm" className="rounded-lg">
               <Link href={`/players/${role}/${prev.id}/`}>
                 <CaretLeftIcon data-icon="inline-start" />
                 {prev.name}
@@ -97,7 +97,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
             </Button>
           )}
           {next && (
-            <Button asChild variant="outline" size="sm" className="rounded-full">
+            <Button asChild variant="outline" size="sm" className="rounded-lg">
               <Link href={`/players/${role}/${next.id}/`}>
                 {next.name}
                 <CaretRightIcon data-icon="inline-end" />
@@ -112,18 +112,18 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
           <div className="flex items-start gap-4">
             <RankRibbon rank={p.rank} className="-mt-7 shrink-0" />
             <div className="flex min-w-0 items-center gap-4">
-              <PlayerAvatar name={p.name} rr size={76} className="from-white to-white/40" />
+              <PlayerAvatar name={p.name} rr size={76} className="bg-white/85" />
               <div className="min-w-0">
                 <h1 className="display text-[2.6rem] text-white sm:text-[3.2rem]">{p.name}</h1>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {p.country && <Badge className="rounded-full bg-black/25 text-white">{p.country}</Badge>}
+                  {p.country && <Badge className="rounded-lg bg-black/25 text-white">{p.country}</Badge>}
                   {p.ipl_team && (
-                    <Badge className="rounded-full bg-black/25 pl-0.5 text-white">
+                    <Badge className="rounded-lg bg-black/25 pl-0.5 text-white">
                       <TeamBadge team={p.ipl_team} size={18} />
                       IPL {p.ipl_season}
                     </Badge>
                   )}
-                  <Badge className="rounded-full bg-black/25 text-white">{isBat ? p.hand : p.bowl_type}</Badge>
+                  <Badge className="rounded-lg bg-black/25 text-white">{isBat ? p.hand : p.bowl_type}</Badge>
                 </div>
               </div>
             </div>
@@ -135,7 +135,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
         </div>
         <dl className="grid grid-cols-2 gap-2.5 self-end sm:grid-cols-3">
           {bannerStats.map(([k, v]) => (
-            <div key={k} className="rounded-2xl bg-black/25 px-4 py-3 backdrop-blur-[2px]">
+            <div key={k} className="rounded-lg bg-black/20 px-4 py-3">
               <dt className="text-[12.5px] text-white/70">{k}</dt>
               <dd className="display num mt-1 text-[2rem] text-white">{v}</dd>
             </div>
