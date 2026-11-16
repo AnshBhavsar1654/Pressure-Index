@@ -236,8 +236,13 @@ def main():
     for pid, t in intl.groupby("player_id").team_name.last().items():
         country.setdefault(pid, t)
 
+    over = json.loads((ROOT / "analysis" / "nationality_overrides.json").read_text())["overrides"]
+    pname = dict(zip(mp.player_id, mp.player_name))
+
     def nat(pid):
-        c = country.get(pid)
+        c = country.get(pid) or over.get(pname.get(pid, ""))
+        if pname.get(pid) in over:
+            c = over[pname[pid]]
         return c if c else "India (uncapped)"
 
     squad = []
@@ -322,8 +327,10 @@ def main():
         g = g[g.balls >= min_balls]
         return g
 
+    # Target the areas where RR trailed the top four most: the bar for winning the title.
+    targets = sorted([g for g in gaps if g["gap_vs_top4"] < 0], key=lambda g: g["gap_vs_top4"])[:3]
     recs = []
-    for gp in gaps[:3]:
+    for gp in targets:
         disc, ph = gp["discipline"], gp["phase"]
         g = role_table(disc, ph, 90 if disc == "bat" else 120)
         pj = press_bat if disc == "bat" else press_bowl
