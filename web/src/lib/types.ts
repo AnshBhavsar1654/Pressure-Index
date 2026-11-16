@@ -30,8 +30,9 @@ export interface PlayerMatch {
 export interface Player {
   id: number
   name: string
-  rank: number
-  score: number
+  /** rank in the default ranking (120+ pressure balls, 8+ matches); null below that bar */
+  rank: number | null
+  score: number | null
   country: string | null
   ipl_team: string | null
   ipl_season: number | null
@@ -46,8 +47,9 @@ export interface Player {
   delta100: number
   wpa100: number
   cons: number
-  z: Record<ComponentKey, number>
-  boot: { p_top10: number; rank_med: number; rank_lo: number; rank_hi: number }
+  z?: Record<ComponentKey, number>
+  /** bootstrap rank stability, computed for the default pool only */
+  boot: { p_top10: number; rank_med: number; rank_lo: number; rank_hi: number } | null
   press: TradStats
   norm: TradStats
   seasons: { season: number; p_balls: number; p_rv100: number | null; n_rv100: number | null }[]
@@ -59,7 +61,15 @@ export interface RoleData {
   players: Player[]
   k: { kp: number; kp_cv: number; kn: number; mun: number; c_prior: number; cv_n: Record<string, number>; cv_p: Record<string, number> }
   split_half: Record<string, number>
-  eligibility: { min_pressure_balls: number; min_pressure_matches: number; n_eligible: number; n_players: number }
+  eligibility: {
+    min_pressure_balls: number
+    min_pressure_matches: number
+    n_eligible: number
+    n_players: number
+    export_min_balls: number
+    export_min_matches: number
+    n_exported: number
+  }
 }
 
 export interface LeagueSlice {
@@ -107,17 +117,39 @@ export interface ChaseGrid {
 }
 
 /** Re-score players client-side from their component z-scores. */
+const COMP_FIELD: Record<ComponentKey, 'p_rv100' | 'wpa100' | 'delta100' | 'cons'> = {
+  pressure: 'p_rv100',
+  impact: 'wpa100',
+  delta: 'delta100',
+  consistency: 'cons',
+}
+
+/**
+ * Standardise each rating ingredient within the given pool (z-scores), blend them
+ * with the weights and rank. Re-run whenever the pool changes, so a player is always
+ * compared with the group currently on screen.
+ */
 export function rescore(players: Player[], w: Weights) {
-  const total = w.pressure + w.impact + w.delta + w.consistency || 1
-  const scored = players.map((p) => ({
-    ...p,
-    liveScore:
-      (w.pressure * p.z.pressure + w.impact * p.z.impact + w.delta * p.z.delta + w.consistency * p.z.consistency) /
-      total,
-  }))
+  const keys = Object.keys(COMP_FIELD) as ComponentKey[]
+  const stats = Object.fromEntries(
+    keys.map((k) => {
+      const v = players.map((p) => p[COMP_FIELD[k]])
+      const mean = v.reduce((a, b) => a + b, 0) / (v.length || 1)
+      const sd = Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (v.length || 1)) || 1
+      return [k, { mean, sd }]
+    }),
+  ) as Record<ComponentKey, { mean: number; sd: number }>
+  const total = keys.reduce((a, k) => a + w[k], 0) || 1
+  const scored = players.map((p) => {
+    const z = Object.fromEntries(keys.map((k) => [k, (p[COMP_FIELD[k]] - stats[k].mean) / stats[k].sd])) as Record<ComponentKey, number>
+    return { ...p, z, liveScore: keys.reduce((a, k) => a + w[k] * z[k], 0) / total }
+  })
   scored.sort((a, b) => b.liveScore - a.liveScore)
   return scored.map((p, i) => ({ ...p, liveRank: i + 1 }))
 }
+
+/** The default bar used for the submitted rankings. */
+export const inDefaultPool = (p: Player) => p.rank != null
 
 export type ScoredPlayer = ReturnType<typeof rescore>[number]
 
@@ -164,10 +196,10 @@ export interface Gap {
 export interface Candidate {
   id: number; name: string; nat: string; overseas: boolean; ipl_team_2026: string | null; balls: number
   rv100: number; fit: number; press_score: number | null; press_rank: number | null
-  ipl26_balls: number; ipl_balls: number; sr?: number; avg?: number | null; econ?: number; bpw?: number | null; status: string
+  ipl26_balls: number; ipl_balls: number; rated: boolean; sr?: number; avg?: number | null; econ?: number; bpw?: number | null; status: string
 }
 export interface Recommendation {
-  gap: Gap; role: string; role_desc: string; candidates: Candidate[]; internal: Candidate[]
+  gap: Gap; role: string; role_desc: string; default_min_balls: number; candidates: Candidate[]; internal: Candidate[]
 }
 export interface RRData {
   season: number

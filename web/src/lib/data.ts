@@ -16,3 +16,6 @@ export const getSummary = () => read<Summary>('summary.json')
 export const getRole = (role: 'bat' | 'bowl') => read<RoleData>(role === 'bat' ? 'batters.json' : 'bowlers.json')
 export const getGrid = () => read<ChaseGrid>('chase_grid.json')
 export const getRR = () => read<RRData>('rr2026.json')
+
+/** Players inside the default bar (they carry the submitted rank and bootstrap figures). */
+export const getRanked = (role: 'bat' | 'bowl') => getRole(role).players.filter((p) => p.rank != null)

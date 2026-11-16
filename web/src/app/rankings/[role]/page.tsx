@@ -37,7 +37,17 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
           {role === 'bowl' ? ' (for bowlers, 10 runs saved)' : ''}. <b>0</b> is exactly average.
         </Note>
       </PageHead>
-      <Leaderboard role={role} players={players} defaults={getSummary().weights} />
+      <Leaderboard
+        role={role}
+        players={players}
+        defaults={getSummary().weights}
+        bar={{
+          balls: data.eligibility.min_pressure_balls,
+          matches: data.eligibility.min_pressure_matches,
+          minBalls: data.eligibility.export_min_balls,
+          minMatches: data.eligibility.export_min_matches,
+        }}
+      />
     </>
   )
 }
