@@ -383,6 +383,55 @@ def main():
         "recommendations": recs,
         "pool": {"known": pool_known, "note": pool.get("note"), "updated": pool.get("updated")},
     }
+    # ------------------------------------------------------------ provenance + cross-checks
+    # Reference figures from the public record (Wikipedia, "2026 Rajasthan Royals season",
+    # accessed 2026-11-16). Every value below is recomputed from the data pack and compared.
+    ref_url = "https://en.wikipedia.org/wiki/2026_Rajasthan_Royals_season"
+    def top(key, stat, k=5):
+        rows = [p for p in squad if p.get(key)]
+        rows.sort(key=lambda p: -p[key][stat])
+        return [(p["name"], p[key][stat]) for p in rows[:k]]
+    ours_runs = dict(top("bat", "runs"))
+    ours_wkts = dict(top("bowl", "wkts"))
+    reference = [
+        ("League position", "4th", f"{int(rr_row.pos)}th"),
+        ("League record (W-L)", "8-6", f"{int(rr_row.won)}-{int(rr_row.lost)}"),
+        ("Points", "16", str(int(rr_row.points))),
+        ("Net run rate", "+0.189", f"{rr_row.nrr:+.3f}"),
+        ("Eliminator v SRH", "Won by 47 runs", "Won by " + next(m["result"].split("Won by ")[-1] for m in matches if m["stage"] == "Eliminator")),
+        ("Qualifier 2 v GT", "Lost by 7 wickets", "Lost by " + next(m["result"].split("Won by ")[-1] for m in matches if m["stage"] == "Qualifier")),
+        ("Vaibhav Sooryavanshi runs", "776", str(ours_runs.get("Vaibhav Sooryavanshi"))),
+        ("Dhruv Jurel runs", "515", str(ours_runs.get("Dhruv Jurel"))),
+        ("Yashasvi Jaiswal runs", "427", str(ours_runs.get("Yashasvi Jaiswal"))),
+        ("Donovan Ferreira runs", "317", str(ours_runs.get("Donovan Ferreira"))),
+        ("Riyan Parag runs", "309", str(ours_runs.get("Riyan Parag"))),
+        ("Jofra Archer wickets", "25", str(ours_wkts.get("Jofra Archer"))),
+        ("Brijesh Sharma wickets", "14", str(ours_wkts.get("Brijesh Sharma"))),
+        ("Ravi Bishnoi wickets", "11", str(ours_wkts.get("Ravi Bishnoi"))),
+        ("Ravindra Jadeja wickets", "10", str(ours_wkts.get("Ravindra Jadeja"))),
+    ]
+    norm = lambda v: str(v).lower().replace("+", "").replace("th", "").strip()
+    checks = [{"item": a, "public": b, "ours": c, "match": norm(b) == norm(c)} for a, b, c in reference]
+    rr_ids = sorted({m["id"] for m in matches})
+    provenance = {
+        "files": [
+            {"file": "ball_by_ball.csv", "use": "Every delivery of RR's 16 IPL 2026 matches (and the rest of the league for benchmarks)",
+             "rows": int(len(d[(d.team_name == RR) | (d.opp_name == RR)]))},
+            {"file": "matches.csv", "use": "Fixtures, stage, toss, revised targets and official results", "rows": len(rr_ids)},
+            {"file": "competitions.csv", "use": "IPL 2026 is competition id 3298", "rows": 1},
+            {"file": "competition_team_player_mapping.csv", "use": "RR's registered IPL 2026 squad", "rows": int(len(sq))},
+            {"file": "playing_eleven.csv", "use": "Who played each match", "rows": None},
+        ],
+        "comp_id": 3298,
+        "match_ids": rr_ids,
+        "league_balls": int(len(d)),
+        "league_matches": int(d.match_id.nunique()),
+        "reference": {"name": "Wikipedia: 2026 Rajasthan Royals season", "url": ref_url, "accessed": "2026-11-16"},
+        "checks": checks,
+        "checks_passed": int(sum(c["match"] for c in checks)),
+    }
+
+    out["provenance"] = provenance
     (OUT / "rr2026.json").write_text(json.dumps(out, separators=(",", ":"), default=str))
     # console digest
     print(table[["pos", "team", "won", "lost", "points", "nrr"]].to_string(index=False))
