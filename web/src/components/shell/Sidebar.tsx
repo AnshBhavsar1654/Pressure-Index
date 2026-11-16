@@ -65,7 +65,6 @@ export function Sidebar() {
         <Mark />
         <span className="leading-none">
           <span className="display block text-[1.5rem] uppercase">Pressure Index</span>
-          <span className="mt-1 block text-[12px] text-rail-dim">Rajasthan Royals, IPL 2027</span>
         </span>
       </Link>
       <nav aria-label="Sections" className="flex flex-col gap-5">

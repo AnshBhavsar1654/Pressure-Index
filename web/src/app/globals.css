@@ -6,7 +6,7 @@
 
 /* ---------------------------------------------------------------------------
    Pressure Index, RR edition.
-   Dark royal navy is the home theme (it is how the kit reads under lights).
+   Dark graphite is the home theme, with the kit colours kept for data and accents.
    Jersey pink = pressure and "you are here"; sleeve royal = data;
    crown gold = recommended auction targets. Light theme is a stepped variant.
 ---------------------------------------------------------------------------- */
@@ -58,26 +58,27 @@
 }
 
 .dark {
-  --canvas: #070b1f;
-  --panel: #0e1534;
-  --panel-2: #141d44;
-  --line: rgba(148, 163, 255, 0.11);
-  --line-strong: rgba(148, 163, 255, 0.22);
-  --ink: #eef1fb;
-  --ink-2: #aab3d4;
-  --ink-3: #7480a8;
-  --pink: #ec2a8e;
-  --pink-ink: #ff74b8;
-  --pink-soft: rgba(236, 42, 142, 0.16);
-  --blue: #6d7cff;
-  --blue-soft: rgba(109, 124, 255, 0.16);
-  --gold: #f5c451;
-  --gold-soft: rgba(245, 196, 81, 0.14);
-  --neutral-mark: #39477a;
+  /* warm graphite with a faint plum cast, so the jersey pink is the only saturated colour */
+  --canvas: #0e0c0f;
+  --panel: #171419;
+  --panel-2: #201c23;
+  --line: rgba(255, 232, 244, 0.09);
+  --line-strong: rgba(255, 232, 244, 0.19);
+  --ink: #f5f0f3;
+  --ink-2: #bcb2b9;
+  --ink-3: #8f858d;
+  --pink: #f0368f;
+  --pink-ink: #ff7fbd;
+  --pink-soft: rgba(240, 54, 143, 0.17);
+  --blue: #86a0ee;
+  --blue-soft: rgba(134, 160, 238, 0.16);
+  --gold: #f2c14e;
+  --gold-soft: rgba(242, 193, 78, 0.14);
+  --neutral-mark: #4b4350;
   --royal: #2b2f8f;
-  --rail: #0b1130;
-  --rail-ink: #eef1fb;
-  --rail-dim: #7f8ab2;
+  --rail: #121014;
+  --rail-ink: #f5f0f3;
+  --rail-dim: #9d929b;
 }
 
 @theme inline {
