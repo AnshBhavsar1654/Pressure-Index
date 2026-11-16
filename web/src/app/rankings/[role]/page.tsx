@@ -43,6 +43,7 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
       <Leaderboard
         role={role}
         players={players}
+        total={data.players.length}
         defaults={getSummary().weights}
         bar={{
           balls: data.eligibility.min_pressure_balls,

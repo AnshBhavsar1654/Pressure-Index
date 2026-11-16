@@ -1,4 +1,4 @@
-import { CaretLeftIcon, CaretRightIcon } from '@phosphor-icons/react/dist/ssr'
+import { CaretLeftIcon, CaretRightIcon, ScalesIcon } from '@phosphor-icons/react/dist/ssr'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -96,7 +96,13 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
             All {isBat ? 'batters' : 'bowlers'}
           </Link>
         </Button>
-        <span className="flex gap-2">
+        <span className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm" className="rounded-lg">
+            <Link href={`/compare/?role=${role}&ids=${p.id}`}>
+              <ScalesIcon data-icon="inline-start" />
+              Compare
+            </Link>
+          </Button>
           {prev && (
             <Button asChild variant="outline" size="sm" className="rounded-lg">
               <Link href={`/players/${role}/${prev.id}/`}>

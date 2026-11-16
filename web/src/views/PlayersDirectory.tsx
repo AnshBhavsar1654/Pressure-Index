@@ -147,11 +147,11 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
                 { value: 'ranked', label: 'In the submitted ranking' },
               ]}
             />
-            <div className="flex min-w-64 items-center gap-3 rounded-lg border border-line bg-panel-2 px-3 py-1.5">
+            <div className="flex min-w-80 items-center gap-3 rounded-lg border border-line bg-panel-2 px-3 py-1.5">
               <span id="dir-min" className="shrink-0 text-[12.5px] text-ink-2">
                 Min pressure balls
               </span>
-              <Slider aria-labelledby="dir-min" min={1} max={300} step={1} value={[minBalls]} onValueChange={([v]) => (setMinBalls(v), setShown(PAGE))} />
+              <Slider className="min-w-32 flex-1" aria-labelledby="dir-min" min={1} max={300} step={1} value={[minBalls]} onValueChange={([v]) => (setMinBalls(v), setShown(PAGE))} />
               <span className="display num w-9 text-right text-[1.3rem] text-pink">{minBalls}</span>
             </div>
             {filtered && (

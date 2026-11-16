@@ -33,7 +33,11 @@ export function ProfileCharts({ p, role }: { p: Player; role: Role }) {
         </section>
         <ChartFrame
           title="Season by season"
-          subtitle="Runs added per 100 balls. Seasons with fewer than 12 pressure balls are left out of the pink line."
+          subtitle={
+            role === 'bat'
+              ? 'Runs added per 100 balls faced. Seasons with fewer than 12 pressure balls are left out of the pink line.'
+              : 'Runs saved per 100 balls bowled, so higher is better. Seasons with fewer than 12 pressure balls are left out of the pink line.'
+          }
           legend={<Legend items={seasonSeries.map((s) => ({ label: s.label, color: s.color, shape: 'line' }))} />}
         >
           <LineChart series={seasonSeries} xTicks={p.seasons.map((s) => s.season)} zeroLine showPoints yFormat={(v) => fmt.signed(v, 0)} height={250} />

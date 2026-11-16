@@ -26,11 +26,14 @@ export function Leaderboard({
   players: all,
   defaults,
   bar,
+  total: everyone,
 }: {
   role: Role
   players: Player[]
   defaults: Weights
   bar: { balls: number; matches: number; minBalls: number; minMatches: number }
+  /** every player with a pressure ball, not only those the sliders can reach */
+  total: number
 }) {
   const router = useRouter()
   const [weights, setWeights] = useState<Weights>(defaults)
@@ -134,7 +137,7 @@ export function Leaderboard({
           <div className="flex flex-col items-start gap-0.5 md:items-end md:px-2">
             <span className="display num text-[2.6rem] leading-none">{raw.length}</span>
             <span className="text-[13px] text-ink-3">
-              {noun} qualify, of {all.length}
+              {noun} qualify, of {everyone}
             </span>
           </div>
         </CardContent>

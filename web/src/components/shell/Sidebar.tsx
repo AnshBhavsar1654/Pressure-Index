@@ -1,11 +1,13 @@
 'use client'
 
-import { BookOpenTextIcon, ChartLineUpIcon, CrownIcon, GaugeIcon, HouseIcon, ShoppingBagIcon, TargetIcon, UsersThreeIcon, type Icon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, CrownIcon, GaugeIcon, HouseIcon, ScalesIcon, ShoppingBagIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import type { ComponentType } from 'react'
+import { BallIcon, BatIcon } from '@/components/icons'
 import { cn } from '@/lib/utils'
 
-type Item = { href: string; label: string; icon: Icon }
+type Item = { href: string; label: string; icon: ComponentType<{ size?: number | string; weight?: 'regular' | 'fill' }> }
 const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: 'Pressure',
@@ -17,9 +19,10 @@ const GROUPS: { title: string; items: Item[] }[] = [
   {
     title: 'Rankings',
     items: [
-      { href: '/rankings/bat/', label: 'Batters', icon: ChartLineUpIcon },
-      { href: '/rankings/bowl/', label: 'Bowlers', icon: TargetIcon },
+      { href: '/rankings/bat/', label: 'Batters', icon: BatIcon },
+      { href: '/rankings/bowl/', label: 'Bowlers', icon: BallIcon },
       { href: '/players/', label: 'All players', icon: UsersThreeIcon },
+      { href: '/compare/', label: 'Compare players', icon: ScalesIcon },
     ],
   },
   {
