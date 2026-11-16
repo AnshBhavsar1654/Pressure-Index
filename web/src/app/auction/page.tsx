@@ -45,7 +45,7 @@ export default function AuctionPage() {
           ) : (
             <>
               <b className="text-ink">Retention lists are due on 17 November 2026</b>, so the auction pool is not final yet.
-              Each list ranks every eligible player outside the RR squad. Some, such as franchise captains, will be retained by
+              Each list ranks players outside the RR squad; use the sliders to widen or narrow the pool. Some, such as franchise captains, will be retained by
               their teams. Once the official released list is published, adding it to the data narrows each list to players
               RR can actually buy.
             </>
@@ -85,7 +85,7 @@ function RoleBlock({ r, n }: { r: Recommendation; n: number }) {
             </div>
           </div>
         </header>
-        <CandidateTable candidates={r.candidates} isBat={isBat} phase={g.phase} />
+        <CandidateTable candidates={r.candidates} isBat={isBat} phase={g.phase} defaultMin={r.default_min_balls} />
       </div>
 
       <aside className="flex flex-col gap-4">

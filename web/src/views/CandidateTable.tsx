@@ -5,7 +5,9 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { NAT_OPTIONS, natMatch, Segmented, type Nat } from '@/components/filters'
 import { Meter, OverseasMark, PlayerAvatar, signed, Tag } from '@/components/kit'
+import { Slider } from '@/components/ui/slider'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import type { Candidate } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -13,14 +15,29 @@ import { cn } from '@/lib/utils'
 type Exp = 'any' | 'ipl'
 
 /** Ranked candidates for one role, filterable by nationality and IPL experience. */
-export function CandidateTable({ candidates, isBat, phase }: { candidates: Candidate[]; isBat: boolean; phase: string }) {
+export function CandidateTable({
+  candidates,
+  isBat,
+  phase,
+  defaultMin,
+}: {
+  candidates: Candidate[]
+  isBat: boolean
+  phase: string
+  defaultMin: number
+}) {
   const [nat, setNat] = useState<Nat>('all')
   const [exp, setExp] = useState<Exp>('any')
+  const [minBalls, setMinBalls] = useState(defaultMin)
+  const [show, setShow] = useState<'10' | '20' | '40'>('10')
+  const floor = Math.min(...candidates.map((c) => c.balls))
   const maxFit = Math.max(...candidates.map((c) => c.fit))
-  const rows = useMemo(
-    () => candidates.map((c, i) => ({ c, pick: i < 3 })).filter(({ c }) => natMatch(nat, c.nat, c.overseas) && (exp === 'any' || c.ipl_balls > 0)),
-    [candidates, nat, exp],
+  // candidates arrive best fit first; filters keep that order and the top three get the crown
+  const matching = useMemo(
+    () => candidates.filter((c) => c.balls >= minBalls && natMatch(nat, c.nat, c.overseas) && (exp === 'any' || c.ipl_balls > 0)),
+    [candidates, nat, exp, minBalls],
   )
+  const rows = matching.slice(0, Number(show)).map((c, i) => ({ c, pick: i < 3, n: i + 1 }))
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-center gap-2 px-5 py-3">
@@ -34,8 +51,30 @@ export function CandidateTable({ candidates, isBat, phase }: { candidates: Candi
             { value: 'ipl', label: 'Played IPL since 2024' },
           ]}
         />
+        <div className="flex min-w-60 flex-1 items-center gap-3 rounded-lg border border-line bg-panel-2 px-3 py-1.5 sm:max-w-xs">
+          <span id={`mb-${phase}`} className="shrink-0 text-[12.5px] text-ink-2">
+            Min balls in role
+          </span>
+          <Slider aria-labelledby={`mb-${phase}`} min={Math.max(30, floor)} max={300} step={10} value={[minBalls]} onValueChange={([v]) => setMinBalls(v)} />
+          <span className="display num w-9 text-right text-[1.3rem] text-pink">{minBalls}</span>
+        </div>
+        <Segmented
+          label="How many to show"
+          value={show}
+          onChange={setShow}
+          options={[
+            { value: '10', label: 'Top 10' },
+            { value: '20', label: 'Top 20' },
+            { value: '40', label: 'Top 40' },
+          ]}
+        />
         <span className="ml-auto text-[12.5px] text-ink-3">
-          {rows.length} of {candidates.length} shown
+          {rows.length} of {matching.length} matching
+          {minBalls !== defaultMin && (
+            <button className="ml-2 font-semibold text-pink-ink hover:underline" onClick={() => setMinBalls(defaultMin)}>
+              Reset to {defaultMin}
+            </button>
+          )}
         </span>
       </div>
       {rows.length === 0 ? (
@@ -44,7 +83,8 @@ export function CandidateTable({ candidates, isBat, phase }: { candidates: Candi
         <Table className="min-w-[780px] border-t text-[13.5px]">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="pl-5 text-ink-3">Player</TableHead>
+              <TableHead className="w-10 pl-5 text-ink-3">#</TableHead>
+              <TableHead className="text-ink-3">Player</TableHead>
               <TableHead className="text-ink-3">2026 team</TableHead>
               <TableHead className="text-right text-ink-3" title={`Runs added per 100 balls in the ${phase.toLowerCase()}`}>
                 In this role
@@ -56,11 +96,12 @@ export function CandidateTable({ candidates, isBat, phase }: { candidates: Candi
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map(({ c, pick }) => {
+            {rows.map(({ c, pick, n }) => {
               const href = c.press_rank != null ? `/players/${isBat ? 'bat' : 'bowl'}/${c.id}/` : null
               return (
                 <TableRow key={c.id} className={cn(pick && 'bg-gold-soft/40 hover:bg-gold-soft/60')}>
-                  <TableCell className="py-2.5 pl-5">
+                  <TableCell className="num pl-5 text-ink-3">{n}</TableCell>
+                  <TableCell className="py-2.5">
                     <span className="flex items-center gap-3">
                       <PlayerAvatar name={c.name} size={34} />
                       <span className="flex flex-col gap-1">
@@ -75,8 +116,8 @@ export function CandidateTable({ candidates, isBat, phase }: { candidates: Candi
                           )}
                         </span>
                         <span className="flex flex-wrap gap-1">
+                          <Flag country={c.nat} size={21} />
                           {c.overseas && <OverseasMark country={c.nat} size={12} />}
-                          <Tag>{c.nat}</Tag>
                           {c.ipl_balls === 0 && <Tag>No IPL games since 2024</Tag>}
                         </span>
                       </span>

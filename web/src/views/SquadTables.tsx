@@ -3,39 +3,36 @@
 import { useMemo, useState } from 'react'
 import { NAT_OPTIONS, natMatch, Segmented, type Nat } from '@/components/filters'
 import { OverseasMark, PlayerAvatar, signed } from '@/components/kit'
+import { Slider } from '@/components/ui/slider'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import type { SquadPlayer } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
-type Usage = 'all' | 'regular'
 type Kind = 'bat' | 'bowl'
 
 /** RR squad, batting and bowling side by side, with shared filters. */
 export function SquadTables({ squad }: { squad: SquadPlayer[] }) {
   const [nat, setNat] = useState<Nat>('all')
-  const [usage, setUsage] = useState<Usage>('all')
+  const [minBalls, setMinBalls] = useState(10)
   const pick = (kind: Kind) =>
     squad
-      .filter((p) => p[kind] && p[kind]!.balls >= (kind === 'bat' ? 10 : 12))
-      .filter((p) => natMatch(nat, p.nat, p.overseas) && (usage === 'all' || p[kind]!.balls >= 60))
+      .filter((p) => p[kind] && p[kind]!.balls >= minBalls && natMatch(nat, p.nat, p.overseas))
       .toSorted((a, b) => b[kind]!.rv - a[kind]!.rv)
-  const bat = useMemo(() => pick('bat'), [squad, nat, usage]) // eslint-disable-line react-hooks/exhaustive-deps
-  const bowl = useMemo(() => pick('bowl'), [squad, nat, usage]) // eslint-disable-line react-hooks/exhaustive-deps
+  const bat = useMemo(() => pick('bat'), [squad, nat, minBalls]) // eslint-disable-line react-hooks/exhaustive-deps
+  const bowl = useMemo(() => pick('bowl'), [squad, nat, minBalls]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2">
         <Segmented label="Nationality" value={nat} onChange={setNat} options={NAT_OPTIONS} />
-        <Segmented
-          label="Workload"
-          value={usage}
-          onChange={setUsage}
-          options={[
-            { value: 'all', label: 'Everyone' },
-            { value: 'regular', label: 'Regulars, 60+ balls' },
-          ]}
-        />
+        <div className="flex min-w-64 items-center gap-3 rounded-lg border border-line bg-panel-2 px-3 py-1.5">
+          <span id="squad-min" className="shrink-0 text-[12.5px] text-ink-2">
+            Min balls in 2026
+          </span>
+          <Slider aria-labelledby="squad-min" min={1} max={200} step={1} value={[minBalls]} onValueChange={([v]) => setMinBalls(v)} />
+          <span className="display num w-9 text-right text-[1.3rem] text-pink">{minBalls}</span>
+        </div>
       </div>
       <div className="grid gap-5 xl:grid-cols-2">
         <SquadTable title="Batting" rows={bat} kind="bat" />
