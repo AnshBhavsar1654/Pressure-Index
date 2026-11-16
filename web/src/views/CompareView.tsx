@@ -120,7 +120,7 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
     key: String(p.id),
     label: p.name,
     color: COLORS[i],
-    points: p.seasons.filter((s) => s.p_balls >= 12).map((s) => ({ x: s.season, y: s.p_rv100, n: s.p_balls })),
+    points: p.seasons.filter((s) => s.p_balls >= 1 && s.p_rv100 != null).map((s) => ({ x: s.season, y: s.p_rv100, n: s.p_balls })),
   }))
   const hasSeasonLine = series.some((s) => s.points.length > 0)
 
@@ -297,7 +297,7 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
           {hasSeasonLine && (
             <ChartFrame
               title="Season by season under pressure"
-              subtitle={`${role === 'bat' ? 'Runs added' : 'Runs saved'} per 100 pressure balls. Seasons with fewer than 12 pressure balls are left out.`}
+              subtitle={`${role === 'bat' ? 'Runs added' : 'Runs saved'} per 100 pressure balls. Every season with a pressure ball is shown; a season with only a few balls is a thin sample.`}
               legend={<Legend items={series.map((s) => ({ label: s.label, color: s.color, shape: 'line' }))} />}
             >
               <LineChart series={series} xTicks={seasons} zeroLine showPoints yFormat={(v) => fmt.signed(v, 0)} height={280} />

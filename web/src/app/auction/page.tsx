@@ -48,7 +48,7 @@ export default function AuctionPage() {
             <>
               <b className="text-ink">Retention lists are due on 17 November 2026</b>, so the auction pool is not final yet.
               Each list ranks players outside the RR squad and starts with those likely to reach the auction: it assumes each franchise keeps the six players who added the most runs for it in 2026. Change that number, or switch to Everyone to see the retained stars too.
-              Every position lists at least ten realistic options. Once the official released list is published, adding it to the data narrows each list to players
+              Every position lists at least ten realistic options. Pakistani players are left out because they cannot register for the auction. Once the official released list is published, adding it to the data narrows each list to players
               RR can actually buy.
             </>
           )}

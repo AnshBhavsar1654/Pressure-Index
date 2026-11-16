@@ -360,7 +360,8 @@ def main():
                            ("retained elsewhere" if pool_known else "check retention list"))
             return c
 
-        external = [cand(pid, r) for pid, r in g.iterrows() if pid not in squad_ids
+        # Pakistani players cannot register for the IPL auction, so they are never recommended
+        external = [cand(pid, r) for pid, r in g.iterrows() if pid not in squad_ids and nat(pid) != "Pakistan"
                     and (not pool_known or pid in released)][:CAND_EXPORT_TOP]
         internal = [cand(pid, r) for pid, r in g.iterrows() if pid in squad_ids][:8]
         # benchmark: league-average and RR's own 2026 usage in this role

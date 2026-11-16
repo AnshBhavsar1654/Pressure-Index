@@ -19,7 +19,7 @@ export function ProfileCharts({ p, role }: { p: Player; role: Role }) {
       key: 'p',
       label: 'Pressure moments',
       color: 'var(--pink)',
-      points: p.seasons.filter((s) => s.p_balls >= 12).map((s) => ({ x: s.season, y: s.p_rv100, n: s.p_balls })),
+      points: p.seasons.filter((s) => s.p_balls >= 1 && s.p_rv100 != null).map((s) => ({ x: s.season, y: s.p_rv100, n: s.p_balls })),
     },
     { key: 'n', label: 'Ordinary moments', color: 'var(--blue)', points: p.seasons.map((s) => ({ x: s.season, y: s.n_rv100 })) },
   ]
@@ -35,8 +35,8 @@ export function ProfileCharts({ p, role }: { p: Player; role: Role }) {
           title="Season by season"
           subtitle={
             role === 'bat'
-              ? 'Runs added per 100 balls faced. Seasons with fewer than 12 pressure balls are left out of the pink line.'
-              : 'Runs saved per 100 balls bowled, so higher is better. Seasons with fewer than 12 pressure balls are left out of the pink line.'
+              ? 'Runs added per 100 balls faced. Every season with a pressure ball is shown; hover a point to see how many balls are behind it, since a season with only a few is a thin sample.'
+              : 'Runs saved per 100 balls bowled, so higher is better. Every season with a pressure ball is shown; hover a point to see how many balls are behind it, since a season with only a few is a thin sample.'
           }
           legend={<Legend items={seasonSeries.map((s) => ({ label: s.label, color: s.color, shape: 'line' }))} />}
         >
