@@ -22,8 +22,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
-from sklearn.isotonic import IsotonicRegression
+from sklearn.ensemble import HistGradientBoostingRegressor
 from sklearn.metrics import brier_score_loss, log_loss, roc_auc_score
 from sklearn.model_selection import GroupKFold
 
@@ -127,43 +126,64 @@ def build_state(b: pd.DataFrame, m: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------- WP model
-F1 = ["runs_before", "balls_left", "wkts_in_hand", "is_ipl", "season_yr"]
-M1 = [1, 1, 1, 0, 0]
-F2 = ["runs_needed", "balls_left", "wkts_in_hand", "rrr", "is_ipl", "season_yr"]
-M2 = [-1, 1, 1, -1, 0, 0]
-
-
-class CalibratedWP:
-    """Gradient-boosted WP with an isotonic calibration layer fitted on out-of-fold predictions."""
-
-    def __init__(self, clf, iso):
-        self.clf, self.iso = clf, iso
-
-    def predict_proba(self, X):
-        p = self.iso.predict(self.clf.predict_proba(X)[:, 1])
-        return np.column_stack([1 - p, p])
+# Smooth logistic WP built on run-expectancy "resources" (Duckworth-Lewis-like):
+# chase -> log(runs needed / runs the side can still expect to make);
+# 1st innings -> log(projected total / par total).  Being smooth in runs and balls
+# matters: leverage is a derivative of WP, and tree models give step-function WP.
+SEASONS = sorted(SEASON_WEIGHT)
 
 
 def _rrr(runs_needed, balls_left):
     return np.clip(runs_needed / np.maximum(balls_left, 1) * 6, -6, 36)
 
 
-def fit_wp(b: pd.DataFrame):
-    train = b[b.bat_won.notna() & b.result.str.contains("won", case=False, na=False)].copy()
-    train["rrr"] = _rrr(train.runs_needed, train.balls_left)
-    models, metrics = {}, {}
-    for inn, F, M in [(1, F1, M1), (2, F2, M2)]:
+class WPModel:
+    def __init__(self, re: dict, par: dict):
+        self.re = np.stack([np.stack([re[(ipl, yr)] for yr in SEASONS]) for ipl in (0, 1)])
+        self.par = np.array([[par[(ipl, yr)] for yr in SEASONS] for ipl in (0, 1)])
+        self.coef = {}
+
+    def _lookup(self, is_ipl, yr, bl, wk_in_hand):
+        i = is_ipl.astype(int)
+        j = np.clip(yr.astype(int) - SEASONS[0], 0, len(SEASONS) - 1)
+        return self.re[i, j, np.clip(bl, 0, 120).astype(int), np.clip(10 - wk_in_hand, 0, 10).astype(int)]
+
+    def features(self, inn, x, bl, wk, is_ipl, yr):
+        res = self._lookup(is_ipl, yr, bl, wk)
+        t = bl / 120.0
+        if inn == 2:
+            ratio = np.log((np.maximum(x, 0) + 2) / (res + 2))
+            return np.column_stack([ratio, ratio * t, ratio ** 2, t, wk / 10, _rrr(x, bl) / 36, is_ipl])
+        par = self.par[is_ipl.astype(int), np.clip(yr.astype(int) - SEASONS[0], 0, len(SEASONS) - 1)]
+        d = np.log((x + res + 1) / par)
+        return np.column_stack([d, d * t, d ** 2, t, wk / 10, is_ipl])
+
+    def fit(self, inn, X, y):
+        from sklearn.linear_model import LogisticRegression
+        self.coef[inn] = LogisticRegression(C=1.0, max_iter=2000).fit(X, y)
+        return self
+
+    def predict(self, inn, X):
+        return self.coef[inn].predict_proba(X)[:, 1]
+
+
+def fit_wp(b: pd.DataFrame, re: dict):
+    from sklearn.linear_model import LogisticRegression
+    full1 = b[(b.innings == 1) & (b.max_balls == 120)]
+    tot1 = full1.groupby("match_id").agg(t=("tot", "sum"), ipl=("is_ipl", "first"), yr=("season_yr", "first"))
+    par = {(ipl, yr): float(tot1[(tot1.ipl == ipl) & (tot1.yr == yr)].t.mean()) for ipl in (0, 1) for yr in SEASONS}
+    model = WPModel(re, par)
+    train = b[b.bat_won.notna() & b.result.str.contains("won", case=False, na=False)]
+    metrics = {}
+    for inn in (1, 2):
         d = train[train.innings == inn]
-        X, y, grp = d[F].to_numpy(float), d.bat_won.to_numpy(int), d.match_id.to_numpy()
-        # strong regularisation: balls within a match are highly correlated
-        params = dict(max_iter=200, learning_rate=0.05, max_leaf_nodes=12,
-                      min_samples_leaf=1500, l2_regularization=5.0, monotonic_cst=M)
+        X = model.features(inn, (d.runs_before if inn == 1 else d.runs_needed).to_numpy(float),
+                           d.balls_left.to_numpy(float), d.wkts_in_hand.to_numpy(float),
+                           d.is_ipl.to_numpy(float), d.season_yr.to_numpy(float))
+        y, grp = d.bat_won.to_numpy(int), d.match_id.to_numpy()
         oof = np.zeros(len(y))
         for tr, te in GroupKFold(n_splits=5).split(X, y, grp):
-            clf = HistGradientBoostingClassifier(**params, random_state=1).fit(X[tr], y[tr])
-            oof[te] = clf.predict_proba(X[te])[:, 1]
-        iso = IsotonicRegression(out_of_bounds="clip", y_min=0.005, y_max=0.995).fit(oof, y)
-        oof = iso.predict(oof)
+            oof[te] = LogisticRegression(C=1.0, max_iter=2000).fit(X[tr], y[tr]).predict_proba(X[te])[:, 1]
         metrics[inn] = {
             "auc": round(roc_auc_score(y, oof), 3),
             "brier": round(brier_score_loss(y, oof), 4),
@@ -171,20 +191,18 @@ def fit_wp(b: pd.DataFrame):
             "n_balls": int(len(y)),
             "n_matches": int(d.match_id.nunique()),
         }
-        # calibration bins for the dashboard
         bins = np.clip((oof * 10).astype(int), 0, 9)
         metrics[inn]["calibration"] = [
             {"pred": round(float(oof[bins == k].mean()), 3),
              "actual": round(float(y[bins == k].mean()), 3), "n": int((bins == k).sum())}
             for k in range(10) if (bins == k).sum() > 0
         ]
-        models[inn] = CalibratedWP(
-            HistGradientBoostingClassifier(**params, random_state=1).fit(X, y), iso)
-        log(f"WP innings {inn}: {metrics[inn]}")
-    return models, metrics
+        model.fit(inn, X, y)
+        log(f"WP innings {inn}: auc={metrics[inn]['auc']} brier={metrics[inn]['brier']}")
+    return model, metrics
 
 
-def wp_eval(models, inn, runs_or_need, balls_left, wkts_in_hand, is_ipl, season_yr):
+def wp_eval(model, inn, runs_or_need, balls_left, wkts_in_hand, is_ipl, season_yr):
     """Vectorised WP for the batting side, handling terminal states."""
     runs_or_need = np.asarray(runs_or_need, float)
     balls_left = np.asarray(balls_left, float)
@@ -198,23 +216,22 @@ def wp_eval(models, inn, runs_or_need, balls_left, wkts_in_hand, is_ipl, season_
         live = ~(won | lost)
         out[won], out[lost] = 1.0, 0.0
         if live.any():
-            X = np.column_stack([runs_or_need, balls_left, wkts_in_hand,
-                                 _rrr(runs_or_need, balls_left), is_ipl, season_yr])[live]
-            out[live] = models[2].predict_proba(X)[:, 1]
+            X = model.features(2, runs_or_need[live], balls_left[live], wkts_in_hand[live],
+                               is_ipl[live], season_yr[live])
+            out[live] = model.predict(2, X)
     else:
         done = (wkts_in_hand <= 0) | (balls_left <= 0)
         live = ~done
         if live.any():
-            X = np.column_stack([runs_or_need, balls_left, wkts_in_hand, is_ipl, season_yr])[live]
-            out[live] = models[1].predict_proba(X)[:, 1]
+            X = model.features(1, runs_or_need[live], balls_left[live], wkts_in_hand[live],
+                               is_ipl[live], season_yr[live])
+            out[live] = model.predict(1, X)
         if done.any():
             # first innings over: P(bat first wins) = 1 - P(chaser wins from start of chase)
-            need = runs_or_need[done] + 1
             n = int(done.sum())
-            X = np.column_stack([need, np.full(n, 120.0), np.full(n, 10.0),
-                                 _rrr(need, np.full(n, 120.0)),
-                                 is_ipl[done], season_yr[done]])
-            out[done] = 1 - models[2].predict_proba(X)[:, 1]
+            X = model.features(2, runs_or_need[done] + 1, np.full(n, 120.0), np.full(n, 10.0),
+                               is_ipl[done], season_yr[done])
+            out[done] = 1 - model.predict(2, X)
     return out
 
 
@@ -291,7 +308,13 @@ def run_expectancy(b: pd.DataFrame):
     for ipl in (0, 1):
         for yr in SEASON_WEIGHT:
             X = np.column_stack([bl.ravel(), wk.ravel(), np.full(bl.size, ipl), np.full(bl.size, yr)])
-            g = reg.predict(X.astype(float)).reshape(121, 11) * bl
+            rate = reg.predict(X.astype(float)).reshape(121, 11)
+            # trees give a stepped rate: smooth along balls-left (+-9 balls) so that
+            # expected runs per ball changes gradually, then convert to runs
+            kern = np.ones(19) / 19
+            pad = np.pad(rate, ((9, 9), (0, 0)), mode="edge")
+            rate = np.column_stack([np.convolve(pad[:, w], kern, mode="valid") for w in range(11)])
+            g = rate * bl
             g = np.maximum(g, 0)
             g[0, :] = 0
             g[:, 10] = 0
@@ -526,14 +549,14 @@ def main():
     b, m, mp = load()
     log("loaded", b.shape)
     b = build_state(b, m)
-    models, wp_metrics = fit_wp(b)
+    re = run_expectancy(b)
+    models, wp_metrics = fit_wp(b, re)
     b, outcome_probs = leverage(b, models)
     b["pi_raw"] = b.li * np.where(b.is_knockout == 1, KNOCKOUT_MULT, 1.0)
     b["pi"] = (b.pi_raw.rank(pct=True) * 100).round(1)
     thr = b.pi_raw.quantile(PRESSURE_PCTL)
     b["pressure"] = b.pi_raw >= thr
     log(f"pressure threshold LI*stage >= {thr:.3f}; share {b.pressure.mean():.3f}")
-    re = run_expectancy(b)
     b = run_value(b, re)
 
     ipl_meta, intl_meta, bat_hand, bowl_type, pace = player_meta(mp, m, b)
