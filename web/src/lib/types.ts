@@ -196,7 +196,7 @@ export interface Gap {
 export interface Candidate {
   id: number; name: string; nat: string; overseas: boolean; ipl_team_2026: string | null; balls: number
   rv100: number; fit: number; press_score: number | null; press_rank: number | null
-  ipl26_balls: number; ipl_balls: number; rated: boolean; sr?: number; avg?: number | null; econ?: number; bpw?: number | null; status: string
+  ipl26_balls: number; ipl_balls: number; rated: boolean; /** rank inside the 2026 franchise by runs added (1 = the team's most valuable player); null if not in an IPL 2026 squad */ core_rank: number | null; ipl26_net: number | null; sr?: number; avg?: number | null; econ?: number; bpw?: number | null; status: string
 }
 export interface Recommendation {
   gap: Gap; role: string; role_desc: string; default_min_balls: number; candidates: Candidate[]; internal: Candidate[]

@@ -20,27 +20,46 @@ export function CandidateTable({
   isBat,
   phase,
   defaultMin,
+  poolKnown,
 }: {
   candidates: Candidate[]
   isBat: boolean
   phase: string
   defaultMin: number
+  /** true once the official released list is loaded; until then availability is an estimate */
+  poolKnown: boolean
 }) {
   const [nat, setNat] = useState<Nat>('all')
   const [exp, setExp] = useState<Exp>('any')
   const [minBalls, setMinBalls] = useState(defaultMin)
   const [show, setShow] = useState<'10' | '20' | '40'>('10')
+  const [avail, setAvail] = useState<'likely' | 'all'>('likely')
+  const [keep, setKeep] = useState(6)
+  // until the retention list is out, assume each franchise keeps the N players who added the most runs for it
+  const retained = (c: Candidate) => !poolKnown && c.core_rank != null && c.core_rank <= keep
   const floor = Math.min(...candidates.map((c) => c.balls))
   const maxFit = Math.max(...candidates.map((c) => c.fit))
   // candidates arrive best fit first; filters keep that order and the top three get the crown
   const matching = useMemo(
-    () => candidates.filter((c) => c.balls >= minBalls && natMatch(nat, c.nat, c.overseas) && (exp === 'any' || c.ipl_balls > 0)),
-    [candidates, nat, exp, minBalls],
+    () => candidates.filter((c) => c.balls >= minBalls && natMatch(nat, c.nat, c.overseas) && (exp === 'any' || c.ipl_balls > 0) && (avail === 'all' || !retained(c))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [candidates, nat, exp, minBalls, avail, keep, poolKnown],
   )
   const rows = matching.slice(0, Number(show)).map((c, i) => ({ c, pick: i < 3, n: i + 1 }))
   return (
     <div className="flex flex-col">
       <div className="flex flex-wrap items-center gap-2 px-5 py-3">
+        {!poolKnown && (
+          <Segmented
+            label="Availability"
+            value={avail}
+            onChange={setAvail}
+            options={[
+              { value: 'likely', label: 'Likely available' },
+              { value: 'all', label: 'Everyone' },
+            ]}
+          />
+        )}
         <Segmented label="Nationality" value={nat} onChange={setNat} options={NAT_OPTIONS} />
         <Segmented
           label="IPL experience"
@@ -58,6 +77,15 @@ export function CandidateTable({
           <Slider aria-labelledby={`mb-${phase}`} min={Math.max(30, floor)} max={300} step={10} value={[minBalls]} onValueChange={([v]) => setMinBalls(v)} />
           <span className="display num w-9 text-right text-[1.3rem] text-pink">{minBalls}</span>
         </div>
+        {!poolKnown && avail === 'likely' && (
+          <div className="flex min-w-60 flex-1 items-center gap-3 rounded-lg border border-line bg-panel-2 px-3 py-1.5 sm:max-w-xs" title="Estimate: each franchise keeps its players who added the most runs in 2026. Replaced by the official list when it is published.">
+            <span id={`keep-${phase}`} className="shrink-0 text-[12.5px] text-ink-2">
+              Each team keeps top
+            </span>
+            <Slider aria-labelledby={`keep-${phase}`} min={0} max={12} step={1} value={[keep]} onValueChange={([v]) => setKeep(v)} />
+            <span className="display num w-9 text-right text-[1.3rem] text-pink">{keep}</span>
+          </div>
+        )}
         <Segmented
           label="How many to show"
           value={show}
@@ -85,7 +113,7 @@ export function CandidateTable({
             <TableRow className="hover:bg-transparent">
               <TableHead className="w-10 pl-5 text-ink-3">#</TableHead>
               <TableHead className="text-ink-3">Player</TableHead>
-              <TableHead className="text-ink-3">2026 team</TableHead>
+              <TableHead className="text-ink-3" title="Team in the IPL 2026 squad lists; empty means no IPL 2026 squad">2026 team</TableHead>
               <TableHead className="text-right text-ink-3" title={`Runs added per 100 balls in the ${phase.toLowerCase()}`}>
                 In this role
               </TableHead>
@@ -119,6 +147,12 @@ export function CandidateTable({
                           <Flag country={c.nat} size={21} />
                           {c.overseas && <OverseasMark country={c.nat} size={12} />}
                           {c.ipl_balls === 0 && <Tag>No IPL games since 2024</Tag>}
+                          {retained(c) && <Tag tone="blue">Likely retained (estimate)</Tag>}
+                          {c.balls < defaultMin && <Tag>Small sample</Tag>}
+                        </span>
+                        <span className="max-w-[34ch] text-[12px] leading-snug text-ink-3">
+                          {signed(c.rv100)} runs {isBat ? 'added' : 'saved'} per 100 {phase === 'Middle' ? 'middle-overs' : phase.toLowerCase()} balls over {c.balls}
+                          {c.press_rank != null ? `, ranked ${c.press_rank} under pressure` : ', not in the pressure ranking'}
                         </span>
                       </span>
                     </span>

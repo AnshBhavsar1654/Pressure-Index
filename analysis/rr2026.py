@@ -296,6 +296,12 @@ def main():
     press_bat = {p["id"]: p for p in bat_json["players"]}
     press_bowl = {p["id"]: p for p in bowl_json["players"]}
     ipl26_team = (mp[mp.comp_id == 3298].groupby("player_id").team_name.last()).to_dict()
+    # Retention estimate: rank every IPL 2026 player inside his franchise by the runs he added (bat + ball).
+    # The dashboard lets the viewer assume each franchise keeps its top N; until the official list is out
+    # this is the only signal of who is unlikely to reach the auction.
+    imp = d[~d.is_wide].groupby("striker_id").rv_bat.sum().add(d.groupby("bowler_id").rv_bowl.sum(), fill_value=0)
+    core = pd.DataFrame({"team": pd.Series(ipl26_team), "net": imp}).dropna()
+    core["core_rank"] = core.groupby("team").net.rank(ascending=False, method="first")
     released = set(pool.get("released_ids", []))
     pool_known = bool(pool.get("released_ids"))
 
@@ -341,7 +347,9 @@ def main():
                  "press_score": r1(r.press_score, 2) if not np.isnan(r.press_score) else None,
                  "press_rank": pj[pid]["rank"] if pid in pj else None,
                  "rated": pid in pj,
-                 "ipl26_balls": int(r.b26), "ipl_balls": int(r.bipl)}
+                 "ipl26_balls": int(r.b26), "ipl_balls": int(r.bipl),
+                 "core_rank": int(core.core_rank[pid]) if pid in core.index else None,
+                 "ipl26_net": r1(core.net[pid]) if pid in core.index else None}
             if disc == "bat":
                 c["sr"] = r1(100 * r.runs / max(r.balls, 1))
                 c["avg"] = r1(r.runs / r.wkt) if r.wkt else None
