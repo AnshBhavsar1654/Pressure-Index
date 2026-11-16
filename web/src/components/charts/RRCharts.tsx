@@ -2,7 +2,7 @@
 
 import { scaleLinear } from 'd3-scale'
 import { useState } from 'react'
-import { signed } from '@/components/ui'
+import { signed } from '@/components/kit'
 import { fmt, iplCode } from '@/lib/format'
 import type { RRMatch, RRPhase } from '@/lib/types'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'

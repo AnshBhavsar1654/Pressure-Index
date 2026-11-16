@@ -30,7 +30,7 @@ export function Tooltip({ tip, width }: { tip: TipState | null; width: number })
   return (
     <div
       role="status"
-      className="pointer-events-none absolute z-20 w-[220px] rounded-[3px] border border-line-strong bg-surface px-3 py-2 text-[12.5px] leading-snug text-ink"
+      className="pointer-events-none absolute z-20 w-[220px] rounded-xl border border-line-strong bg-panel-2 px-3 py-2 text-[12.5px] leading-snug text-ink shadow-xl shadow-black/30"
       style={{ left, top: Math.max(tip.y - 12, 0) }}
     >
       {tip.content}
@@ -90,7 +90,7 @@ export function ChartFrame({
   className?: string
 }) {
   return (
-    <figure className={`panel flex min-w-0 flex-col gap-3 p-4 sm:p-5 ${className}`}>
+    <figure className={`panel flex min-w-0 flex-col gap-3 p-5 ${className}`}>
       <figcaption className="flex flex-col gap-1">
         <h3 className="display text-[1.5rem] text-ink">{title}</h3>
         {subtitle && <p className="max-w-[68ch] text-[13px] leading-relaxed text-ink-2">{subtitle}</p>}

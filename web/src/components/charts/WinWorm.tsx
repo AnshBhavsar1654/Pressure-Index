@@ -91,7 +91,7 @@ export function WinWorm({
               width={Math.max(1.6, (width - m.l - m.r) / n)}
               height={height - m.t - m.b}
               fill="var(--pink)"
-              opacity={0.1}
+              opacity={0.06}
             />
           ))}
         </g>
