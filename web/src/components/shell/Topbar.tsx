@@ -25,10 +25,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { Flag } from "@/components/Flag";
 import { TeamBadge } from "@/components/TeamBadge";
 import { Mark, NAV } from "./Sidebar";
 
-type Entry = { id: number; name: string; role: 'bat' | 'bowl'; rank: number; ipl: string | null; country: string | null };
+type Entry = { id: number; name: string; role: 'bat' | 'bowl'; rank: number | null; ipl: string | null; country: string | null };
 
 export function Topbar({ players }: { players: Entry[] }) {
   const router = useRouter();
@@ -165,13 +166,18 @@ export function Topbar({ players }: { players: Entry[] }) {
                       value={`${p.name} ${role}`}
                       onSelect={() => go(`/players/${role}/${p.id}/`)}
                     >
-                      <span className="display num w-8 text-[1.1rem] text-pink">
-                        {p.rank}
+                      <span className="display num w-8 shrink-0 text-[1.1rem] text-pink">
+                        {p.rank ?? "–"}
                       </span>
-                      <span className="font-medium">{p.name}</span>
-                      <span className="ml-auto flex items-center gap-2 text-[12px] text-ink-3">
-                        {p.country}
-                        <TeamBadge team={p.ipl} size={22} />
+                      <span className="min-w-0 truncate font-medium">{p.name}</span>
+                      {/* fixed slots so flags and crests line up in two columns */}
+                      <span className="ml-auto grid shrink-0 grid-cols-[28px_26px] items-center justify-items-center gap-1.5">
+                        <span className="grid h-6 w-7 place-items-center">
+                          <Flag country={p.country} size={22} />
+                        </span>
+                        <span className="grid size-6 place-items-center">
+                          <TeamBadge team={p.ipl} size={24} />
+                        </span>
                       </span>
                     </CommandItem>
                   ))}

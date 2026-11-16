@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Meter, PlayerAvatar, RankRibbon, signed } from '@/components/kit'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import { fmt } from '@/lib/format'
 
@@ -53,7 +54,7 @@ export function Spotlight({ bat, bowl }: { bat: Lite; bowl: Lite }) {
             <div className="display text-[2rem] text-white">{p.name}</div>
             <div className="mt-1 flex items-center gap-2 text-[13.5px] text-white/75">
               <TeamBadge team={p.team} size={24} />
-              {p.country}
+              <Flag country={p.country} size={22} />
             </div>
           </div>
         </div>
@@ -87,9 +88,11 @@ function Row({ p, role }: { p: Lite; role: 'bat' | 'bowl' }) {
         <PlayerAvatar name={p.name} rr={p.rr} size={38} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14.5px] font-medium">{p.name}</span>
-          <span className="block truncate text-[12px] text-ink-3">{p.country}</span>
         </span>
-        <TeamBadge team={p.team} size={26} />
+        <span className="flex items-center gap-2">
+          <Flag country={p.country} size={20} />
+          <TeamBadge team={p.team} size={26} />
+        </span>
         <span className="flex w-16 flex-col items-end gap-1">
           <span className="num text-[13px] font-semibold">{fmt.pct(p.stay)}</span>
           <Meter value={p.stay} className="w-14" />
