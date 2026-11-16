@@ -23,7 +23,7 @@ export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; w
   const legendStops = [0, 0.5, 1, 2, 3, 4]
 
   return (
-    <div ref={ref} className="relative w-full">
+    <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label={`Chase leverage map with ${wkts} wickets in hand`}>
         <rect x={m.l} y={m.t} width={width - m.l - m.r} height={height - m.t - m.b} fill="var(--surface-2)" />
         {rows.map(([, ov, need, wp, li]) => (

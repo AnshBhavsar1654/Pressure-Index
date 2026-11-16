@@ -31,7 +31,7 @@ export function PressureScatter({ players, highlight, selected, onSelect, height
   const labelled = players.filter((p) => highlight.has(p.id) || p.id === selected)
 
   return (
-    <div ref={ref} className="relative w-full">
+    <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label="Baseline versus pressure run value scatter">
         {x.ticks(6).map((t) => (
           <g key={`x${t}`}>

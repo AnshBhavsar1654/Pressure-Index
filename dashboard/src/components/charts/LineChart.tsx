@@ -86,7 +86,7 @@ export function LineChart({
   }
 
   return (
-    <div ref={ref} className="relative w-full">
+    <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label={`${yLabel ?? ''} by ${xLabel ?? ''}`}>
         {y.ticks(5).map((t) => (
           <g key={t}>

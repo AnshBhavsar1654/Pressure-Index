@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 
 /** Measure a container's width so SVG charts stay crisp at any size. */
 export function useWidth<T extends HTMLElement>(fallback = 640) {
   const ref = useRef<T>(null)
   const [w, setW] = useState(fallback)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
+    setW(Math.max(260, Math.floor(el.getBoundingClientRect().width)))
     const ro = new ResizeObserver(([e]) => setW(Math.max(260, Math.floor(e.contentRect.width))))
     ro.observe(el)
     return () => ro.disconnect()
@@ -87,13 +88,13 @@ export function ChartFrame({
   className?: string
 }) {
   return (
-    <figure className={`panel flex flex-col gap-3 p-4 sm:p-5 ${className}`}>
+    <figure className={`panel flex min-w-0 flex-col gap-3 p-4 sm:p-5 ${className}`}>
       <figcaption className="flex flex-col gap-1">
         <h3 className="display text-[1.3rem] font-semibold leading-tight text-ink">{title}</h3>
         {subtitle && <p className="max-w-[68ch] text-[13px] leading-relaxed text-ink-2">{subtitle}</p>}
       </figcaption>
       {legend}
-      <div className="relative">{children}</div>
+      <div className="relative min-w-0">{children}</div>
       {footnote && <p className="text-[12px] leading-relaxed text-ink-3">{footnote}</p>}
     </figure>
   )
