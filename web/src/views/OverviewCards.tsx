@@ -35,20 +35,20 @@ export function Spotlight({ bat, bowl }: { bat: Lite; bowl: Lite }) {
           type="single"
           value={role}
           onValueChange={(v) => v && setRole(v as 'bat' | 'bowl')}
-          className="rounded-full bg-black/25 p-1"
+          className="rounded-lg bg-black/25 p-1"
           aria-label="Choose batter or bowler"
         >
-          <ToggleGroupItem value="bat" className="rounded-full px-3 text-white/80 data-[state=on]:bg-white data-[state=on]:text-royal">
+          <ToggleGroupItem value="bat" className="rounded-lg px-3 text-white/80 data-[state=on]:bg-white data-[state=on]:text-royal">
             Batter
           </ToggleGroupItem>
-          <ToggleGroupItem value="bowl" className="rounded-full px-3 text-white/80 data-[state=on]:bg-white data-[state=on]:text-royal">
+          <ToggleGroupItem value="bowl" className="rounded-lg px-3 text-white/80 data-[state=on]:bg-white data-[state=on]:text-royal">
             Bowler
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
       <div className="mt-auto flex flex-col gap-4 pt-6">
         <div className="flex items-center gap-4">
-          <PlayerAvatar name={p.name} rr size={68} className="from-white to-white/40" />
+          <PlayerAvatar name={p.name} rr size={68} className="bg-white/85" />
           <div className="min-w-0">
             <div className="display text-[2rem] text-white">{p.name}</div>
             <div className="mt-1 flex items-center gap-2 text-[13.5px] text-white/75">
@@ -106,11 +106,11 @@ export function TopTen({ bat, bowl }: { bat: Lite[]; bowl: Lite[] }) {
       <Tabs defaultValue="bat" className="flex h-full flex-col gap-3">
         <div className="flex items-center justify-between gap-2 px-1">
           <h2 className="display text-[1.5rem]">Top 10</h2>
-          <TabsList className="rounded-full">
-            <TabsTrigger value="bat" className="rounded-full px-3">
+          <TabsList className="rounded-lg">
+            <TabsTrigger value="bat" className="rounded-lg px-3">
               Batters
             </TabsTrigger>
-            <TabsTrigger value="bowl" className="rounded-full px-3">
+            <TabsTrigger value="bowl" className="rounded-lg px-3">
               Bowlers
             </TabsTrigger>
           </TabsList>

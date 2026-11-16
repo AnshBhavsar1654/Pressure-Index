@@ -26,13 +26,13 @@ export function Segmented<T extends string>({
       value={value}
       onValueChange={(v) => v && onChange(v as T)}
       aria-label={label}
-      className={cn('rounded-full border border-line bg-panel-2/70 p-1', className)}
+      className={cn('rounded-lg border border-line bg-panel-2/70 p-1', className)}
     >
       {options.map((o) => (
         <ToggleGroupItem
           key={o.value}
           value={o.value}
-          className="h-8 rounded-full px-3 text-[13px] text-ink-2 data-[state=on]:bg-pink data-[state=on]:text-white"
+          className="h-8 rounded-md px-3 text-[13px] text-ink-2 data-[state=on]:bg-pink data-[state=on]:text-white"
         >
           {o.label}
         </ToggleGroupItem>
@@ -59,7 +59,7 @@ export function Pick({
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
-      <SelectTrigger aria-label={label} className={cn('h-10 min-w-40 rounded-full bg-panel-2/70', className)}>
+      <SelectTrigger aria-label={label} className={cn('h-10 min-w-40 rounded-lg bg-panel-2/70', className)}>
         <SelectValue placeholder={allLabel} />
       </SelectTrigger>
       <SelectContent>

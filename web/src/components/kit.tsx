@@ -45,7 +45,7 @@ export function Stat({
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-col gap-1.5 rounded-2xl border border-line bg-panel-2/70 px-4 py-3.5', className)}>
+    <div className={cn('flex flex-col gap-1.5 rounded-lg border border-line bg-panel-2 px-4 py-3.5', className)}>
       <span className="text-[13px] text-ink-3">{label}</span>
       <span className={cn('display num text-[2.1rem]', TONE[tone])}>{value}</span>
       {note && <span className="text-[12.5px] leading-snug text-ink-3">{note}</span>}
@@ -53,14 +53,14 @@ export function Stat({
   )
 }
 
-/** Initials in a gradient ring: there are no player photos in the data, so identity is typographic. */
+/** Initials in a kit-colour ring: there are no player photos in the data, so identity is typographic. */
 export function PlayerAvatar({ name, rr = false, size = 40, className }: { name: string; rr?: boolean; size?: number; className?: string }) {
   const parts = name.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean)
   const initials = (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0]?.slice(0, 2) ?? '?').toUpperCase()
   return (
     <span
       aria-hidden
-      className={cn('grid shrink-0 place-items-center rounded-full p-[2px]', rr ? 'bg-gradient-to-br from-pink to-royal' : 'bg-gradient-to-br from-blue/70 to-royal', className)}
+      className={cn('grid shrink-0 place-items-center rounded-full p-[2px]', rr ? 'bg-pink' : 'bg-blue/55', className)}
       style={{ width: size, height: size }}
     >
       <span className="display grid size-full place-items-center rounded-full bg-panel-2 text-ink" style={{ fontSize: size * 0.4 }}>
@@ -75,13 +75,7 @@ export function RankRibbon({ rank, className }: { rank: number; className?: stri
   return (
     <span className={cn('relative grid w-16 place-items-center pb-3 pt-2 text-white', className)} aria-label={`Rank ${rank}`}>
       <svg viewBox="0 0 64 84" className="absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
-        <path d="M0 0 H64 V84 L32 68 L0 84 Z" fill="url(#rib)" />
-        <defs>
-          <linearGradient id="rib" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#f5c451" />
-            <stop offset="1" stopColor="#d99a1c" />
-          </linearGradient>
-        </defs>
+        <path d="M0 0 H64 V84 L32 68 L0 84 Z" fill="#f2bd45" />
       </svg>
       <span className="display num relative text-[2.3rem] text-[#3a2600]">{rank}</span>
     </span>
@@ -90,7 +84,7 @@ export function RankRibbon({ rank, className }: { rank: number; className?: stri
 
 export function Note({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
-    <Alert className={cn('rounded-2xl border-line bg-panel-2/70', className)}>
+    <Alert className={cn('rounded-lg border-line bg-panel-2', className)}>
       <InfoIcon weight="fill" className="text-blue" />
       <AlertTitle className="font-semibold">{title}</AlertTitle>
       <AlertDescription className="text-ink-2 [&_b]:text-foreground">{children}</AlertDescription>
@@ -127,7 +121,7 @@ const TAG = {
 
 /** Small coloured label for nationality, status and similar facts. */
 export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?: keyof typeof TAG }) {
-  return <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] font-medium', TAG[tone])}>{children}</span>
+  return <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11.5px] font-medium', TAG[tone])}>{children}</span>
 }
 
 /** Overseas player marker: an aeroplane, explained on hover and to screen readers. */

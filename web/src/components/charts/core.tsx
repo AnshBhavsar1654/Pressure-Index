@@ -30,7 +30,7 @@ export function Tooltip({ tip, width }: { tip: TipState | null; width: number })
   return (
     <div
       role="status"
-      className="pointer-events-none absolute z-20 w-[220px] rounded-xl border border-line-strong bg-panel-2 px-3 py-2 text-[12.5px] leading-snug text-ink shadow-xl shadow-black/30"
+      className="pointer-events-none absolute z-20 w-[220px] rounded-lg border border-line-strong bg-panel-2 px-3 py-2 text-[12.5px] leading-snug text-ink"
       style={{ left, top: Math.max(tip.y - 12, 0) }}
     >
       {tip.content}

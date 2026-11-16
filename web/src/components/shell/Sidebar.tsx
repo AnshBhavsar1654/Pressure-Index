@@ -37,13 +37,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
 export function Mark({ size = 34 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden className="shrink-0">
-      <defs>
-        <linearGradient id="mk" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stopColor="#ec2a8e" />
-          <stop offset="1" stopColor="#4b2fa0" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="9" fill="url(#mk)" />
+      <rect width="32" height="32" rx="7" fill="#d81f7c" />
       <path d="M5 21 C9 21 10 12 14 12 S18 24 22 18 S25 9 27 8" fill="none" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
     </svg>
   )
@@ -82,9 +76,9 @@ export function Sidebar() {
                   href={it.href}
                   aria-current={on ? 'page' : undefined}
                   className={cn(
-                    'flex min-h-11 items-center gap-3 rounded-xl px-3 text-[14.5px] font-medium transition-colors',
+                    'flex min-h-11 items-center gap-3 rounded-lg px-3 text-[14.5px] font-medium transition-colors',
                     on
-                      ? 'bg-gradient-to-r from-pink to-[#a3248f] text-white shadow-[0_8px_24px_-10px_rgba(236,42,142,0.7)]'
+                      ? 'bg-pink text-white'
                       : 'text-rail-dim hover:bg-panel-2 hover:text-rail-ink',
                   )}
                 >

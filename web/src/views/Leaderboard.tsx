@@ -68,7 +68,7 @@ export function Leaderboard({ role, players: raw, defaults }: { role: Role; play
           <CardTitle>Build your own ranking</CardTitle>
           <CardDescription>The rating blends four ingredients. Change how much each one counts and watch the order move.</CardDescription>
           <CardAction>
-            <Button variant="outline" className="rounded-full" disabled={!changed} onClick={() => setWeights(defaults)}>
+            <Button variant="outline" className="rounded-lg" disabled={!changed} onClick={() => setWeights(defaults)}>
               <ArrowCounterClockwiseIcon data-icon="inline-start" />
               Reset to submitted
             </Button>
@@ -76,7 +76,7 @@ export function Leaderboard({ role, players: raw, defaults }: { role: Role; play
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {KEYS.map((k) => (
-            <div key={k} className="flex flex-col gap-3 rounded-2xl border border-line bg-panel-2/60 p-4">
+            <div key={k} className="flex flex-col gap-3 rounded-lg border border-line bg-panel-2/60 p-4">
               <div className="flex items-baseline justify-between gap-2">
                 <span id={`w-${k}`} className="text-[14px] font-semibold">
                   {COMPONENT_LABEL[k]}
@@ -121,13 +121,13 @@ export function Leaderboard({ role, players: raw, defaults }: { role: Role; play
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <label className="relative block">
               <MagnifyingGlassIcon size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-3" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name" className="h-10 w-56 rounded-full pl-9" aria-label={`Search ${noun}`} />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name" className="h-10 w-56 rounded-lg pl-9" aria-label={`Search ${noun}`} />
             </label>
             <Segmented label="Nationality" value={nat} onChange={setNat} options={NAT_OPTIONS} />
             <Pick label="IPL team" value={team} onChange={setTeam} options={teams} allLabel="All IPL teams" />
             <Pick label="Country" value={country} onChange={setCountry} options={countries} allLabel="All countries" />
             {(q || nat !== 'all' || team !== 'all' || country !== 'all') && (
-              <Button variant="ghost" className="rounded-full" onClick={() => { setQ(''); setNat('all'); setTeam('all'); setCountry('all') }}>
+              <Button variant="ghost" className="rounded-lg" onClick={() => { setQ(''); setNat('all'); setTeam('all'); setCountry('all') }}>
                 Clear filters
               </Button>
             )}

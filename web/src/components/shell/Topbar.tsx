@@ -82,7 +82,7 @@ export function Topbar({ players }: { players: Entry[] }) {
         </Link>
         <button
           onClick={() => setOpen(true)}
-          className="ml-auto flex h-11 min-w-0 items-center gap-2.5 rounded-full border border-line bg-panel px-4 text-[14px] text-ink-3 transition-colors hover:border-line-strong hover:text-ink-2 lg:ml-0 lg:w-[380px]"
+          className="ml-auto flex h-11 min-w-0 items-center gap-2.5 rounded-lg border border-line bg-panel px-4 text-[14px] text-ink-3 transition-colors hover:border-line-strong hover:text-ink-2 lg:ml-0 lg:w-[380px]"
         >
           <MagnifyingGlassIcon size={17} weight="bold" />
           <span className="hidden sm:inline">Search any player</span>
@@ -91,7 +91,7 @@ export function Topbar({ players }: { players: Entry[] }) {
           </kbd>
         </button>
         <div className="ml-auto hidden items-center gap-2 lg:flex">
-          <span className="rounded-full border border-line bg-panel px-3.5 py-2 text-[13px] text-ink-2">
+          <span className="rounded-lg border border-line bg-panel px-3.5 py-2 text-[13px] text-ink-2">
             Data to IPL 2026 final, 29 May
           </span>
         </div>
@@ -100,7 +100,7 @@ export function Topbar({ players }: { players: Entry[] }) {
             <Button
               variant="outline"
               size="icon"
-              className="size-11 rounded-full"
+              className="size-11 rounded-lg"
               onClick={toggleTheme}
               aria-label={dark ? "Use light theme" : "Use dark theme"}
             >
@@ -112,7 +112,7 @@ export function Topbar({ players }: { players: Entry[] }) {
         <Button
           variant="outline"
           size="icon"
-          className="size-11 rounded-full lg:hidden"
+          className="size-11 rounded-lg lg:hidden"
           onClick={() => setMenu((m) => !m)}
           aria-label="Open sections menu"
           aria-expanded={menu}
