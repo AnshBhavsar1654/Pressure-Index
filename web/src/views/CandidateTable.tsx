@@ -4,7 +4,7 @@ import { CrownIcon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { NAT_OPTIONS, natMatch, Segmented, type Nat } from '@/components/filters'
-import { Meter, PlayerAvatar, signed, Tag } from '@/components/kit'
+import { Meter, OverseasMark, PlayerAvatar, signed, Tag } from '@/components/kit'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { TeamBadge } from '@/components/TeamBadge'
 import type { Candidate } from '@/lib/types'
@@ -75,7 +75,8 @@ export function CandidateTable({ candidates, isBat, phase }: { candidates: Candi
                           )}
                         </span>
                         <span className="flex flex-wrap gap-1">
-                          <Tag tone={c.overseas ? 'blue' : 'neutral'}>{c.overseas ? `Overseas, ${c.nat}` : c.nat}</Tag>
+                          {c.overseas && <OverseasMark country={c.nat} size={12} />}
+                          <Tag>{c.nat}</Tag>
                           {c.ipl_balls === 0 && <Tag>No IPL games since 2024</Tag>}
                         </span>
                       </span>

@@ -1,6 +1,7 @@
-import { InfoIcon } from '@phosphor-icons/react/dist/ssr'
+import { AirplaneTiltIcon, InfoIcon } from '@phosphor-icons/react/dist/ssr'
 import type { ReactNode } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 /** Page title with a one-sentence summary underneath; optional content on the right. */
@@ -127,4 +128,19 @@ const TAG = {
 /** Small coloured label for nationality, status and similar facts. */
 export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?: keyof typeof TAG }) {
   return <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11.5px] font-medium', TAG[tone])}>{children}</span>
+}
+
+/** Overseas player marker: an aeroplane, explained on hover and to screen readers. */
+export function OverseasMark({ country, size = 15 }: { country?: string | null; size?: number }) {
+  const label = country ? `Overseas player, ${country}` : 'Overseas player'
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span role="img" aria-label={label} className="inline-grid shrink-0 place-items-center rounded-full bg-blue-soft p-1 text-blue">
+          <AirplaneTiltIcon size={size} weight="fill" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
 }

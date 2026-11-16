@@ -1,5 +1,7 @@
 'use client'
 
+import { AirplaneTiltIcon } from '@phosphor-icons/react'
+import type { ReactNode } from 'react'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { cn } from '@/lib/utils'
@@ -15,7 +17,7 @@ export function Segmented<T extends string>({
   label: string
   value: T
   onChange: (v: T) => void
-  options: { value: T; label: string }[]
+  options: { value: T; label: ReactNode }[]
   className?: string
 }) {
   return (
@@ -75,10 +77,18 @@ export function Pick({
 }
 
 export type Nat = 'all' | 'india' | 'overseas'
-export const NAT_OPTIONS: { value: Nat; label: string }[] = [
+export const NAT_OPTIONS: { value: Nat; label: ReactNode }[] = [
   { value: 'all', label: 'All' },
   { value: 'india', label: 'Indian' },
-  { value: 'overseas', label: 'Overseas' },
+  {
+    value: 'overseas',
+    label: (
+      <span className="flex items-center gap-1.5">
+        <AirplaneTiltIcon weight="fill" aria-hidden />
+        Overseas
+      </span>
+    ),
+  },
 ]
 export const isIndian = (country: string | null | undefined) => !country || country.startsWith('India')
 export const natMatch = (nat: Nat, country: string | null | undefined, overseas?: boolean) =>
