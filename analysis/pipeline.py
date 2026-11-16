@@ -28,7 +28,7 @@ from sklearn.model_selection import GroupKFold
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "Data Pack"
-OUT = ROOT / "dashboard" / "public" / "data"
+OUT = ROOT / "web" / "data"
 OUT.mkdir(parents=True, exist_ok=True)
 
 RNG = np.random.default_rng(27)
@@ -558,6 +558,11 @@ def main():
     b["pressure"] = b.pi_raw >= thr
     log(f"pressure threshold LI*stage >= {thr:.3f}; share {b.pressure.mean():.3f}")
     b = run_value(b, re)
+    # cache ball-level output for downstream analyses (rr2026.py)
+    cache = ROOT / "analysis" / "cache"
+    cache.mkdir(exist_ok=True)
+    keep = [c for c in b.columns if c not in ("delivery_ist_time", "stroke")]
+    b[keep].to_parquet(cache / "balls.parquet", index=False)
 
     ipl_meta, intl_meta, bat_hand, bowl_type, pace = player_meta(mp, m, b)
 
