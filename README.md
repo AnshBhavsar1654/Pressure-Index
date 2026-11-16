@@ -9,6 +9,7 @@ The submission is an interactive dashboard (Next.js, built with Bun, exported as
 | Overview | The top 10 batters and bowlers under pressure, told through a real RR match |
 | How pressure works | What counts as pressure, in plain words, and proof that the definition works |
 | Batters / Bowlers | Full rankings, a "build your own ranking" weight panel, and a profile page for every player |
+| All players | Every player with a high-pressure ball since 2022, searchable and filterable, each with a profile page |
 | IPL 2026 review | RR's season: all 16 matches ball by ball, where runs were won and lost, and the squad player by player |
 | Auction targets | The three roles where RR trailed the top four, and the best players for each |
 | Method in plain words | The whole approach in four steps, a glossary, and the evidence behind it |
