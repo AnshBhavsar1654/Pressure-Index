@@ -46,8 +46,9 @@ MIN_PRESSURE_BALLS_BOWL = 120
 MIN_PRESSURE_MATCHES = 8
 # Wider pool exported to the dashboard so viewers can lower the bar themselves.
 # Shrinkage already pulls small samples toward the player's own baseline.
-EXPORT_MIN_BALLS = 30
+EXPORT_MIN_BALLS = 30     # lowest bar offered by the ranking sliders
 EXPORT_MIN_MATCHES = 3
+PROFILE_MIN_BALLS = 1     # every player with any pressure ball gets a profile page
 DEFAULT_WEIGHTS = {"pressure": 0.40, "impact": 0.20, "delta": 0.20, "consistency": 0.20}
 PRESSURE_K = 250              # credibility prior: pressure balls before a player's own record counts 50%
 N_BOOT = int(__import__('os').environ.get('N_BOOT', 400))
@@ -574,7 +575,7 @@ def main():
         sh = split_half(pm, role, eligible, k)
         log(f"{role} split-half: {sh}")
         names = d.groupby("pid").pname.agg(lambda x: x.mode().iat[0])
-        pool = t[(t.pn >= EXPORT_MIN_BALLS) & (t.pmatches >= EXPORT_MIN_MATCHES)].index
+        pool = t[t.pn >= PROFILE_MIN_BALLS].index
         s_all = score(t, pool)
         order = list(s.sort_values("rank").index) + [
             pid for pid in s_all.sort_values("score", ascending=False).index if pid not in s.index]
@@ -627,6 +628,7 @@ def main():
                                          "export_min_balls": EXPORT_MIN_BALLS,
                                          "export_min_matches": EXPORT_MIN_MATCHES,
                                          "n_exported": int(len(pool)),
+                                         "n_slider_pool": int(((t.pn >= EXPORT_MIN_BALLS) & (t.pmatches >= EXPORT_MIN_MATCHES)).sum()),
                                          "n_players": int(len(t))}}
 
     # ------------------------------------------------ league-level evidence
