@@ -3,7 +3,7 @@ import { WinWorm } from '@/components/charts/WinWorm'
 import { ordinal, signed } from '@/components/kit'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { getRole, getRR, getSummary } from '@/lib/data'
+import { getRanked, getRR, getSummary } from '@/lib/data'
 import { fmt, iplCode } from '@/lib/format'
 import type { Gap, Player, Role } from '@/lib/types'
 import { Spotlight, TopTen, type Lite } from '@/views/OverviewCards'
@@ -12,13 +12,13 @@ import { Spotlight, TopTen, type Lite } from '@/views/OverviewCards'
 const lite = (p: Player, role: Role): Lite => ({
   id: p.id,
   name: p.name,
-  rank: p.rank,
+  rank: p.rank ?? 0,
   team: p.ipl_team,
   country: p.country,
   rr: p.ipl_team === 'Rajasthan Royals',
   p_rv100: p.p_rv100,
   p_balls: p.p_balls,
-  stay: p.boot.p_top10,
+  stay: p.boot?.p_top10 ?? 0,
   rate: role === 'bat' ? p.press.sr : (p.press.econ ?? null),
   rateNormal: role === 'bat' ? p.norm.sr : (p.norm.econ ?? null),
   extra: '',
@@ -29,8 +29,8 @@ const phaseName = (g: Gap) => `${g.phase === 'Middle' ? 'middle-overs' : g.phase
 export default function Overview() {
   const s = getSummary()
   const rr = getRR()
-  const bat = getRole('bat').players
-  const bowl = getRole('bowl').players
+  const bat = getRanked('bat')
+  const bowl = getRanked('bowl')
   const hero = rr.matches.filter((m) => m.won).toSorted((a, b) => b.pressure_balls - a.pressure_balls)[0]
   const first = hero.scores['1']
   const second = hero.scores['2']

@@ -155,10 +155,10 @@ export default function MethodPage() {
           <CalibrationPair s={s} />
         </Details>
         <Details title="Which ranks are safe and which are close calls?">
-          <StabilityPair bat={bat.players.slice(0, 15)} bowl={bowl.players.slice(0, 15)} />
+          <StabilityPair bat={bat.players.filter((p) => p.rank != null).slice(0, 15)} bowl={bowl.players.filter((p) => p.rank != null).slice(0, 15)} />
         </Details>
         <Details title="How much should a pressure record be trusted?">
-          <ShrinkCurve bat={bat} bowl={bowl} />
+          <ShrinkCurve batCv={bat.k.cv_p} bowlCv={bowl.k.cv_p} />
           <table className="mt-4 w-full max-w-lg text-[13.5px]">
             <caption className="mb-2 text-left text-[13px] text-ink-3">
               Same measure on odd-numbered and even-numbered matches: how closely the two halves agree (1 = perfectly).

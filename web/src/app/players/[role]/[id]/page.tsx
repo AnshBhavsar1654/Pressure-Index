@@ -3,14 +3,15 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { PlayerAvatar, RankRibbon, signed } from '@/components/kit'
+import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { getRole } from '@/lib/data'
+import { getRanked, getRole, getSummary } from '@/lib/data'
 import { fmt } from '@/lib/format'
-import type { Player, Role } from '@/lib/types'
+import { rescore, type Player, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { ProfileCharts } from '@/views/Profile'
 
@@ -23,7 +24,15 @@ export function generateStaticParams() {
 function find(role: Role, id: string) {
   const list = getRole(role).players
   const i = list.findIndex((p) => String(p.id) === id)
-  return { p: list[i], prev: list[i - 1], next: list[i + 1], total: list.length }
+  const total = list.filter((p) => p.rank != null).length
+  return { p: list[i], prev: list[i - 1], next: list[i + 1], total, bar: getRole(role).eligibility }
+}
+
+/** Rating ingredients as z-scores against the default pool (the player is added if outside it). */
+function zFor(role: Role, p: Player) {
+  const pool = getRanked(role)
+  const scored = rescore(p.rank != null ? pool : [...pool, p], getSummary().weights)
+  return scored.find((x) => x.id === p.id)!.z
 }
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
@@ -50,7 +59,7 @@ function cmp(a: number | null | undefined, b: number | null | undefined, dir: 1 
 
 export default async function PlayerPage({ params }: { params: Promise<Params> }) {
   const { role, id } = await params
-  const { p, prev, next, total } = find(role, id)
+  const { p, prev, next, total, bar } = find(role, id)
   if (!p) notFound()
   const isBat = role === 'bat'
   const rr = p.ipl_team === 'Rajasthan Royals'
@@ -73,8 +82,8 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
     [isBat ? 'Strike rate under pressure' : 'Economy under pressure', isBat ? fmt.dec(p.press.sr, 0) : fmt.dec(p.press.econ, 2)],
     ['Runs added per 100', signed(p.p_rv100)],
     ['Pressure balls', fmt.int(p.p_balls)],
-    ['Stays in top 10', fmt.pct(p.boot.p_top10)],
-    ['Likely rank range', `${p.boot.rank_lo}–${p.boot.rank_hi}`],
+    ['Stays in top 10', p.boot ? fmt.pct(p.boot.p_top10) : '–'],
+    ['Likely rank range', p.boot ? `${p.boot.rank_lo}–${p.boot.rank_hi}` : '–'],
     ['Matches with pressure', String(p.p_matches)],
   ]
 
@@ -110,13 +119,18 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
       <section className={cn('panel jersey grid gap-6 p-6 sm:p-7 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]', !rr && 'jersey-royal')}>
         <div className="flex flex-col gap-5">
           <div className="flex items-start gap-4">
-            <RankRibbon rank={p.rank} className="-mt-7 shrink-0" />
+            <RankRibbon rank={p.rank ?? '–'} className="-mt-7 shrink-0" />
             <div className="flex min-w-0 items-center gap-4">
               <PlayerAvatar name={p.name} rr size={76} className="bg-white/85" />
               <div className="min-w-0">
                 <h1 className="display text-[2.6rem] text-white sm:text-[3.2rem]">{p.name}</h1>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {p.country && <Badge className="rounded-lg bg-black/25 text-white">{p.country}</Badge>}
+                  {p.country && (
+                    <Badge className="rounded-lg bg-black/25 pl-1 text-white">
+                      <Flag country={p.country} size={18} />
+                      {p.country}
+                    </Badge>
+                  )}
                   {p.ipl_team && (
                     <Badge className="rounded-lg bg-black/25 pl-0.5 text-white">
                       <TeamBadge team={p.ipl_team} size={18} />
@@ -130,7 +144,9 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
           </div>
           <p className="max-w-[60ch] text-[15px] leading-relaxed text-white/85">{story(p, role)}</p>
           <p className="text-[13px] text-white/65">
-            Ranked {p.rank} of {total} eligible {isBat ? 'batters' : 'bowlers'}.
+            {p.rank != null
+              ? `Ranked ${p.rank} of ${total} ${isBat ? 'batters' : 'bowlers'} in the submitted ranking.`
+              : `Below the default bar (${bar.min_pressure_balls}+ pressure balls, ${bar.min_pressure_matches}+ matches), so outside the submitted ranking. Lower the bar on the rankings page to compare.`}
           </p>
         </div>
         <dl className="grid grid-cols-2 gap-2.5 self-end sm:grid-cols-3">
@@ -177,7 +193,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
         </CardContent>
       </Card>
 
-      <ProfileCharts p={p} role={role} />
+      <ProfileCharts p={{ ...p, z: zFor(role, p) }} role={role} />
     </div>
   )
 }

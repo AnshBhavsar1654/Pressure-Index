@@ -98,7 +98,7 @@ export function PressureScatter({ players, highlight, selected, onSelect, height
                       <TipRow label="Under pressure" value={fmt.signed(p.p_rv100)} />
                       <TipRow label="Normally" value={fmt.signed(p.n_rv100)} />
                       <TipRow label="Pressure balls" value={fmt.int(p.p_balls)} />
-                      <TipRow label="P(top 10)" value={fmt.pct(p.boot.p_top10)} />
+                      {p.boot && <TipRow label="Stays top 10" value={fmt.pct(p.boot.p_top10)} />}
                     </div>
                   ),
                 })

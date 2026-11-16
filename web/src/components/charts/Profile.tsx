@@ -95,7 +95,7 @@ export function RankRanges({ players, n = 15 }: { players: ScoredPlayer[]; n?: n
   const rowH = 24
   const m = { t: 22, r: 16, b: 18, l: 150 }
   const height = m.t + rows.length * rowH + m.b
-  const maxR = Math.max(30, ...rows.map((p) => p.boot.rank_hi))
+  const maxR = Math.max(30, ...rows.map((p) => p.boot!.rank_hi))
   const x = scaleLinear().domain([1, maxR]).range([m.l, width - m.r])
   return (
     <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
@@ -125,9 +125,9 @@ export function RankRanges({ players, n = 15 }: { players: ScoredPlayer[]; n?: n
                   content: (
                     <div className="flex flex-col gap-1">
                       <div className="font-semibold">{p.name}</div>
-                      <TipRow label="Median bootstrap rank" value={p.boot.rank_med} />
-                      <TipRow label="90% interval" value={`${p.boot.rank_lo} to ${p.boot.rank_hi}`} />
-                      <TipRow label="P(top 10)" value={fmt.pct(p.boot.p_top10)} />
+                      <TipRow label="Median bootstrap rank" value={p.boot!.rank_med} />
+                      <TipRow label="90% interval" value={`${p.boot!.rank_lo} to ${p.boot!.rank_hi}`} />
+                      <TipRow label="P(top 10)" value={fmt.pct(p.boot!.p_top10)} />
                     </div>
                   ),
                 })
@@ -141,8 +141,8 @@ export function RankRanges({ players, n = 15 }: { players: ScoredPlayer[]; n?: n
                 </tspan>
                 {p.name.length > 17 ? p.name.split(' ').slice(-1)[0] : p.name}
               </text>
-              <line x1={x(p.boot.rank_lo)} x2={x(p.boot.rank_hi)} y1={cy} y2={cy} stroke="var(--blue)" strokeWidth={2} strokeLinecap="round" />
-              <circle cx={x(p.boot.rank_med)} cy={cy} r={5} fill="var(--pink)" stroke="var(--surface)" strokeWidth={2} />
+              <line x1={x(p.boot!.rank_lo)} x2={x(p.boot!.rank_hi)} y1={cy} y2={cy} stroke="var(--blue)" strokeWidth={2} strokeLinecap="round" />
+              <circle cx={x(p.boot!.rank_med)} cy={cy} r={5} fill="var(--pink)" stroke="var(--surface)" strokeWidth={2} />
             </g>
           )
         })}

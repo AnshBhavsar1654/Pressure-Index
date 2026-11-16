@@ -3,9 +3,10 @@
 import { ChartFrame, Legend } from '@/components/charts/core'
 import { LineChart } from '@/components/charts/LineChart'
 import { Calibration, RankRanges } from '@/components/charts/Profile'
-import type { Player, RoleData, Summary } from '@/lib/types'
+import { rescore, type Player, type RoleData, type Summary } from '@/lib/types'
 
-const asScored = (ps: Player[]) => ps.map((p) => ({ ...p, liveRank: p.rank, liveScore: p.score }))
+// default-pool players in their submitted order, with z-scores filled in
+const asScored = (ps: Player[]) => rescore(ps, { pressure: 0.4, impact: 0.2, delta: 0.2, consistency: 0.2 }).map((p) => ({ ...p, liveRank: p.rank ?? p.liveRank })).toSorted((a, b) => a.liveRank - b.liveRank)
 
 export function CalibrationPair({ s }: { s: Summary }) {
   return (
@@ -33,15 +34,15 @@ export function StabilityPair({ bat, bowl }: { bat: Player[]; bowl: Player[] }) 
   )
 }
 
-export function ShrinkCurve({ bat, bowl }: { bat: RoleData; bowl: RoleData }) {
+export function ShrinkCurve({ batCv, bowlCv }: { batCv: RoleData['k']['cv_p']; bowlCv: RoleData['k']['cv_p'] }) {
   const series = [
-    { key: 'bat', label: 'Batters', color: 'var(--pink)', d: bat },
-    { key: 'bowl', label: 'Bowlers', color: 'var(--blue)', d: bowl },
+    { key: 'bat', label: 'Batters', color: 'var(--pink)', cv: batCv },
+    { key: 'bowl', label: 'Bowlers', color: 'var(--blue)', cv: bowlCv },
   ].map((x) => ({
     key: x.key,
     label: x.label,
     color: x.color,
-    points: Object.entries(x.d.k.cv_p).map(([k, v]) => ({ x: Math.log10(Number(k)), y: v })),
+    points: Object.entries(x.cv).map(([k, v]) => ({ x: Math.log10(Number(k)), y: v })),
   }))
   return (
     <ChartFrame

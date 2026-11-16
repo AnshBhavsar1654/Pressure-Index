@@ -71,7 +71,7 @@ export function PlayerAvatar({ name, rr = false, size = 40, className }: { name:
 }
 
 /** Ribbon carrying a rank number, after the numbered banner on a team sheet. */
-export function RankRibbon({ rank, className }: { rank: number; className?: string }) {
+export function RankRibbon({ rank, className }: { rank: number | string; className?: string }) {
   return (
     <span className={cn('relative grid w-16 place-items-center pb-3 pt-2 text-white', className)} aria-label={`Rank ${rank}`}>
       <svg viewBox="0 0 64 84" className="absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>

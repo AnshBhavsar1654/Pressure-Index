@@ -29,7 +29,7 @@ export function ProfileCharts({ p, role }: { p: Player; role: Role }) {
         <section className="panel p-5">
           <h2 className="display mb-1 text-[1.5rem]">What drives the rating</h2>
           <p className="mb-4 text-[13px] text-ink-2">Each bar compares the player with every other eligible {role === 'bat' ? 'batter' : 'bowler'}.</p>
-          <ComponentBars z={p.z} labels={LABELS} />
+          <ComponentBars z={p.z ?? {}} labels={LABELS} />
         </section>
         <ChartFrame
           title="Season by season"
