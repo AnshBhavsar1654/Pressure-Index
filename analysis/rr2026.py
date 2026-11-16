@@ -35,6 +35,8 @@ PHASES = ["Powerplay", "Middle", "Death"]
 PHASE_OVERS = {"Powerplay": "overs 1-6", "Middle": "overs 7-15", "Death": "overs 16-20"}
 REC_W = {2024: 0.6, 2025: 0.8, 2026: 1.0}
 SHRINK_BALLS = 120
+CAND_EXPORT_MIN = 30   # smallest role sample exported; the dashboard default is 90 / 120
+CAND_EXPORT_TOP = 40   # candidates exported per role, best fit first
 
 
 def r1(x, d=1):
@@ -320,9 +322,11 @@ def main():
     recs = []
     for gp in targets:
         disc, ph = gp["discipline"], gp["phase"]
-        g = role_table(disc, ph, 90 if disc == "bat" else 120)
+        # export a wide pool (30+ balls in the role); the dashboard applies the default
+        # minimum (90 batting / 120 bowling) and lets the viewer change it
+        g = role_table(disc, ph, CAND_EXPORT_MIN)
         pj = press_bat if disc == "bat" else press_bowl
-        g["press_score"] = [pj[i]["score"] if i in pj else np.nan for i in g.index]
+        g["press_score"] = [pj[i]["score"] if i in pj and pj[i]["score"] is not None else np.nan for i in g.index]
         z_role = (g.rv100 - g.rv100.mean()) / g.rv100.std(ddof=0)
         ps = g.press_score
         z_press = ((ps - ps.mean()) / ps.std(ddof=0)).fillna(-0.5)  # unproven under pressure: small penalty
@@ -335,6 +339,7 @@ def main():
                  "rv100": r1(r.rv100), "fit": r1(r.fit, 2),
                  "press_score": r1(r.press_score, 2) if not np.isnan(r.press_score) else None,
                  "press_rank": pj[pid]["rank"] if pid in pj else None,
+                 "rated": pid in pj,
                  "ipl26_balls": int(r.b26), "ipl_balls": int(r.bipl)}
             if disc == "bat":
                 c["sr"] = r1(100 * r.runs / max(r.balls, 1))
@@ -347,10 +352,11 @@ def main():
             return c
 
         external = [cand(pid, r) for pid, r in g.iterrows() if pid not in squad_ids
-                    and (not pool_known or pid in released)][:10]
-        internal = [cand(pid, r) for pid, r in g.iterrows() if pid in squad_ids][:4]
+                    and (not pool_known or pid in released)][:CAND_EXPORT_TOP]
+        internal = [cand(pid, r) for pid, r in g.iterrows() if pid in squad_ids][:8]
         # benchmark: league-average and RR's own 2026 usage in this role
         recs.append({"gap": gp, "role": ROLE[gp["key"]][0], "role_desc": ROLE[gp["key"]][1],
+                     "default_min_balls": 90 if disc == "bat" else 120,
                      "candidates": external, "internal": internal})
 
 

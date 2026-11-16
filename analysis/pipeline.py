@@ -44,6 +44,10 @@ SEASON_WEIGHT = {2022: 0.60, 2023: 0.70, 2024: 0.80, 2025: 0.90, 2026: 1.00}
 MIN_PRESSURE_BALLS_BAT = 120  # eligibility (raw balls faced under pressure)
 MIN_PRESSURE_BALLS_BOWL = 120
 MIN_PRESSURE_MATCHES = 8
+# Wider pool exported to the dashboard so viewers can lower the bar themselves.
+# Shrinkage already pulls small samples toward the player's own baseline.
+EXPORT_MIN_BALLS = 30
+EXPORT_MIN_MATCHES = 3
 DEFAULT_WEIGHTS = {"pressure": 0.40, "impact": 0.20, "delta": 0.20, "consistency": 0.20}
 PRESSURE_K = 250              # credibility prior: pressure balls before a player's own record counts 50%
 N_BOOT = int(__import__('os').environ.get('N_BOOT', 400))
@@ -570,8 +574,13 @@ def main():
         sh = split_half(pm, role, eligible, k)
         log(f"{role} split-half: {sh}")
         names = d.groupby("pid").pname.agg(lambda x: x.mode().iat[0])
+        pool = t[(t.pn >= EXPORT_MIN_BALLS) & (t.pmatches >= EXPORT_MIN_MATCHES)].index
+        s_all = score(t, pool)
+        order = list(s.sort_values("rank").index) + [
+            pid for pid in s_all.sort_values("score", ascending=False).index if pid not in s.index]
         players = []
-        for pid, row in s.sort_values("rank").iterrows():
+        for pid in order:
+            row = t.loc[pid]
             dp = d[d.pid == pid]
             press, norm = traditional(dp, role, dp.P == 1), traditional(dp, role, dp.P == 0)
             seasons = []
@@ -598,8 +607,9 @@ def main():
             ipl_team = ipl_meta.team_name.get(pid) if pid in ipl_meta.index else None
             ipl_season = int(ipl_meta.season_yr.get(pid)) if pid in ipl_meta.index else None
             players.append({
-                "id": int(pid), "name": names[pid], "rank": int(row["rank"]),
-                "score": round(float(row.score), 3),
+                "id": int(pid), "name": names[pid],
+                "rank": int(s.loc[pid, "rank"]) if pid in s.index else None,
+                "score": round(float(s.loc[pid, "score"]), 3) if pid in s.index else None,
                 "country": intl_meta.team_name.get(pid) if pid in intl_meta.index else None,
                 "ipl_team": ipl_team, "ipl_season": ipl_season,
                 "hand": bat_hand.get(pid), "bowl_type": bowl_type.get(pid), "pace": pace.get(pid),
@@ -607,14 +617,16 @@ def main():
                 "p_rv100": round(100 * row.p_rv, 2), "n_rv100": round(100 * row.n_rv, 2),
                 "delta100": round(100 * row.delta, 2), "wpa100": round(float(row.wpa100), 3),
                 "cons": round(float(row.cons), 3),
-                "z": {c: round(float(row[f"z_{c}"]), 3) for c in DEFAULT_WEIGHTS},
-                "boot": boot[pid], "press": press, "norm": norm,
+                "boot": boot.get(pid), "press": press, "norm": norm,
                 "seasons": seasons, "phases": phases, "matches": matches,
             })
         results[role] = {"players": players, "k": k, "split_half": sh,
                          "eligibility": {"min_pressure_balls": min_balls,
                                          "min_pressure_matches": MIN_PRESSURE_MATCHES,
                                          "n_eligible": int(len(eligible)),
+                                         "export_min_balls": EXPORT_MIN_BALLS,
+                                         "export_min_matches": EXPORT_MIN_MATCHES,
+                                         "n_exported": int(len(pool)),
                                          "n_players": int(len(t))}}
 
     # ------------------------------------------------ league-level evidence
@@ -694,7 +706,7 @@ def main():
     (OUT / "chase_grid.json").write_text(json.dumps(
         {"cols": ["wkts", "overs_left", "need", "wp", "li"], "rows": grid}, separators=(",", ":")))
     for role in ("bat", "bowl"):
-        top = results[role]["players"][:15]
+        top = [p for p in results[role]["players"] if p["rank"]][:15]
         log(f"\nTOP {role}:")
         for p in top:
             log(f"{p['rank']:>2} {p['name']:<24} score={p['score']:.2f} P={p['p_rv100']:+.1f} "
