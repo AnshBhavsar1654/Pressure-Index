@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpenTextIcon, ChartLineUpIcon, CrownIcon, GaugeIcon, HouseIcon, ShoppingBagIcon, TargetIcon, type Icon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, ChartLineUpIcon, CrownIcon, GaugeIcon, HouseIcon, ShoppingBagIcon, TargetIcon, UsersThreeIcon, type Icon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -19,6 +19,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: '/rankings/bat/', label: 'Batters', icon: ChartLineUpIcon },
       { href: '/rankings/bowl/', label: 'Bowlers', icon: TargetIcon },
+      { href: '/players/', label: 'All players', icon: UsersThreeIcon },
     ],
   },
   {
@@ -47,6 +48,7 @@ export function Sidebar() {
   const path = usePathname()
   const active = (href: string) => {
     if (href === '/') return path === '/'
+    if (href === '/players/') return path === '/players/' || path === '/players'
     if (href.startsWith('/rankings/')) {
       const role = href.split('/')[2]
       return path.startsWith(href) || path.startsWith(`/players/${role}/`)
