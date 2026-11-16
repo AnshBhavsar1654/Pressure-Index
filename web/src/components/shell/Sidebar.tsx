@@ -96,11 +96,6 @@ export function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="mt-auto rounded-2xl border border-line bg-panel-2 p-4 text-[12.5px] leading-relaxed text-ink-3">
-        <span className="font-semibold text-ink">SupeRR Selector Season 2</span>
-        <br />
-        Built only from the official IPL and T20I ball-by-ball data, 2022 to 2026.
-      </div>
     </aside>
   )
 }
