@@ -49,7 +49,7 @@ export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; w
                     </div>
                     <TipRow label="Required rate" value={(need / ov).toFixed(1)} />
                     <TipRow label="Chase win probability" value={fmt.pct(wp)} />
-                    <TipRow label="Leverage Index" value={li.toFixed(2)} />
+                    <TipRow label="Stakes (× typical ball)" value={li.toFixed(2)} />
                   </div>
                 ),
               })
@@ -80,7 +80,7 @@ export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; w
         {/* scale legend */}
         <g transform={`translate(${width - m.r + 14} ${m.t})`}>
           <text x={0} y={8} {...AXIS.label}>
-            LI
+            Stakes
           </text>
           {legendStops.map((s, i) => (
             <g key={s} transform={`translate(0 ${18 + i * 22})`}>

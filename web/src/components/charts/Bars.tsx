@@ -70,7 +70,7 @@ export function LiHistogram({
         })}
         <line x1={x(threshold)} x2={x(threshold)} y1={m.t - 8} y2={height - m.b} stroke="var(--ink)" strokeWidth={1.5} />
         <text x={x(threshold) + 6} y={m.t - 2} {...AXIS.label} fill="var(--ink)" fontWeight={600}>
-          pressure line, LI ≥ {threshold.toFixed(2)} (top 20%)
+          pressure moments: the top 20%
         </text>
         {[0, 1, 2, 3, 4, 5].map((t) => (
           <text key={t} x={x(t)} y={height - m.b + 15} textAnchor="middle" {...AXIS.tick} className="num">
@@ -78,7 +78,7 @@ export function LiHistogram({
           </text>
         ))}
         <text x={(m.l + width - m.r) / 2} y={height - 4} textAnchor="middle" {...AXIS.label}>
-          Leverage Index (1.0 = average delivery)
+          Stakes of the ball (1.0 = a typical ball)
         </text>
       </svg>
       <Tooltip tip={tip} width={width} />
