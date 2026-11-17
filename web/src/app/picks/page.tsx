@@ -6,7 +6,6 @@ import { TeamBadge } from '@/components/TeamBadge'
 import { Term } from '@/components/Term'
 import { getRole, getRR, getSummary } from '@/lib/data'
 import { momentLine } from '@/views/Moments'
-import { PoolNotice, RoleBlock } from '@/views/RoleShortlist'
 import { fmt, iplCode } from '@/lib/format'
 import { betterThan, winPts } from '@/lib/terms'
 import { rescore, type ComponentKey, type Gap, type Player, type Role } from '@/lib/types'
@@ -25,7 +24,7 @@ const SLOT: Record<string, string> = {
 const MIN_PHASE_BALLS = 30 // fewer pressure balls than this in a phase is too thin to call a strength
 
 type Pick = { p: Player; z: Record<ComponentKey, number> }
-const ON: Record<ComponentKey, string> = { pressure: 'output under pressure', impact: 'win impact', delta: 'lifting above their normal', consistency: 'consistency' }
+const ON: Record<ComponentKey, string> = { pressure: 'output under pressure', recent: 'recent form', impact: 'win impact', delta: 'lifting above their normal', consistency: 'consistency' }
 
 /** The qualified players RR can sign, best first, with each rating ingredient against the whole qualified pool. */
 function picks(role: Role): Pick[] {
@@ -45,6 +44,7 @@ function why({ p, z }: Pick, role: Role): string[] {
         ? `Scores ${fmt.dec(p.p_rv100, 1)} more runs per 100 pressure balls than an average batter would in the same situations.`
         : `Concedes ${fmt.dec(p.p_rv100, 1)} fewer runs per 100 pressure balls than an average bowler would in the same situations.`,
     consistency: `Delivered in ${Math.round(p.cons * 10)} of every 10 pressure ${role === 'bat' ? 'innings' : 'spells'}.`,
+    recent: `Still doing it: ${signed(p.recent100)} runs ${role === 'bat' ? 'added' : 'saved'} per 100 pressure balls in 2025–26, over ${p.r_balls} balls in ${p.r_matches} matches.`,
     delta:
       p.delta100 >= 0
         ? `Gets ${fmt.dec(p.delta100, 0)} runs per 100 balls better than their own normal level when the match is tight.`
@@ -92,6 +92,12 @@ export default function PicksPage() {
   const rr = getRR()
   const targets = new Set(rr.recommendations.map((r) => r.gap.key))
   const lists = { bat: picks('bat'), bowl: picks('bowl') }
+  const elig = getRole('bat').eligibility
+  const fresh = (role: Role) =>
+    getRole(role)
+      .players.filter((p) => p.fresh_rank != null)
+      .toSorted((a, b) => a.fresh_rank! - b.fresh_rank!)
+      .slice(0, 8)
 
   return (
     <>
@@ -99,12 +105,12 @@ export default function PicksPage() {
         title="My picks"
         summary={
           <>
-            First, the ten batters and ten bowlers RR could sign who deliver most reliably when the match is on the line, why I back
-            each one and the gap they would fill. Then, for each role where RR lost runs in 2026,{' '}
-            <a href="#roles" className="font-semibold text-pink-ink hover:underline">
-              a deeper shortlist
+            The ten batters and ten bowlers RR could sign who deliver most reliably when the match is on the line, why I back each
+            one and the gap they would fill, then the{' '}
+            <a href="#fresh" className="font-semibold text-pink-ink hover:underline">
+              fresh picks
             </a>{' '}
-            for the auction room.
+            among them who are new at the top level.
           </>
         }
       >
@@ -124,7 +130,7 @@ export default function PicksPage() {
       <section className="panel grid gap-6 p-5 sm:p-6 md:grid-cols-2" aria-label="The twenty picks at a glance">
         {(['bat', 'bowl'] as const).map((role) => (
           <div key={role}>
-            <h2 className="display mb-3 text-[1.6rem]">{role === 'bat' ? 'Batters' : 'Bowlers'}</h2>
+            <h2 className="display mb-3 text-[1.6rem]">{role === 'bat' ? 'Batters' : 'Bowlers'} <span className="text-[13px] font-normal text-ink-3">in ranking order</span></h2>
             <ol className="grid gap-1.5">
               {lists[role].map(({ p }) => (
                 <li key={p.id} className="flex items-center gap-3 text-[14.5px]">
@@ -140,15 +146,28 @@ export default function PicksPage() {
         ))}
       </section>
 
-      {(['bat', 'bowl'] as const).map((role) => (
+      {(['bat', 'bowl'] as const).map((role) => {
+        // auction priority: players who fix a 2026 weak spot first, then those who add depth; each group keeps ranking order
+        const withFit = lists[role].map((pk) => ({ pk, f: fit(pk.p, role, rr.gaps, targets) }))
+        const groups = [
+          { key: 'fills', title: 'Fill a gap first', note: 'Strongest in a phase where RR lost runs in 2026.', items: withFit.filter((x) => x.f.fills) },
+          { key: 'depth', title: 'Then add depth', note: 'Best in a phase RR already handle well.', items: withFit.filter((x) => !x.f.fills) },
+        ].filter((g) => g.items.length)
+        return (
         <div key={role}>
           <SectionHead title={role === 'bat' ? 'The ten batters' : 'The ten bowlers'}>
-            In ranking order. Hover any underlined term for what it means.
+            Players who fix one of RR’s weak spots come first, then those who add depth. The big number is their pressure ranking.
+            Hover any underlined term for what it means.
           </SectionHead>
+          {groups.map((g) => (
+          <div key={g.key} className="mb-6">
+          <h3 className="mb-3 flex flex-wrap items-baseline gap-x-3 text-[15px] font-semibold">
+            <Tag tone={g.key === 'fills' ? 'pink' : 'neutral'}>{g.items.length}</Tag> {g.title}
+            <span className="text-[13px] font-normal text-ink-3">{g.note}</span>
+          </h3>
           <div className="grid gap-4 xl:grid-cols-2">
-            {lists[role].map((pk) => {
+            {g.items.map(({ pk, f }) => {
               const { p } = pk
-              const f = fit(p, role, rr.gaps, targets)
               return (
                 <article key={p.id} id={`${role}-${p.id}`} className="panel flex scroll-mt-24 flex-col gap-4 p-5">
                   <header className="flex items-start gap-4">
@@ -205,19 +224,47 @@ export default function PicksPage() {
               )
             })}
           </div>
+          </div>
+          ))}
         </div>
-      ))}
+        )
+      })}
 
-      <SectionHead id="roles" title="Beyond the top 10: shortlist by role">
-        The roles where RR lost runs in 2026 or trailed the top four, each with at least ten realistic options ranked on that
-        exact job. This is the list to work from in the auction room once the top-10 names are gone.
+      <SectionHead id="fresh" title="Fresh picks: new at the top level">
+        Players whose first IPL or T20I match in the data is {elig.fresh_from} or later, the kind of find an auction can be won on. The
+        data starts in 2022 and holds no ages, so a few (George Linde, for one) are new to this level rather than young. They are ranked on exactly
+        the same scale as the top 10; this list just pulls the newcomers out. Shorter records, so treat them as scouting leads rather
+        than sure things.
       </SectionHead>
-      <PoolNotice pool={rr.pool} />
-      <div className="mt-5 flex flex-col gap-10">
-        {rr.recommendations.map((r, i) => (
-          <RoleBlock key={r.gap.key} r={r} n={i + 1} poolKnown={rr.pool.known} />
+      <div className="mb-10 grid gap-4 xl:grid-cols-2">
+        {(['bat', 'bowl'] as const).map((role) => (
+          <section key={role} className="panel overflow-hidden">
+            <h3 className="border-b border-line px-5 py-3 text-[15px] font-semibold">{role === 'bat' ? 'Batters' : 'Bowlers'}</h3>
+            <ol className="divide-y divide-line">
+              {fresh(role).map((p) => (
+                <li key={p.id} className="flex items-center gap-3 px-5 py-2.5 text-[13.5px]">
+                  <span className="display num w-5 text-right text-[1.2rem] text-pink">{p.fresh_rank}</span>
+                  <PlayerAvatar name={p.name} size={30} />
+                  <span className="min-w-0 flex-1">
+                    <Link href={`/players/${role}/${p.id}/`} className="font-medium hover:underline">
+                      {p.name}
+                    </Link>
+                    <span className="block text-[12px] text-ink-3">
+                      {p.country ?? 'Uncapped'} · first seen {p.debut} · {p.p_balls} pressure balls
+                      {p.ipl_team ? ` · last IPL squad ${iplCode(p.ipl_team)}` : ''}
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <span className="num block font-semibold">{signed(p.p_rv100)}</span>
+                    <span className="block text-[11.5px] text-ink-3">recent {signed(p.recent100)}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </section>
         ))}
       </div>
+
     </>
   )
 }

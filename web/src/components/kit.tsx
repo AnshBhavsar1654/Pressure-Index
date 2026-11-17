@@ -124,6 +124,26 @@ export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?
   return <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11.5px] font-medium', TAG[tone])}>{children}</span>
 }
 
+/** Retained marker: a small "R", naming the franchise on hover and to screen readers. */
+export function RetainedMark({ team, size = 18 }: { team?: string | null; size?: number }) {
+  const label = team ? `Retained by ${team} for IPL 2027` : 'Retained for IPL 2027'
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span
+          role="img"
+          aria-label={label}
+          style={{ width: size, height: size, fontSize: Math.round(size * 0.62) }}
+          className="inline-grid shrink-0 place-items-center rounded-full bg-gold-soft font-bold leading-none text-gold ring-1 ring-gold/40"
+        >
+          R
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{label}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 /** Overseas player marker: an aeroplane, explained on hover and to screen readers. */
 export function OverseasMark({ country, size = 15 }: { country?: string | null; size?: number }) {
   const label = country ? `Overseas player, ${country}` : 'Overseas player'

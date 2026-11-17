@@ -121,8 +121,8 @@ export default function Overview() {
             <Link href="/rajasthan/" className="text-pink-ink hover:underline">
               Season review
             </Link>
-            <Link href="/picks/#roles" className="text-pink-ink hover:underline">
-              Shortlist by role
+            <Link href="/picks/" className="text-pink-ink hover:underline">
+              My picks
             </Link>
           </div>
         </div>

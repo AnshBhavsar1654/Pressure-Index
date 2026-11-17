@@ -66,14 +66,18 @@ def main():
         "wpa_raw100": round(float(r.pwwpa / r.pwbn * 100), 3), "wpa_keep": round(float(r.pwbn / (r.pwbn + k["kp"])), 3),
         "wpa100": round(float(r.wpa100), 3),
         "c_n": int(r.c_n), "c_pos": int(r.c_pos), "c_prior": round(k["c_prior"], 3), "cons": round(float(r.cons), 3),
+        "r_balls": int(r.rn), "r_matches": int(r.rmatches), "r_weighted": round(float(r.rwn), 1),
+        "r_raw100": round(100 * float(r.rwrv / max(r.rwn, 1e-9)), 2), "r_keep": round(float(r.rwn / (r.rwn + k["kp"])), 3),
+        "recent100": round(100 * float(r.recent), 2), "recent_from": P.RECENT_FROM,
     }
     for key in ("p_rv100", "n_rv100", "delta100"):
         assert abs(steps[key] - me[key]) < 0.02, (key, steps[key], me[key])
     assert abs(steps["wpa100"] - me["wpa100"]) < 0.002 and abs(steps["cons"] - me["cons"]) < 0.002
+    assert abs(steps["recent100"] - me["recent100"]) < 0.02
 
     # ---- against the qualified pool: z-scores, weights, score
     elig = [p for p in pub["players"] if p["merit_rank"] is not None]
-    cols = {"pressure": "p_rv100", "impact": "wpa100", "delta": "delta100", "consistency": "cons"}
+    cols = {"pressure": "p_rv100", "recent": "recent100", "impact": "wpa100", "delta": "delta100", "consistency": "cons"}
     blend = []
     for name, col in cols.items():
         v = np.array([p[col] for p in elig])

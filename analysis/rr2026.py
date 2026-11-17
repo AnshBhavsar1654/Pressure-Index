@@ -34,10 +34,6 @@ RR = "Rajasthan Royals"
 SEASON = 2026
 PHASES = ["Powerplay", "Middle", "Death"]
 PHASE_OVERS = {"Powerplay": "overs 1-6", "Middle": "overs 7-15", "Death": "overs 16-20"}
-REC_W = {2024: 0.6, 2025: 0.8, 2026: 1.0}
-SHRINK_BALLS = 120
-CAND_EXPORT_MIN = 30   # smallest role sample exported; the dashboard default is 90 / 120
-CAND_EXPORT_TOP = 40   # candidates exported per role, best fit first
 
 
 def r1(x, d=1):
@@ -243,7 +239,6 @@ def main():
 
     # ------------------------------------------------------------ squad
     sq = mp[(mp.comp_id == 3298) & (mp.team_name == RR)]
-    squad_ids = set(sq.player_id)
     country = {}
     for p in bat_json["players"] + bowl_json["players"]:
         country[p["id"]] = p["country"]
@@ -315,92 +310,21 @@ def main():
         "bowl_death": ("Death bowler", "Bowler who defends totals in overs 16-20"),
     }
 
-    # ------------------------------------------------------------ candidates
-    pool_b = b[(b.season_yr >= 2024) & ((b.comp_tier == "IPL") | (b.comp_tier == "T20I Full"))].copy()
-    pool_b["w"] = pool_b.season_yr.map(REC_W) * pool_b.comp_weight
-    press_bat = {p["id"]: p for p in bat_json["players"]}
-    press_bowl = {p["id"]: p for p in bowl_json["players"]}
-    ipl26_team = (mp[mp.comp_id == 3298].groupby("player_id").team_name.last()).to_dict()
-    # Retention estimate: rank every IPL 2026 player inside his franchise by the runs he added (bat + ball).
-    # The dashboard lets the viewer assume each franchise keeps its top N; until the official list is out
-    # this is the only signal of who is unlikely to reach the auction.
-    imp = d[~d.is_wide].groupby("striker_id").rv_bat.sum().add(d.groupby("bowler_id").rv_bowl.sum(), fill_value=0)
-    core = pd.DataFrame({"team": pd.Series(ipl26_team), "net": imp}).dropna()
-    core["core_rank"] = core.groupby("team").net.rank(ascending=False, method="first")
+    # ------------------------------------------------------------ retentions and target roles
     released = set(pool.get("released_ids", []))
     retained, unmatched, announced = retained_ids(mp, pool)
     if unmatched:
         print("WARNING retained names not found in the data:", unmatched)
     # the pool is final once every franchise has announced (or an official released list is given)
     pool_known = bool(released) or announced >= set(teams)
-    # RR players RR keeps are never targets; once RR announce, the ones they let go can be bought back
-    off_limits = (squad_ids & set(retained)) if RR in announced else squad_ids
-
-    def role_table(disc, ph, min_balls):
-        if disc == "bat":
-            x = pool_b[(pool_b.phase == ph) & ~pool_b.is_wide]
-            pid, name, rv = x.striker_id, x.striker_name, x.rv_bat
-        else:
-            x = pool_b[pool_b.phase == ph]
-            pid, name, rv = x.bowler_id, x.bowler_name, x.rv_bowl
-        t = pd.DataFrame({"pid": pid, "name": name, "rv": rv, "w": x.w, "runs": x.runs if disc == "bat" else x.bowler_runs,
-                          "legal": x.legal.astype(int), "wkt": x.striker_out if disc == "bat" else x.bowler_wkt,
-                          "s26": (x.season_yr == 2026) & (x.comp_tier == "IPL"), "sipl": x.comp_tier == "IPL"})
-        t["wrv"] = t.w * t.rv
-        g = t.groupby("pid").agg(name=("name", lambda s: s.mode().iat[0]), balls=("rv", "size"), wn=("w", "sum"),
-                                 wrv=("wrv", "sum"), runs=("runs", "sum"), legal=("legal", "sum"), wkt=("wkt", "sum"),
-                                 b26=("s26", "sum"), bipl=("sipl", "sum"))
-        g["rv100"] = 100 * g.wrv / (g.wn + SHRINK_BALLS)  # shrunk toward 0 (league average)
-        g = g[g.balls >= min_balls]
-        return g
+    for row in squad:
+        row["retained"] = retained.get(row["id"]) == RR
 
     # Target every area that was a leak against an average side, or that left RR behind the top four
-    # (the bar for winning the title). Most behind the top four first.
+    # (the bar for winning the title). Most behind the top four first. My picks marks which of the
+    # top-10 players fill these roles.
     targets = sorted([g for g in gaps if g["gap_vs_avg"] < 0 or g["gap_vs_top4"] < 0], key=lambda g: g["gap_vs_top4"])
-    recs = []
-    for gp in targets:
-        disc, ph = gp["discipline"], gp["phase"]
-        # export a wide pool (30+ balls in the role); the dashboard applies the default
-        # minimum (90 batting / 120 bowling) and lets the viewer change it
-        g = role_table(disc, ph, CAND_EXPORT_MIN)
-        pj = press_bat if disc == "bat" else press_bowl
-        g["press_score"] = [pj[i]["score"] if i in pj and pj[i]["score"] is not None else np.nan for i in g.index]
-        z_role = (g.rv100 - g.rv100.mean()) / g.rv100.std(ddof=0)
-        ps = g.press_score
-        z_press = ((ps - ps.mean()) / ps.std(ddof=0)).fillna(-0.5)  # unproven under pressure: small penalty
-        g["fit"] = 0.7 * z_role + 0.3 * z_press
-        g = g.sort_values("fit", ascending=False)
-
-        def cand(pid, r):
-            c = {"id": int(pid), "name": r["name"], "nat": nat(pid), "overseas": nat(pid) not in ("India", "India (uncapped)"),
-                 "ipl_team_2026": ipl26_team.get(pid), "balls": int(r.balls),
-                 "rv100": r1(r.rv100), "fit": r1(r.fit, 2),
-                 "press_score": r1(r.press_score, 2) if not np.isnan(r.press_score) else None,
-                 "press_rank": pj[pid]["rank"] if pid in pj else None,
-                 "rated": pid in pj,
-                 "ipl26_balls": int(r.b26), "ipl_balls": int(r.bipl),
-                 "core_rank": int(core.core_rank[pid]) if pid in core.index else None,
-                 "ipl26_net": r1(core.net[pid]) if pid in core.index else None}
-            if disc == "bat":
-                c["sr"] = r1(100 * r.runs / max(r.balls, 1))
-                c["avg"] = r1(r.runs / r.wkt) if r.wkt else None
-            else:
-                c["econ"] = r1(6 * r.runs / max(r.legal, 1), 2)
-                c["bpw"] = r1(r.legal / r.wkt) if r.wkt else None
-            # known available: released, or from a franchise that has announced and did not keep them
-            c["status"] = ("in auction pool" if pid in released or (ipl26_team.get(pid) in announced) else
-                           ("in auction pool" if pool_known else "check retention list"))
-            return c
-
-        # Pakistani players cannot register for the IPL auction, so they are never recommended
-        external = [cand(pid, r) for pid, r in g.iterrows() if pid not in off_limits and nat(pid) != "Pakistan"
-                    and pid not in retained and (not released or pid in released)][:CAND_EXPORT_TOP]
-        internal = [cand(pid, r) for pid, r in g.iterrows() if pid in squad_ids][:8]
-        # benchmark: league-average and RR's own 2026 usage in this role
-        recs.append({"gap": gp, "role": ROLE[gp["key"]][0], "role_desc": ROLE[gp["key"]][1],
-                     "default_min_balls": 90 if disc == "bat" else 120,
-                     "candidates": external, "internal": internal})
-
+    recs = [{"gap": gp, "role": ROLE[gp["key"]][0], "role_desc": ROLE[gp["key"]][1]} for gp in targets]
 
     rr_row = table[table.team == RR].iloc[0]
     out = {
@@ -493,9 +417,7 @@ def main():
     print("\nGAPS (runs per match vs average side):")
     for g in gaps:
         print(f"  {g['discipline']:>4} {g['phase']:<9} {g['gap_vs_avg']:+.2f}  vs top4 {g['gap_vs_top4']:+.2f}  rank {g['rank']}")
-    for r in recs:
-        print(f"\n{r['role']}: " + ", ".join(f"{c['name']} ({c['rv100']:+}, {c['nat']})" for c in r["candidates"][:8]))
-        print("   internal: " + ", ".join(f"{c['name']} ({c['rv100']:+})" for c in r["internal"]))
+    print("\ntarget roles:", [r["role"] for r in recs])
     print("\nmatchups", {k: v for k, v in matchups.items() if k != "teams"})
     print("pressure", {k: v for k, v in pressure.items() if k != "teams"})
     print("order", order)

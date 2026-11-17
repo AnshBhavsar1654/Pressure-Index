@@ -54,8 +54,8 @@ export default function MethodPage() {
       ),
     },
     {
-      t: 'Blend four ingredients and stress-test',
-      d: `The rating is ${pct(w.pressure)} under-pressure output, ${pct(w.impact)} win impact, ${pct(w.delta)} lift above their own normal and ${pct(w.consistency)} consistency. Then I re-run the whole ranking 400 times on reshuffled matches to see which ranks are solid.`,
+      t: 'Blend five ingredients and stress-test',
+      d: `The rating is ${pct(w.pressure)} under-pressure output, ${pct(w.recent)} recent form (the same measure for 2025–26 only), ${pct(w.impact)} win impact, ${pct(w.delta)} lift above their own normal and ${pct(w.consistency)} consistency. Then I re-run the whole ranking 400 times on reshuffled matches to see which ranks are solid.`,
       e: (
         <>
           A player who stays in the top 10 in 380 of 400 re-runs is a safe pick. One who makes it in 120 is a close call, and the
@@ -171,8 +171,18 @@ export default function MethodPage() {
           count 75%, and emerging-team tournaments 60%.
         </li>
         <li className="panel p-4">
-          <b>Built for 2027.</b> Recent form matters more for an auction: 2026 counts fully, then 90%, 80%, 70% and 60% going
-          back to 2022.
+          <b>Built for 2027.</b> Recent form matters most for an auction: 2026 counts fully and 2025 at 90%, then 65% for 2024,
+          40% for 2023 and 25% for 2022. The last two seasons carry about three times the weight of 2022 and 2023 together.
+        </li>
+        <li className="panel p-4">
+          <b>Current players, and room for newcomers.</b> The bar to be ranked is low on purpose: 25 pressure balls in 3 matches,
+          at least 20 of them in 2 matches in 2025–26. A strong 2023 alone says little about 2027, and a newcomer who has shown it
+          recently deserves a look. Short records are pulled towards average until they prove themselves, and recent form is its
+          own ingredient, so a player whose best pressure work is behind them drops. The newcomers are also pulled out as{' '}
+          <Link href="/picks/#fresh" className="font-semibold text-pink-ink hover:underline">
+            fresh picks
+          </Link>
+          .
         </li>
       </ul>
 
@@ -256,8 +266,8 @@ export default function MethodPage() {
             </li>
             <li>
               Rating: baseline shrunk to the league mean (prior chosen by cross-validation); pressure lift against the player’s own
-              baseline shrunk towards zero (prior {bat.k.kp} balls); z-scored components blended {pct(w.pressure)} / {pct(w.impact)} /{' '}
-              {pct(w.delta)} / {pct(w.consistency)}; 400 match-level bootstrap resamples.
+              baseline shrunk towards zero (prior {bat.k.kp} balls); z-scored components blended {pct(w.pressure)} pressure / {pct(w.recent)} recent (2025–26) / {pct(w.impact)} impact /{' '}
+              {pct(w.delta)} lift / {pct(w.consistency)} consistency; eligibility 25 pressure balls in 3 matches, 20 of them in 2 matches in 2025–26; 400 match-level bootstrap resamples.
             </li>
             <li>
               Reproduce everything: <code className="rounded bg-panel-2 px-1">python -I analysis/pipeline.py</code> then{' '}

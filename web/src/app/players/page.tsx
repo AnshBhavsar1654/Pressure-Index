@@ -17,7 +17,7 @@ export default function PlayersPage() {
   const map = new Map<number, DirRow>()
   for (const role of ['bat', 'bowl'] as const) {
     for (const p of getRole(role).players) {
-      const row = map.get(p.id) ?? { id: p.id, name: p.name, country: p.country, team: p.ipl_team, kind: 'Batter', balls: 0 }
+      const row = map.get(p.id) ?? { id: p.id, name: p.name, country: p.country, team: p.ipl_team, retained: p.retained_by, kind: 'Batter', balls: 0 }
       row[role] = line(p)
       row.balls += p.p_balls
       row.country ??= p.country

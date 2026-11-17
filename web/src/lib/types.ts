@@ -1,7 +1,7 @@
 import type { TermKey } from './terms'
 
 export type Role = 'bat' | 'bowl'
-export type ComponentKey = 'pressure' | 'impact' | 'delta' | 'consistency'
+export type ComponentKey = 'pressure' | 'recent' | 'impact' | 'delta' | 'consistency'
 export type Weights = Record<ComponentKey, number>
 
 export interface TradStats {
@@ -49,12 +49,12 @@ export interface PlayerMatch {
 export interface Player {
   id: number
   name: string
-  /** rank in the submitted ranking (120+ pressure balls, 8+ matches, and signable by RR); null otherwise */
+  /** rank in the submitted ranking (25+ pressure balls in 3+ matches, 20+ of them in 2025-26, and signable by RR); null otherwise */
   rank: number | null
   /** rank among every qualified player, including those RR cannot sign */
   merit_rank: number | null
   /** why the player is outside the submitted ranking despite qualifying */
-  excluded: 'rr' | 'pakistan' | 'retained' | null
+  excluded: 'rr' | 'pakistan' | 'retained' | 'retired' | null
   /** franchise that retained the player for IPL 2027, from the announced lists */
   retained_by: string | null
   score: number | null
@@ -72,6 +72,15 @@ export interface Player {
   delta100: number
   wpa100: number
   cons: number
+  /** runs added per 100 pressure balls in 2025-26 only, shrunk toward average */
+  recent100: number
+  /** pressure balls and matches in 2025-26 */
+  r_balls: number
+  r_matches: number
+  /** first season the player appears in the data */
+  debut: number
+  /** rank among fresh picks (first match 2024 or later, lower bar), signable players only */
+  fresh_rank: number | null
   z?: Record<ComponentKey, number>
   /** bootstrap rank stability, computed for the default pool only */
   boot: { p_top10: number; rank_med: number; rank_lo: number; rank_hi: number } | null
@@ -91,6 +100,8 @@ export interface RoleData {
   eligibility: {
     min_pressure_balls: number
     min_pressure_matches: number
+    recent_from: number; min_recent_balls: number; min_recent_matches: number
+    fresh_from: number; fresh_min_balls: number; fresh_min_matches: number; n_fresh: number
     n_eligible: number
     /** qualified players RR can sign: the submitted ranking */
     n_ranked: number
@@ -150,8 +161,9 @@ export interface ChaseGrid {
 }
 
 /** Re-score players client-side from their component z-scores. */
-const COMP_FIELD: Record<ComponentKey, 'p_rv100' | 'wpa100' | 'delta100' | 'cons'> = {
+const COMP_FIELD: Record<ComponentKey, 'p_rv100' | 'recent100' | 'wpa100' | 'delta100' | 'cons'> = {
   pressure: 'p_rv100',
+  recent: 'recent100',
   impact: 'wpa100',
   delta: 'delta100',
   consistency: 'cons',
@@ -187,6 +199,7 @@ export type ScoredPlayer = ReturnType<typeof rescore>[number]
 
 export const COMPONENT_LABEL: Record<ComponentKey, string> = {
   pressure: 'Under pressure',
+  recent: 'Recent form',
   impact: 'Win impact',
   delta: 'Lift under pressure',
   consistency: 'Consistency',
@@ -195,6 +208,7 @@ export const COMPONENT_LABEL: Record<ComponentKey, string> = {
 /** The vocabulary entry that explains each rating ingredient. */
 export const COMPONENT_TERM: Record<ComponentKey, TermKey> = {
   pressure: 'underPressure',
+  recent: 'recentForm',
   impact: 'winImpact',
   delta: 'lift',
   consistency: 'consistency',
@@ -218,6 +232,8 @@ export interface RRMatch {
 }
 export interface SquadPlayer {
   id: number; name: string; nat: string; overseas: boolean; matches: number
+  /** kept by RR for IPL 2027 (false until RR announce) */
+  retained?: boolean
   bat?: { balls: number; runs: number; outs: number; sr: number; avg: number | null; rv: number; rv100: number
     p_balls: number; p_rv100: number | null; phases: Record<string, { balls: number; sr: number; rv100: number | null }> }
   bowl?: { balls: number; runs: number; wkts: number; econ: number; rv: number; rv100: number; type: string; pace: string
@@ -227,13 +243,9 @@ export interface Gap {
   key: string; discipline: 'bat' | 'bowl'; phase: string; rr_rv_pm: number; top4_rv_pm: number
   gap_vs_avg: number; gap_vs_top4: number; rank: number
 }
-export interface Candidate {
-  id: number; name: string; nat: string; overseas: boolean; ipl_team_2026: string | null; balls: number
-  rv100: number; fit: number; press_score: number | null; press_rank: number | null
-  ipl26_balls: number; ipl_balls: number; rated: boolean; /** rank inside the 2026 franchise by runs added (1 = the team's most valuable player); null if not in an IPL 2026 squad */ core_rank: number | null; ipl26_net: number | null; sr?: number; avg?: number | null; econ?: number; bpw?: number | null; status: string
-}
+/** a role RR need to fix for 2027 */
 export interface Recommendation {
-  gap: Gap; role: string; role_desc: string; default_min_balls: number; candidates: Candidate[]; internal: Candidate[]
+  gap: Gap; role: string; role_desc: string
 }
 export interface RRData {
   season: number

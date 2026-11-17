@@ -6,7 +6,7 @@ import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
 import { ChartFrame, Legend } from '@/components/charts/core'
 import { NAT_OPTIONS, natMatch, Pick, Segmented, type Nat } from '@/components/filters'
 import { PressureScatter } from '@/components/charts/Scatter'
-import { Meter, PlayerAvatar } from '@/components/kit'
+import { Meter, PlayerAvatar, RetainedMark } from '@/components/kit'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -33,7 +33,8 @@ export function Leaderboard({
   role: Role
   players: Player[]
   defaults: Weights
-  bar: { balls: number; matches: number; minBalls: number; minMatches: number }
+  /** recentBalls / recentMatches: the fixed 2025-26 evidence rule */
+  bar: { balls: number; matches: number; minBalls: number; minMatches: number; recentBalls: number; recentMatches: number }
   /** every player with a pressure ball, not only those the sliders can reach */
   total: number
 }) {
@@ -44,7 +45,10 @@ export function Leaderboard({
   const dBalls = useDeferredValue(minBalls)
   const dMatches = useDeferredValue(minMatches)
   // who qualifies: everyone at or above the chosen bar is rated against each other
-  const raw = useMemo(() => all.filter((p) => p.p_balls >= dBalls && p.p_matches >= dMatches), [all, dBalls, dMatches])
+  const raw = useMemo(
+    () => all.filter((p) => p.p_balls >= dBalls && p.p_matches >= dMatches && p.r_balls >= bar.recentBalls && p.r_matches >= bar.recentMatches),
+    [all, dBalls, dMatches, bar.recentBalls, bar.recentMatches],
+  )
   const barChanged = minBalls !== bar.balls || minMatches !== bar.matches
   const [q, setQ] = useState('')
   const [nat, setNat] = useState<Nat>('all')
@@ -94,8 +98,8 @@ export function Leaderboard({
         <CardHeader>
           <CardTitle>Who qualifies</CardTitle>
           <CardDescription>
-            My ranking needs {bar.balls}+ pressure balls across {bar.matches}+ matches. Lower the bar to widen the
-            shortlist, for example when retentions take players out of the auction. Small samples are pulled towards each
+            My ranking needs {bar.balls}+ pressure balls across {bar.matches}+ matches. Lower the bar to see more
+            players, or raise it to keep only long records. Small samples are pulled towards each
             player’s normal level, so short records cannot run away with the top spots.
           </CardDescription>
           <CardAction>
@@ -263,9 +267,12 @@ export function Leaderboard({
                   <span className="flex items-center gap-3">
                     <PlayerAvatar name={p.name} rr={p.ipl_team === 'Rajasthan Royals'} size={34} />
                     <span>
-                      <a href={`/players/${role}/${p.id}/`} onClick={(e) => e.stopPropagation()} className="block font-medium hover:underline">
-                        {p.name}
-                      </a>
+                      <span className="flex items-center gap-1.5">
+                        <a href={`/players/${role}/${p.id}/`} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
+                          {p.name}
+                        </a>
+                        {p.retained_by && <RetainedMark team={p.retained_by} size={17} />}
+                      </span>
                       <span className="block text-[12px] text-ink-3">
                         {role === 'bowl' ? p.bowl_type : p.hand === 'LHB' ? 'Left-handed' : p.hand === 'RHB' ? 'Right-handed' : p.hand}
                       </span>

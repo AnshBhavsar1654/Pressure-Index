@@ -24,6 +24,10 @@ export const TERMS = {
       def: 'Runs saved per 100 pressure balls, compared with an average bowler in exactly the same situation. Balls with more at stake count for more. +10 means 10 fewer runs conceded than average; 0 is average.',
     },
   },
+  recentForm: {
+    label: 'Recent form',
+    def: 'The under-pressure measure for 2025 and 2026 only: is the player still doing it? Shrunk towards average like the rest, so a few recent balls cannot carry it.',
+  },
   normal: {
     label: 'Normal',
     def: 'The same measure in the other 80% of balls, when little is at stake.',
@@ -55,7 +59,7 @@ export const TERMS = {
   },
   qualified: {
     label: 'Qualified',
-    def: 'At least 120 pressure balls across 8 or more matches, so nobody ranks on one lucky night.',
+    def: 'At least 25 pressure balls across 3 or more matches, with at least 20 of them in 2 matches in 2025–26, so every pick has been seen under pressure recently. The bar is low on purpose so newcomers can be ranked; short records are pulled towards average until they prove themselves.',
   },
   rate: {
     label: 'Strike rate',
@@ -109,11 +113,13 @@ export const EXCLUDED_NOTE = {
   rr: 'Already at RR',
   pakistan: 'Can’t enter the IPL auction',
   retained: 'Retained by their team',
+  retired: 'Retired from the IPL',
 } as const
 export const EXCLUDED_LONG = {
   rr: 'Already in the Rajasthan Royals squad, so left out of my ranking of players to target.',
   pakistan: 'Pakistani players cannot register for the IPL auction, so left out of my ranking.',
   retained: 'Retained by their IPL team for 2027, so not in the auction and left out of my ranking.',
+  retired: 'Retired from the IPL, so not available and left out of my ranking.',
 } as const
 
 type Excludable = Pick<Player, 'excluded' | 'retained_by'>

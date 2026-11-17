@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { PlayerAvatar, RankRibbon, signed } from '@/components/kit'
+import { PlayerAvatar, RankRibbon, RetainedMark, signed } from '@/components/kit'
 import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Badge } from '@/components/ui/badge'
@@ -133,7 +133,10 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
             <div className="flex min-w-0 items-center gap-4">
               <PlayerAvatar name={p.name} rr size={76} className="bg-white/85" />
               <div className="min-w-0">
-                <h1 className="display text-[2.6rem] text-white sm:text-[3.2rem]">{p.name}</h1>
+                <h1 className="display flex items-center gap-3 text-[2.6rem] text-white sm:text-[3.2rem]">
+                  {p.name}
+                  {p.retained_by && <RetainedMark team={p.retained_by} size={30} />}
+                </h1>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {p.country && (
                     <Badge className="rounded-lg bg-black/25 pl-1 text-white">

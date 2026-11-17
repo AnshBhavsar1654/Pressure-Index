@@ -18,6 +18,7 @@ export interface Example {
     p_raw100: number; n_raw100: number; league100: number; kn: number; kp: number; n_keep: number; n_rv100: number
     gap100: number; p_keep: number; delta100: number; p_rv100: number; wpa_raw100: number; wpa100: number
     c_n: number; c_pos: number; c_prior: number; cons: number
+    r_balls: number; r_matches: number; r_weighted: number; r_raw100: number; r_keep: number; recent100: number; recent_from: number
   }
   blend: { key: ComponentKey; value: number; mean: number; sd: number; z: number; weight: number; part: number }[]
   score: number
@@ -88,7 +89,7 @@ export function WorkedExample({ e }: { e: Example }) {
         }
       >
         The same sum for all {fmt.int(s.p_balls)} of {last}’s pressure balls in {s.p_matches} matches, and for every normal ball. Older seasons
-        and weaker competitions count for less (2026 counts fully, 2022 counts 60%). Pressure balls with more at stake count for
+        and weaker competitions count for less (2026 counts fully, 2025 at 90%, 2022 only 25%). Pressure balls with more at stake count for
         more: a ball at twice the stakes of the average pressure ball counts twice, up to {s.stakes_cap} times, so a last-over ball outweighs one just
         over the pressure line.
       </Step>
@@ -112,10 +113,12 @@ export function WorkedExample({ e }: { e: Example }) {
       </Step>
       <Step
         n={4}
-        title="Build the four ingredients"
+        title="Build the five ingredients"
         sum={
           <>
             <Term k="underPressure">Under pressure</Term>: {sg(s.n_rv100)} {op(s.delta100)} = <b>{sg(s.p_rv100)}</b>
+            <br />
+            <Term k="recentForm">Recent form</Term>: {sg(s.r_raw100)} over {s.r_balls} balls in {s.recent_from}–26 × keep {fmt.pct(s.r_keep)} = <b>{sg(s.recent100)}</b>
             <br />
             <Term k="winImpact">Win impact</Term>: {(s.wpa_raw100 * 100).toFixed(1)} pts × {fmt.pct(s.wpa_keep)} = <b>{winPts(s.wpa100)}</b>
             <br />
@@ -123,7 +126,8 @@ export function WorkedExample({ e }: { e: Example }) {
           </>
         }
       >
-        Under pressure is the normal level plus the lift. Win impact adds up how much each pressure ball moved the team’s chance
+        Under pressure is the normal level plus the lift. Recent form is the same measure for {s.recent_from} and 2026 only, pulled
+        towards average with the same caution, so it asks whether {last} is still doing it. Win impact adds up how much each pressure ball moved the team’s chance
         of winning, with the same caution. Consistency counts the pressure innings of 6 balls or more where {last} beat the average:{' '}
         {s.c_pos} of {s.c_n}, again nudged towards the typical player.
       </Step>
@@ -146,9 +150,9 @@ export function WorkedExample({ e }: { e: Example }) {
           </span>
         }
       >
-        The four ingredients are on different scales, so each one becomes “how far above the average of the {e.n_qualified}{' '}
-        qualified batters, measured in typical gaps between players”. Then they are blended: 40% under pressure, 20% each for win
-        impact, lift and consistency. The biggest blend wins.
+        The five ingredients are on different scales, so each one becomes “how far above the average of the {e.n_qualified}{' '}
+        qualified batters, measured in typical gaps between players”. Then they are blended:{' '}
+        {e.blend.map((x) => `${Math.round(x.weight * 100)}% ${COMPONENT_LABEL[x.key].toLowerCase()}`).join(', ')}. The biggest blend wins.
       </Step>
       <Step
         n={6}

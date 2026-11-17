@@ -3,11 +3,12 @@
 import { ChartFrame, Legend } from '@/components/charts/core'
 import { LineChart } from '@/components/charts/LineChart'
 import { Calibration, RankRanges } from '@/components/charts/Profile'
-import { rescore, type Player, type RoleData, type Summary } from '@/lib/types'
+import { rescore, type Player, type RoleData, type Summary, type Weights } from '@/lib/types'
 
 // default-pool players in their submitted order, with z-scores filled in
+const WEIGHTS: Weights = { pressure: 0.3, recent: 0.2, impact: 0.2, delta: 0.15, consistency: 0.15 }
 const asScored = (ps: Player[]) =>
-  rescore(ps, { pressure: 0.4, impact: 0.2, delta: 0.2, consistency: 0.2 })
+  rescore(ps, WEIGHTS)
     .filter((p) => p.rank != null)
     .map((p) => ({ ...p, liveRank: p.rank! }))
     .toSorted((a, b) => a.liveRank - b.liveRank)

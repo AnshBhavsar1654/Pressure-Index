@@ -1,5 +1,5 @@
 {
-  "note": "IPL 2027 retentions (announced 17 November 2026), one list per franchise as each announces: names as written in the data, or player_ids. Traded-in players go under their new franchise. Rerun analysis/pipeline.py, analysis/rr2026.py and analysis/worked_example.py after each update. Retained players leave the submitted top 10 and the auction lists; a franchise's 2026 players missing from its list are treated as released. Until RR announce, RR's whole 2026 squad stays out of the top 10. `released_ids` is the older, stricter option: when filled, the auction lists show only those players.",
+  "note": "IPL 2027 retentions (announced 17 November 2026), one list per franchise as each announces: names as written in the data, or player_ids. Traded-in players go under their new franchise. Rerun analysis/pipeline.py, analysis/rr2026.py and analysis/worked_example.py after each update. Retained players leave the submitted top 10 and the auction lists; a franchise's 2026 players missing from its list are treated as released. Until RR announce, RR's whole 2026 squad stays out of the top 10. `released_ids` is the older, stricter option: when filled, the auction lists show only those players. `retired`: players who have retired from the IPL; they are never recommended.",
   "updated": "17 November 2026",
   "retained": {
     "Chennai Super Kings": [
@@ -215,5 +215,11 @@
       "Sam Curran"
     ]
   },
-  "released_ids": []
+  "released_ids": [],
+  "retired": [
+    "Mahendra Singh Dhoni",
+    "Dinesh Karthik",
+    "Andre Russell",
+    "Ajinkya Rahane"
+  ]
 }

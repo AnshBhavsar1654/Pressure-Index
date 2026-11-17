@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useDeferredValue, useMemo, useState } from 'react'
 import { Flag } from '@/components/Flag'
 import { NAT_OPTIONS, natMatch, Pick, Segmented, type Nat } from '@/components/filters'
-import { PlayerAvatar, signed } from '@/components/kit'
+import { PlayerAvatar, RetainedMark, signed } from '@/components/kit'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,6 +20,8 @@ export type DirRow = {
   name: string
   country: string | null
   team: string | null
+  /** franchise that retained them for IPL 2027 */
+  retained: string | null
   kind: 'Batter' | 'Bowler' | 'All-rounder'
   bat?: RoleLine
   bowl?: RoleLine
@@ -195,6 +197,7 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
                       <Link href={`/players/${r.bat && (!r.bowl || r.bat.balls >= r.bowl.balls) ? 'bat' : 'bowl'}/${r.id}/`} className="font-medium hover:underline">
                         {r.name}
                       </Link>
+                      {r.retained && <RetainedMark team={r.retained} size={17} />}
                     </span>
                   </TableCell>
                   <TableCell>

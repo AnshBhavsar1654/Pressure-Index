@@ -165,12 +165,12 @@ export default function RajasthanPage() {
           <h2 className="display text-[1.7rem]">What to fix for 2027</h2>
           <p className="text-[14px] text-ink-2">
             RR leaked runs against an average side, or trailed the top four, in {rr.recommendations.length} roles:{' '}
-            {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. My picks page ranks the players who fill each
-            one best.
+            {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. My picks puts the top-10 players who fill
+            these gaps first.
           </p>
         </div>
-        <Link href="/picks/#roles" className="flex min-h-11 items-center rounded-lg bg-pink px-4 font-semibold text-white hover:bg-pink-ink">
-          See the shortlist
+        <Link href="/picks/" className="flex min-h-11 items-center rounded-lg bg-pink px-4 font-semibold text-white hover:bg-pink-ink">
+          See my picks
         </Link>
       </section>
 

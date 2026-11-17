@@ -31,7 +31,8 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
           <>
             {a.name}, {b.name} and {c.name} lead the {data.eligibility.n_ranked} qualified {noun} RR could sign. Each has at least{' '}
             {data.eligibility.min_pressure_balls} high-pressure balls across {data.eligibility.min_pressure_matches} or more
-            matches, so nobody ranks on one lucky night.
+            matches, at least {data.eligibility.min_recent_balls} of them in 2025–26, so every pick is current. The bar is low so
+            newcomers can show up; short records are pulled towards average, so nobody ranks on one lucky night.
           </>
         }
       >
@@ -48,6 +49,8 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
         bar={{
           balls: data.eligibility.min_pressure_balls,
           matches: data.eligibility.min_pressure_matches,
+          recentBalls: data.eligibility.min_recent_balls,
+          recentMatches: data.eligibility.min_recent_matches,
           minBalls: data.eligibility.export_min_balls,
           minMatches: data.eligibility.export_min_matches,
         }}

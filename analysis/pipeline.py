@@ -43,21 +43,37 @@ FULL_MEMBERS = {
     "India", "Pakistan", "Australia", "England", "New Zealand", "South Africa",
     "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan", "Ireland", "Zimbabwe",
 }
-SEASON_WEIGHT = {2022: 0.60, 2023: 0.70, 2024: 0.80, 2025: 0.90, 2026: 1.00}
-MIN_PRESSURE_BALLS_BAT = 120  # eligibility (raw balls faced under pressure)
-MIN_PRESSURE_BALLS_BOWL = 120
-MIN_PRESSURE_MATCHES = 8
+# Recency: the last two seasons (2025-26) carry about three times the weight of 2022-23 combined,
+# because current form is what a 2027 squad buys.
+SEASON_WEIGHT = {2022: 0.25, 2023: 0.40, 2024: 0.65, 2025: 0.90, 2026: 1.00}
+# Eligibility: a low bar so newcomers who have shown it recently can be ranked. Shrinkage (a prior of
+# 250 balls) keeps a short record near average unless it is strong, and the bootstrap shows how settled
+# each rank is. (25 balls in 2 matches was tested and let 40-ball careers into the top 10.)
+MIN_PRESSURE_BALLS_BAT = 25   # raw balls faced under pressure
+MIN_PRESSURE_BALLS_BOWL = 25
+MIN_PRESSURE_MATCHES = 3
+# Fresh evidence: a 2027 pick must have been seen under pressure recently. Nobody is ranked without at
+# least 20 pressure balls in 2 matches in 2025-26, however good their older record.
+RECENT_FROM = 2025
+MIN_RECENT_BALLS = 20
+MIN_RECENT_MATCHES = 2
+# Fresh picks: the ranked players whose first match in the data is 2024 or later.
+FRESH_FROM = 2024
+FRESH_MIN_BALLS = MIN_PRESSURE_BALLS_BAT
+FRESH_MIN_MATCHES = MIN_PRESSURE_MATCHES
 # Wider pool exported to the dashboard so viewers can lower the bar themselves.
 # Shrinkage already pulls small samples toward the player's own baseline.
-EXPORT_MIN_BALLS = 30     # lowest bar offered by the ranking sliders
-EXPORT_MIN_MATCHES = 3
+EXPORT_MIN_BALLS = 20     # lowest bar offered by the ranking sliders
+EXPORT_MIN_MATCHES = 2
 PROFILE_MIN_BALLS = 1     # every player with any pressure ball gets a profile page
 # Inside the pressure set, a ball counts in proportion to its stakes: one at 10x a typical ball
 # matters more than one just over the line. Weight = stakes / average pressure-ball stakes,
 # capped at 1.5: higher caps made ratings less repeatable between odd and even matches
 # (bowlers' split-half fell from 0.16 to 0.07 at a cap of 3), so big moments count more, not most.
 STAKES_CAP = 1.5
-DEFAULT_WEIGHTS = {"pressure": 0.40, "impact": 0.20, "delta": 0.20, "consistency": 0.20}
+# "recent" = output under pressure in 2025-26 only: is the player still doing it?
+DEFAULT_WEIGHTS = {"pressure": 0.30, "recent": 0.20, "impact": 0.20, "delta": 0.15, "consistency": 0.15}
+COMPONENTS = {"pressure": "p_rv", "recent": "recent", "impact": "wpa100", "delta": "delta", "consistency": "cons"}
 PRESSURE_K = 250              # credibility prior: pressure balls before a player's own record counts 50%
 N_BOOT = int(__import__('os').environ.get('N_BOOT', 400))
 
@@ -571,6 +587,7 @@ def player_match_table(b: pd.DataFrame, role: str) -> pd.DataFrame:
         d["r"], d["out"] = d.bowler_runs, d.bowler_wkt
     d["wb"] = d.comp_weight * d.season_yr.map(SEASON_WEIGHT)  # recency and competition
     d["P"] = d.pressure.astype(int)
+    d["R"] = (d.season_yr >= RECENT_FROM).astype(int)
     # stakes (with match importance) against the average pressure ball. Knockout balls are all in the
     # pressure set but weighted by their own stakes like any other ball: a minimum weight was tested
     # and made bowlers' ratings less repeatable (split-half 0.16 to 0.13).
@@ -583,7 +600,7 @@ def player_match_table(b: pd.DataFrame, role: str) -> pd.DataFrame:
     d["lg"] = d.legal.astype(int)
     # win probability already grows with the stakes, so WPA is not weighted by them again
     d["wrv"], d["wrv2"], d["wwpa"] = d.w * d.rv, d.w * d.rv ** 2, d.wb * d.wpa
-    agg = d.groupby(["pid", "match_id", "P"]).agg(
+    agg = d.groupby(["pid", "match_id", "P", "R"]).agg(
         n=("rv", "size"), wn=("w", "sum"), wbn=("wb", "sum"), wrv=("wrv", "sum"), wrv2=("wrv2", "sum"),
         wwpa=("wwpa", "sum"), rv=("rv", "sum"), rvs=("rvs", "sum"), wpa=("wpa", "sum"), r=("r", "sum"),
         out=("out", "sum"), dotb=("dotb", "sum"), bnd=("bnd", "sum"), lg=("lg", "sum"),
@@ -609,7 +626,9 @@ def rate(pm: pd.DataFrame, role: str, k=None):
     pmm = x[(x.P == 1) & (pm.loc[x.index, "n"] >= 6)]
     cons = pmm.assign(pos=(pmm.rvs > 0).astype(int) * pmm["mult"]).groupby("pid").agg(
         c_n=("mult", "sum"), c_pos=("pos", "sum"))
-    t = p.join(n, how="left").join(cons, how="left").fillna(0)
+    r = x[(x.P == 1) & (x.R == 1)].groupby("pid").agg(rn=("n", "sum"), rwn=("wn", "sum"), rwrv=("wrv", "sum"),
+                                                      rmatches=("mult", "sum"))
+    t = p.join(n, how="left").join(cons, how="left").join(r, how="left").fillna(0)
     if k is None:
         k = choose_k(pm, role)
     # baseline (non-pressure) level: shrink toward the league mean
@@ -622,18 +641,20 @@ def rate(pm: pd.DataFrame, role: str, k=None):
     t["p_rv"] = t.n_rv + t.delta
     t["wpa100"] = t.pwwpa / np.maximum(t.pwbn, 1) * 100 * (t.pwbn / (t.pwbn + k["kp"]))
     t["cons"] = (t.c_pos + 8 * k["c_prior"]) / (t.c_n + 8)
+    # recent form: runs added per pressure ball in 2025-26 only, shrunk toward average like the rest
+    t["recent"] = t.rwrv / (t.rwn + k["kp"])
     return t, k
 
 
-def score(t: pd.DataFrame, eligible: pd.Index, weights=DEFAULT_WEIGHTS, excluded=frozenset()):
-    """Standardise within the whole eligible pool, then rank.
+def score(t: pd.DataFrame, eligible: pd.Index, weights=DEFAULT_WEIGHTS, excluded=frozenset(), ref=None):
+    """Standardise against the eligible pool (or `ref`, so other groups share its scale), then rank.
     merit_rank ranks everyone; rank (the submitted list) skips players RR cannot sign
     (its own squad, and Pakistani players, who cannot enter the IPL auction)."""
     e = t.loc[t.index.intersection(eligible)].copy()
-    comps = {"pressure": "p_rv", "impact": "wpa100", "delta": "delta", "consistency": "cons"}
-    for name, col in comps.items():
-        e[f"z_{name}"] = (e[col] - e[col].mean()) / e[col].std(ddof=0)
-    e["score"] = sum(weights[n] * e[f"z_{n}"] for n in comps)
+    base = e if ref is None else t.loc[t.index.intersection(ref)]
+    for name, col in COMPONENTS.items():
+        e[f"z_{name}"] = (e[col] - base[col].mean()) / base[col].std(ddof=0)
+    e["score"] = sum(weights[n] * e[f"z_{n}"] for n in COMPONENTS)
     e["merit_rank"] = e.score.rank(ascending=False, method="first").astype(int)
     ok = ~e.index.isin(list(excluded))
     e["rank"] = np.nan
@@ -672,7 +693,7 @@ def split_half(pm: pd.DataFrame, role: str, eligible: pd.Index, k: dict):
     j = to.join(te, lsuffix="_o", rsuffix="_e", how="inner")
     j = j.loc[j.index.intersection(eligible)]
     res = {}
-    for col in ["p_rv", "n_rv", "delta", "cons", "wpa100"]:
+    for col in ["p_rv", "n_rv", "delta", "cons", "wpa100", "recent"]:
         r = float(np.corrcoef(j[f"{col}_o"], j[f"{col}_e"])[0, 1])
         res[col] = round(r, 3)
     return res
@@ -742,6 +763,11 @@ def player_meta(mp: pd.DataFrame, m: pd.DataFrame, b: pd.DataFrame):
         "Netherlands", "Scotland", "United Arab Emirates", "Nepal", "Hong Kong", "Oman",
         "Canada", "United States Of America", "Namibia", "Kuwait", "Singapore", "Japan"})]
     intl = intl.sort_values("season_yr").groupby("player_id").last()
+    # players seen only for an A side (emerging tournaments) take that country: Bangladesh A -> Bangladesh.
+    # This also keeps uncapped Pakistan A players out of the picks.
+    a_side = mp[(mp.is_ipl == 0) & mp.team_name.str.endswith(" A")].sort_values("season_yr").groupby("player_id").last()
+    a_side["team_name"] = a_side.team_name.str[:-2]
+    intl = pd.concat([intl, a_side.loc[~a_side.index.isin(intl.index)]])
     bat_hand = b.groupby("striker_id").batting_type.agg(lambda s: s.mode().iat[0])
     bowl_type = b.groupby("bowler_id").bowling_type.agg(lambda s: s.mode().iat[0])
     pace = b.groupby("bowler_id").pace_or_spin.agg(lambda s: s.mode().iat[0])
@@ -770,6 +796,12 @@ def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[dict, list, set]:
             else:
                 ids[int(pid)] = team or None
     return ids, missing, {t for t in raw if t}
+
+
+def retired_ids(mp: pd.DataFrame, cfg: dict) -> tuple[set, list]:
+    """Players named in auction_pool.json `retired` (retired from the IPL), and names not found."""
+    ids, missing, _ = retained_ids(mp, {"retained": {"": cfg.get("retired", [])}})
+    return set(ids), missing
 
 
 def main():
@@ -803,8 +835,9 @@ def main():
     overrides = json.loads((ROOT / "analysis" / "nationality_overrides.json").read_text())["overrides"]
     pool_cfg = json.loads(POOL.read_text()) if POOL.exists() else {}
     retained, unmatched, announced = retained_ids(mp, pool_cfg)
-    if unmatched:
-        log("WARNING retained names not found in the data:", unmatched)
+    retired, unmatched_r = retired_ids(mp, pool_cfg)
+    if unmatched or unmatched_r:
+        log("WARNING names not found in the data:", unmatched + unmatched_r)
     log(f"retentions: {len(retained)} players from {sorted(announced)}")
     rr_squad = set(mp[(mp.comp_id == IPL_2026) & (mp.team_name == "Rajasthan Royals")].player_id)
 
@@ -812,6 +845,8 @@ def main():
         """Why a player is left out of the submitted top 10, if they are."""
         if (overrides.get(name) or intl_meta.team_name.get(pid)) == "Pakistan":
             return "pakistan"  # cannot register for the IPL auction
+        if pid in retired:
+            return "retired"  # retired from the IPL
         if pid in retained:  # on a franchise's announced list
             return "rr" if retained[pid] == "Rajasthan Royals" else "retained"
         if pid in rr_squad and "Rajasthan Royals" not in announced:
@@ -826,8 +861,17 @@ def main():
         why = {pid: r for pid in t.index if (r := exclusion(pid, names.get(pid)))}
         excluded = frozenset(why)
         min_balls = MIN_PRESSURE_BALLS_BAT if role == "bat" else MIN_PRESSURE_BALLS_BOWL
-        eligible = t[(t.pn >= min_balls) & (t.pmatches >= MIN_PRESSURE_MATCHES)].index
+        fresh_ev = (t.rn >= MIN_RECENT_BALLS) & (t.rmatches >= MIN_RECENT_MATCHES)
+        eligible = t[(t.pn >= min_balls) & (t.pmatches >= MIN_PRESSURE_MATCHES) & fresh_ev].index
+        log(f"{role}: {int(((t.pn >= min_balls) & (t.pmatches >= MIN_PRESSURE_MATCHES) & ~fresh_ev).sum())} "
+            "players with enough pressure balls left out for lack of 2025-26 evidence")
         s = score(t, eligible, excluded=excluded)
+        # fresh picks: short careers, same scale as the main pool, signable players only
+        debut = d.groupby("pid").season_yr.min()
+        fresh_pool = t[(debut.reindex(t.index) >= FRESH_FROM) & (t.pn >= FRESH_MIN_BALLS)
+                       & (t.pmatches >= FRESH_MIN_MATCHES) & fresh_ev].index
+        fs = score(t, fresh_pool, excluded=excluded, ref=eligible)
+        fresh_rank = fs["rank"].dropna().astype(int).to_dict()
         log(f"{role}: k={k}, eligible={len(eligible)}")
         boot = bootstrap(pm, role, eligible, k, excluded)
         sh = split_half(pm, role, eligible, k)
@@ -877,6 +921,8 @@ def main():
                 "p_rv100": round(100 * row.p_rv, 2), "n_rv100": round(100 * row.n_rv, 2),
                 "delta100": round(100 * row.delta, 2), "wpa100": round(float(row.wpa100), 3),
                 "cons": round(float(row.cons), 3),
+                "recent100": round(100 * row.recent, 2), "r_balls": int(row.rn), "r_matches": int(row.rmatches),
+                "debut": int(debut[pid]), "fresh_rank": fresh_rank.get(pid),
                 "boot": boot.get(pid), "press": press, "norm": norm,
                 "seasons": seasons, "phases": phases, "matches": matches,
                 "moments": big_moments(dp, role),
@@ -884,6 +930,10 @@ def main():
         results[role] = {"players": players, "k": k, "split_half": sh,
                          "eligibility": {"min_pressure_balls": min_balls,
                                          "min_pressure_matches": MIN_PRESSURE_MATCHES,
+                                         "recent_from": RECENT_FROM, "min_recent_balls": MIN_RECENT_BALLS,
+                                         "min_recent_matches": MIN_RECENT_MATCHES,
+                                         "fresh_from": FRESH_FROM, "fresh_min_balls": FRESH_MIN_BALLS,
+                                         "fresh_min_matches": FRESH_MIN_MATCHES, "n_fresh": int(len(fresh_pool)),
                                          "n_eligible": int(len(eligible)),
                                          "n_ranked": int(s["rank"].notna().sum()),
                                          "export_min_balls": EXPORT_MIN_BALLS,

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, type ReactNode } from 'react'
 import { NAT_OPTIONS, natMatch, Segmented, type Nat } from '@/components/filters'
-import { OverseasMark, PlayerAvatar, signed } from '@/components/kit'
+import { OverseasMark, PlayerAvatar, RetainedMark, signed } from '@/components/kit'
 import { Slider } from '@/components/ui/slider'
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -113,6 +113,7 @@ function SquadTable({ title, rows: base, kind }: { title: string; rows: SquadPla
                     <span className="flex items-center gap-2.5">
                       <PlayerAvatar name={p.name} rr size={30} />
                       <span className="font-medium">{p.name}</span>
+                      {p.retained && <RetainedMark team="Rajasthan Royals" size={17} />}
                       {p.overseas && <OverseasMark country={p.nat} size={13} />}
                     </span>
                   </TableCell>

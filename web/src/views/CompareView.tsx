@@ -7,7 +7,7 @@ import { ChartFrame, Legend } from '@/components/charts/core'
 import { LineChart } from '@/components/charts/LineChart'
 import { Flag } from '@/components/Flag'
 import { BallIcon, BatIcon } from '@/components/icons'
-import { PlayerAvatar } from '@/components/kit'
+import { PlayerAvatar, RetainedMark } from '@/components/kit'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -38,6 +38,7 @@ function rowsFor(role: Role): Row[] {
   const d = (n: number) => (v: number | null | undefined) => fmt.dec(v, n)
   return [
     { label: `Under pressure (${bat ? 'runs added' : 'runs saved'} per 100)`, hint: term('underPressure', role).def, get: (p) => p.p_rv100, fmt: (v) => fmt.signed(v), better: 1 },
+    { label: 'Recent form (2025–26)', hint: term('recentForm').def, get: (p) => p.recent100, fmt: (v) => fmt.signed(v), better: 1 },
     { label: `Normal (${bat ? 'runs added' : 'runs saved'} per 100)`, hint: term('normal').def, get: (p) => p.n_rv100, fmt: (v) => fmt.signed(v), better: 1 },
     { label: 'Lift under pressure', hint: term('lift').def, get: (p) => p.delta100, fmt: (v) => fmt.signed(v), better: 1 },
     { label: 'Win impact', hint: term('winImpact').def, get: (p) => p.wpa100, fmt: winPts, better: 1 },
@@ -198,7 +199,10 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
               <div className="flex items-center gap-3 pr-7">
                 <PlayerAvatar name={p.name} rr={p.ipl_team === 'Rajasthan Royals'} size={48} />
                 <div className="min-w-0">
-                  <h2 className="display truncate text-[1.6rem]">{p.name}</h2>
+                  <h2 className="display flex items-center gap-2 text-[1.6rem]">
+                    <span className="truncate">{p.name}</span>
+                    {p.retained_by && <RetainedMark team={p.retained_by} size={20} />}
+                  </h2>
                   <span className="text-[12.5px] text-ink-3">{role === 'bat' ? p.hand : p.bowl_type}</span>
                 </div>
               </div>
