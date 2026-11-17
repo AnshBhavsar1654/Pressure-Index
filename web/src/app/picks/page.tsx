@@ -4,7 +4,7 @@ import { Flag } from '@/components/Flag'
 import { Note, PageHead, PlayerAvatar, SectionHead, Tag, ordinal, signed } from '@/components/kit'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Term } from '@/components/Term'
-import { getRole, getRR, getSummary } from '@/lib/data'
+import { getRole, getRR } from '@/lib/data'
 import { momentLine } from '@/views/Moments'
 import { fmt, iplCode } from '@/lib/format'
 import { betterThan, winPts } from '@/lib/terms'
@@ -24,37 +24,31 @@ const SLOT: Record<string, string> = {
 const MIN_PHASE_BALLS = 30 // fewer pressure balls than this in a phase is too thin to call a strength
 
 type Pick = { p: Player; z: Record<ComponentKey, number> }
-const ON: Record<ComponentKey, string> = { pressure: 'output under pressure', recent: 'recent form', impact: 'win impact', delta: 'lifting above their normal', consistency: 'consistency' }
 
-/** The qualified players RR can sign, best first, with each rating ingredient against the whole qualified pool. */
+/** The recommended players, best first, with each piece of evidence against the whole qualified pool. */
 function picks(role: Role): Pick[] {
   const pool = getRole(role).players.filter((p) => p.merit_rank != null)
-  return rescore(pool, getSummary().weights)
+  return rescore(pool)
     .filter((p) => p.rank != null && p.rank <= 10)
     .toSorted((a, b) => a.rank! - b.rank!)
     .map((p) => ({ p, z: p.z }))
 }
 
-/** Two plain sentences on the player's strongest ingredients, then the evidence behind them. */
+/** Plain sentences: the rating, the rise above his usual level, the stronger of win impact and consistency, then the evidence. */
 function why({ p, z }: Pick, role: Role): string[] {
   const noun = role === 'bat' ? 'batter' : 'bowler'
-  const say: Record<ComponentKey, string> = {
-    pressure:
-      role === 'bat'
-        ? `Scores ${fmt.dec(p.p_rv100, 1)} more runs per 100 pressure balls than an average batter would in the same situations.`
-        : `Concedes ${fmt.dec(p.p_rv100, 1)} fewer runs per 100 pressure balls than an average bowler would in the same situations.`,
-    consistency: `Delivered in ${Math.round(p.cons * 10)} of every 10 pressure ${role === 'bat' ? 'innings' : 'spells'}.`,
-    recent: `Still doing it: ${signed(p.recent100)} runs ${role === 'bat' ? 'added' : 'saved'} per 100 pressure balls in 2025–26, over ${p.r_balls} balls in ${p.r_matches} matches.`,
-    delta:
-      p.delta100 >= 0
-        ? `Gets ${fmt.dec(p.delta100, 0)} runs per 100 balls better than their own normal level when the match is tight.`
-        : `Roughly at their normal level under pressure, which is already well above average.`,
-    impact: `Adds ${Math.round(p.wpa100 * 100)} percentage points to the team’s chance of winning every 100 pressure balls.`,
-  }
-  const best = (Object.keys(z) as ComponentKey[]).toSorted((a, b) => z[b] - z[a]).slice(0, 2)
+  const runs = role === 'bat' ? 'added' : 'saved'
+  const extra =
+    z.impact >= z.consistency || p.cons == null
+      ? `Moves matches: adds ${Math.round(p.wpa100 * 100)} percentage points to his team’s chance of winning every 100 pressure balls, better than ${betterThan(z.impact)}% of qualified ${noun}s.`
+      : `Reliable: beat the average in ${Math.round(p.cons * 10)} of every 10 pressure ${role === 'bat' ? 'innings' : 'spells'} (${p.c_n} in all), better than ${betterThan(z.consistency)}% of qualified ${noun}s.`
   return [
-    ...best.map((k) => `${say[k]} Better than ${betterThan(z[k])}% of qualified ${noun}s on ${ON[k]}.`),
-    `Backed by ${fmt.int(p.p_balls)} pressure balls in ${p.p_matches} matches, and top 10 in ${fmt.pct(p.boot?.p_top10)} of 400 re-runs.`,
+    role === 'bat'
+      ? `Scores ${fmt.dec(p.p_rv100, 1)} more runs per 100 pressure balls than an average batter would in the same situations, better than ${betterThan(z.pressure)}% of qualified batters.`
+      : `Concedes ${fmt.dec(p.p_rv100, 1)} fewer runs per 100 pressure balls than an average bowler would in the same situations, better than ${betterThan(z.pressure)}% of qualified bowlers.`,
+    `Rises when it matters: ${signed(p.delta100)} runs ${runs} per 100 balls above his usual level (${signed(p.n_rv100)}).`,
+    extra,
+    `Backed by ${fmt.int(p.p_balls)} pressure balls in ${p.p_matches} matches (${p.r_balls} in 2025–26), and top 10 in ${fmt.pct(p.boot?.p_top10)} of 400 re-runs.`,
     ...(p.moments[0]
       ? [`Biggest moment: ${momentLine(p.moments[0], role)} v ${p.moments[0].opp} (${fmt.date(p.moments[0].date)}), taking the team’s chance of winning from ${fmt.chance(p.moments[0].wp_from)} to ${fmt.chance(p.moments[0].wp_to)}${p.moments[0].won ? '' : ', though they lost'}.`]
       : []),
@@ -116,8 +110,9 @@ export default function PicksPage() {
       >
         <div className="max-w-sm">
           <Note title="Who is left out">
-            RR’s own players are already in the squad, and Pakistani players cannot enter the IPL auction, so neither is listed
-            here.{' '}
+            RR’s own players are already in the squad, retired players are not available, and Pakistani players cannot enter the
+            IPL auction, so none is listed here. Nor is anyone who is worse under pressure than usual, however good his usual
+            level.{' '}
             {rr.pool.known
               ? 'Players retained by their teams are out too, so every name here can be bought at the auction.'
               : rr.pool.announced.length
@@ -232,9 +227,9 @@ export default function PicksPage() {
 
       <SectionHead id="fresh" title="Fresh picks: new at the top level">
         Players whose first IPL or T20I match in the data is {elig.fresh_from} or later, the kind of find an auction can be won on. The
-        data starts in 2022 and holds no ages, so a few (George Linde, for one) are new to this level rather than young. They are ranked on exactly
-        the same scale as the top 10; this list just pulls the newcomers out. Shorter records, so treat them as scouting leads rather
-        than sure things.
+        data starts in 2022 and holds no ages, so a few are new to this level rather than young. They clear the same bar and are ranked
+        on exactly the same scale as the top 10; this list just pulls the newcomers out. Shorter records, so their ratings lean more
+        on their usual level: treat them as scouting leads rather than sure things.
       </SectionHead>
       <div className="mb-10 grid gap-4 xl:grid-cols-2">
         {(['bat', 'bowl'] as const).map((role) => (

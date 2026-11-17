@@ -2,15 +2,18 @@
 SupeRR Selector S2 - Pressure performance pipeline.
 
 Reads the raw data pack, builds:
-  1. Match state for every delivery (score, wickets, balls left, target).
-  2. A win-probability (WP) model per innings (monotonic gradient boosting).
-  3. Leverage Index (LI): expected absolute swing in WP from the next ball,
-     normalised so the average delivery = 1.0. Pressure Index = LI x stage factor.
-  4. Run-expectancy (RE) table -> context-adjusted Run Value (RV) per ball.
-  5. Player ratings under pressure vs baseline, with empirical-Bayes shrinkage,
-     consistency, and bootstrap rank stability.
+  1. Match state for every delivery (score, wickets, balls left, target; revised for rain).
+  2. A win-probability (WP) model, worked out exactly ball by ball in the final over of a chase.
+  3. Stakes: the expected swing in WP from the next ball, where 1.0 = a typical ball.
+     Pressure ball = top 20% by stakes, or any ball of a knockout.
+  4. Runs added per ball: runs against an average player from the same spot, wickets charged
+     at the runs they cost from there.
+  5. One rating per player: runs added per 100 pressure balls, leaning on the player's usual level
+     until his pressure record is long enough (K = 200 balls). Lift = rating - usual level.
+     Ranked if 60 pressure balls in 5 matches (20 in 2025-26), signable at the 2027 auction and not
+     worse under pressure than usual. Checked by a forward test, split halves and a bootstrap.
 
-Writes JSON consumed by the dashboard into dashboard/public/data/.
+Writes JSON consumed by the dashboard into web/data/.
 
 Run:  python -I analysis/pipeline.py
 """
@@ -36,45 +39,31 @@ OUT.mkdir(parents=True, exist_ok=True)
 RNG = np.random.default_rng(27)
 
 # ---------------------------------------------------------------- config
-PRESSURE_PCTL = 0.80          # top 20% of Pressure Index = "high pressure" delivery
-KNOCKOUT_MULT = 1.20          # knockout / playoff stakes multiplier
-RACE_MULT = 1.10              # late IPL league game involving a team still in the playoff race
+# The whole method has four settings. Each was checked with a forward test (forward_check): ratings
+# built from earlier seasons only, scored on how players actually did under pressure the next season.
+PRESSURE_PCTL = 0.80          # 1. a pressure ball: top 20% of balls by stakes (plus every knockout ball)
+K = 200                       # 2. a pressure record counts half at 200 balls; the rest is the usual level
+SEASON_WEIGHT = {2022: 0.2, 2023: 0.4, 2024: 0.6, 2025: 0.8, 2026: 1.0}  # 3. each year back counts 20% less
+MIN_PRESSURE_BALLS = 60       # 4. evidence to be ranked: 60 pressure balls in 5 matches,
+MIN_PRESSURE_MATCHES = 5      #    at least 20 of them in 2025-26 (still doing it now). A short record
+RECENT_FROM = 2025            #    is safe because the rating leans on the usual level until the
+MIN_RECENT_BALLS = 20         #    pressure record grows (a 100-ball bar left only below-average batters
+                              #    at ranks 6-10 of the auction pool).
+# The brief asks who rises and who dips under pressure, so a player whose rating is below his usual
+# level (lift < 0) is never recommended, however good his usual level is.
+# Ratings use top-level cricket only: the IPL and T20Is between two full-member nations. Associate
+# T20Is and A-team tournaments are left out rather than down-weighted (one rule, no fractions).
 FULL_MEMBERS = {
     "India", "Pakistan", "Australia", "England", "New Zealand", "South Africa",
     "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan", "Ireland", "Zimbabwe",
 }
-# Recency: the last two seasons (2025-26) carry about three times the weight of 2022-23 combined,
-# because current form is what a 2027 squad buys.
-SEASON_WEIGHT = {2022: 0.25, 2023: 0.40, 2024: 0.65, 2025: 0.90, 2026: 1.00}
-# Eligibility: a low bar so newcomers who have shown it recently can be ranked. Shrinkage (a prior of
-# 250 balls) keeps a short record near average unless it is strong, and the bootstrap shows how settled
-# each rank is. (25 balls in 2 matches was tested and let 40-ball careers into the top 10.)
-MIN_PRESSURE_BALLS_BAT = 25   # raw balls faced under pressure
-MIN_PRESSURE_BALLS_BOWL = 25
-MIN_PRESSURE_MATCHES = 3
-# Fresh evidence: a 2027 pick must have been seen under pressure recently. Nobody is ranked without at
-# least 20 pressure balls in 2 matches in 2025-26, however good their older record.
-RECENT_FROM = 2025
-MIN_RECENT_BALLS = 20
-MIN_RECENT_MATCHES = 2
-# Fresh picks: the ranked players whose first match in the data is 2024 or later.
+TOP_LEVEL = ("IPL", "T20I Full")
+# Rain: matches cut below 10 overs a side are left out of pressure (a 5-over game is a different sport).
+# Longer reduced games, like the 2023 IPL final (171 off 15 overs), are judged on their revised target.
+MIN_MATCH_BALLS = 60
+# Fresh picks: the ranked players who are newcomers (first top-level match 2024 or later).
 FRESH_FROM = 2024
-FRESH_MIN_BALLS = MIN_PRESSURE_BALLS_BAT
-FRESH_MIN_MATCHES = MIN_PRESSURE_MATCHES
-# Wider pool exported to the dashboard so viewers can lower the bar themselves.
-# Shrinkage already pulls small samples toward the player's own baseline.
-EXPORT_MIN_BALLS = 20     # lowest bar offered by the ranking sliders
-EXPORT_MIN_MATCHES = 2
-PROFILE_MIN_BALLS = 1     # every player with any pressure ball gets a profile page
-# Inside the pressure set, a ball counts in proportion to its stakes: one at 10x a typical ball
-# matters more than one just over the line. Weight = stakes / average pressure-ball stakes,
-# capped at 1.5: higher caps made ratings less repeatable between odd and even matches
-# (bowlers' split-half fell from 0.16 to 0.07 at a cap of 3), so big moments count more, not most.
-STAKES_CAP = 1.5
-# "recent" = output under pressure in 2025-26 only: is the player still doing it?
-DEFAULT_WEIGHTS = {"pressure": 0.30, "recent": 0.20, "impact": 0.20, "delta": 0.15, "consistency": 0.15}
-COMPONENTS = {"pressure": "p_rv", "recent": "recent", "impact": "wpa100", "delta": "delta", "consistency": "cons"}
-PRESSURE_K = 250              # credibility prior: pressure balls before a player's own record counts 50%
+PROFILE_MIN_BALLS = 1     # every player with any top-level pressure ball gets a profile page
 N_BOOT = int(__import__('os').environ.get('N_BOOT', 400))
 
 
@@ -98,44 +87,10 @@ def load():
         ["IPL", "Emerging", "T20I Full"],
         default="T20I Assoc",
     )
-    m["comp_weight"] = m["comp_tier"].map(
-        {"IPL": 1.0, "T20I Full": 1.0, "T20I Assoc": 0.75, "Emerging": 0.6}
-    )
+    m["top_level"] = m["comp_tier"].isin(TOP_LEVEL)
     m["is_knockout"] = ((m["knock_out"] == 1) | m["stage"].isin(
         ["Final", "Qualifier", "Eliminator", "Semi Final"])).astype(int)
-    m["is_race"] = playoff_race(m)
-    m["stage_mult"] = np.where(m.is_knockout == 1, KNOCKOUT_MULT, np.where(m.is_race == 1, RACE_MULT, 1.0))
     return b, m, mp
-
-
-def playoff_race(m: pd.DataFrame) -> np.ndarray:
-    """IPL league games among a team's last five, when that team finished within one
-    win (2 points) of the fourth playoff place: a game with qualification on the line. The data has
-    no live table, so the final table stands in for 'still in the race at the time'."""
-    race = pd.Series(0, index=m.index)
-    for _, g in m[(m.is_ipl == 1) & (m.stage == "League")].groupby("comp_id"):
-        pts: dict = {}
-        for r in g.itertuples():
-            for t in (r.home_team_id, r.away_team_id):
-                pts.setdefault(t, 0)
-            if pd.isna(r.win_team_id):
-                pts[r.home_team_id] += 1
-                pts[r.away_team_id] += 1
-            else:
-                pts[int(r.win_team_id)] = pts.get(int(r.win_team_id), 0) + 2
-        if len(pts) < 5:
-            continue
-        p4 = sorted(pts.values(), reverse=True)[3]
-        alive = {t for t, v in pts.items() if abs(v - p4) <= 2}
-        g = g.sort_values(["match_date", "match_number"])
-        played: dict = {}
-        for idx, r in g.iterrows():
-            late = False
-            for t in (r.home_team_id, r.away_team_id):
-                played[t] = played.get(t, 0) + 1
-                late |= t in alive and played[t] > 9  # the last five games of the league stage
-            race[idx] = int(late)
-    return race.to_numpy()
 
 
 # ---------------------------------------------------------------- state
@@ -161,7 +116,7 @@ def build_state(b: pd.DataFrame, m: pd.DataFrame) -> pd.DataFrame:
 
     inn_tot = b.groupby(["match_id", "innings"]).tot.sum().unstack()
     b = b.merge(
-        m[["match_id", "season_yr", "is_ipl", "comp_tier", "comp_weight", "is_knockout", "is_race", "stage_mult",
+        m[["match_id", "season_yr", "is_ipl", "comp_tier", "top_level", "is_knockout",
            "first_inn_revised_overs", "second_inn_revised_overs", "revised_target",
            "win_team_id", "match_date", "comp_name", "home_team", "away_team",
            "home_team_id", "away_team_id", "stage", "result"]],
@@ -207,13 +162,18 @@ class WPModel:
         j = np.clip(yr.astype(int) - SEASONS[0], 0, len(SEASONS) - 1)
         return self.re[i, j, np.clip(bl, 0, 120).astype(int), np.clip(10 - wk_in_hand, 0, 10).astype(int)]
 
-    def features(self, inn, x, bl, wk, is_ipl, yr):
+    def features(self, inn, x, bl, wk, is_ipl, yr, mb=None):
         res = self._lookup(is_ipl, yr, bl, wk)
         t = bl / 120.0
         if inn == 2:
             ratio = np.log((np.maximum(x, 0) + 2) / (res + 2))
             return np.column_stack([ratio, ratio * t, ratio ** 2, t, wk / 10, _rrr(x, bl) / 36, is_ipl])
         par = self.par[is_ipl.astype(int), np.clip(yr.astype(int) - SEASONS[0], 0, len(SEASONS) - 1)]
+        if mb is not None:  # a reduced-overs innings is measured against a par scaled to its length
+            mb = np.broadcast_to(np.asarray(mb, float), np.shape(x))
+            full = np.full(np.shape(x), 120.0)
+            ten = np.full(np.shape(x), 10.0)
+            par = par * self._lookup(is_ipl, yr, mb, ten) / self._lookup(is_ipl, yr, full, ten)
         d = np.log((x + res + 1) / par)
         return np.column_stack([d, d * t, d ** 2, t, wk / 10, is_ipl])
 
@@ -331,7 +291,8 @@ def fit_wp(b: pd.DataFrame, re: dict):
         d = train[train.innings == inn]
         X = model.features(inn, (d.runs_before if inn == 1 else d.runs_needed).to_numpy(float),
                            d.balls_left.to_numpy(float), d.wkts_in_hand.to_numpy(float),
-                           d.is_ipl.to_numpy(float), d.season_yr.to_numpy(float))
+                           d.is_ipl.to_numpy(float), d.season_yr.to_numpy(float),
+                           d.max_balls.to_numpy(float) if inn == 1 else None)
         y, grp = d.bat_won.to_numpy(int), d.match_id.to_numpy()
         oof = np.zeros(len(y))
         for tr, te in GroupKFold(n_splits=5).split(X, y, grp):
@@ -357,9 +318,10 @@ def fit_wp(b: pd.DataFrame, re: dict):
     return model, metrics
 
 
-def wp_eval(model, inn, runs_or_need, balls_left, wkts_in_hand, is_ipl, season_yr):
+def wp_eval(model, inn, runs_or_need, balls_left, wkts_in_hand, is_ipl, season_yr, max_balls=120.0):
     """Vectorised WP for the batting side, handling terminal states."""
     runs_or_need = np.asarray(runs_or_need, float)
+    max_balls = np.broadcast_to(np.asarray(max_balls, float), runs_or_need.shape)
     balls_left = np.asarray(balls_left, float)
     wkts_in_hand = np.asarray(wkts_in_hand, float)
     is_ipl = np.broadcast_to(np.asarray(is_ipl, float), runs_or_need.shape)
@@ -384,7 +346,7 @@ def wp_eval(model, inn, runs_or_need, balls_left, wkts_in_hand, is_ipl, season_y
         live = ~done
         if live.any():
             X = model.features(1, runs_or_need[live], balls_left[live], wkts_in_hand[live],
-                               is_ipl[live], season_yr[live])
+                               is_ipl[live], season_yr[live], max_balls[live])
             out[live] = model.predict(1, X)
         if done.any():
             # first innings over: P(bat first wins) = 1 - P(chaser wins from start of chase)
@@ -406,9 +368,10 @@ def leverage(b: pd.DataFrame, models):
     lab = np.where(lab == "5", "4", lab)
     probs = pd.crosstab(b.phase, lab, normalize="index")
     is_ipl, yr = b.is_ipl.to_numpy(float), b.season_yr.to_numpy(float)
+    mb = b.max_balls.to_numpy(float)
     wp_now = np.where(
         b.innings == 1,
-        wp_eval(models, 1, b.runs_before, b.balls_left, b.wkts_in_hand, is_ipl, yr),
+        wp_eval(models, 1, b.runs_before, b.balls_left, b.wkts_in_hand, is_ipl, yr, mb),
         wp_eval(models, 2, b.runs_needed.fillna(0), b.balls_left, b.wkts_in_hand, is_ipl, yr),
     )
     # evaluate separately per innings for correct state arithmetic
@@ -423,15 +386,16 @@ def leverage(b: pd.DataFrame, models):
             bl = d.balls_left.to_numpy(float) - ball
             wk = d.wkts_in_hand.to_numpy(float) - w
             if inn == 1:
-                wp_o = wp_eval(models, 1, d.runs_before.to_numpy(float) + r, bl, wk, is_ipl[idx], yr[idx])
+                wp_o = wp_eval(models, 1, d.runs_before.to_numpy(float) + r, bl, wk, is_ipl[idx], yr[idx], mb[idx])
             else:
                 wp_o = wp_eval(models, 2, d.runs_needed.to_numpy(float) - r, bl, wk, is_ipl[idx], yr[idx])
             exp_swing[idx] += p * np.abs(wp_o - wp_now[idx])
-    # Rain-shortened matches (fewer than 20 overs, or a revised target) are left out of pressure and
-    # win impact: the model is built for 20-over games and cannot judge the stakes of a 5-over one.
-    # Their runs still count towards each player's normal level.
+    # Matches cut below 10 overs a side are left out of pressure and win impact: a 5-over slog is a
+    # different game. Longer reduced matches are judged on their revised overs and target, so the
+    # 2023 IPL final (CSK 171 off 15 overs, Jadeja 10 off the last 2 balls) counts like any other.
+    # Runs in the very short games still count towards each player's normal level.
     g = b.groupby("match_id")
-    short = ((g.max_balls.transform("min") < 120) | g.revised_target.transform(lambda x: x.notna().any())).to_numpy()
+    short = (g.max_balls.transform("min") < MIN_MATCH_BALLS).to_numpy()
     exp_swing = np.where(short, 0.0, exp_swing)
     b["wp_before"] = wp_now
     b["exp_swing"] = exp_swing
@@ -441,7 +405,7 @@ def leverage(b: pd.DataFrame, models):
     nb = b.groupby(["match_id", "innings"]).wp_before.shift(-1)
     # end-of-innings fallback
     end_inn1 = wp_eval(models, 1, (b.runs_before + b.tot).to_numpy(float), np.zeros(len(b)),
-                       np.zeros(len(b)), is_ipl, yr)
+                       np.zeros(len(b)), is_ipl, yr, mb)
     # last ball of a chase: the actual result (covers rain-shortened DLS finishes), a coin flip for a tie
     left = b.runs_needed - b.tot
     end_inn2 = np.where(left <= 0, 1.0, np.where(left == 1, 0.5, b.bat_won.fillna(0.0)))
@@ -523,58 +487,20 @@ def run_value(b: pd.DataFrame, re):
 
 
 # ---------------------------------------------------------------- ratings
-K_GRID = [25, 50, 100, 150, 200, 300, 400, 600, 800, 1200, 1600, 2400]
+# One rating per player, in one sentence: runs added per 100 pressure balls, where a player is assumed
+# to play as he normally does until his pressure record says otherwise.
+#     normal = sum(weight x runs added on other balls) / (sum(weight) + K)
+#     rating = (sum(weight x runs added on pressure balls) + K x normal) / (sum(weight) + K)
+# weight = how recent the ball is (2026 = 1.0, each year back 20% less). With K = 200, a player's own
+# pressure record counts half once he has 200 (recency-weighted) pressure balls, and more after that.
+# lift = rating - normal: does he rise (+) or dip (-) when it matters?
+# Win impact, consistency and recent form are shown as evidence beside the rating; the forward test
+# found that blending them in made next-season predictions worse, not better.
 
 
-def _raw(pm, P):
-    x = pm[pm.P == P].groupby("pid")[["wn", "wrv"]].sum()
-    return x
-
-
-def choose_k(pm: pd.DataFrame, role: str) -> dict:
-    """Cross-validated shrinkage: pick prior strengths that best predict a player's
-    raw rate in the other half of matches (odd vs even match ids, both directions)."""
-    halves = [pm[pm.match_id % 2 == 1], pm[pm.match_id % 2 == 0]]
-    mun = float(pm[pm.P == 0].wrv.sum() / pm[pm.P == 0].wn.sum())
-    res_n, res_p = {}, {}
-    for kn in K_GRID:
-        err = wsum = 0.0
-        for a, bb in [(0, 1), (1, 0)]:
-            fa, tb = _raw(halves[a], 0), _raw(halves[bb], 0)
-            j = fa.join(tb, lsuffix="_a", rsuffix="_b", how="inner")
-            j = j[j.wn_b >= 30]
-            est = (j.wrv_a + kn * mun) / (j.wn_a + kn)
-            err += (j.wn_b * (est - j.wrv_b / j.wn_b) ** 2).sum()
-            wsum += j.wn_b.sum()
-        res_n[kn] = err / wsum
-    kn = min(res_n, key=res_n.get)
-    for kp in K_GRID:
-        err = wsum = 0.0
-        for a, bb in [(0, 1), (1, 0)]:
-            na, pa, pb = _raw(halves[a], 0), _raw(halves[a], 1), _raw(halves[bb], 1)
-            j = pa.join(na, lsuffix="", rsuffix="_n", how="left").fillna(0).join(
-                pb, rsuffix="_b", how="inner")
-            j = j[j.wn_b >= 30]
-            base = (j.wrv_n + kn * mun) / (j.wn_n + kn)
-            n_raw = np.where(j.wn_n > 0, j.wrv_n / np.maximum(j.wn_n, 1e-9), mun)
-            est = base + (j.wrv - j.wn * n_raw) / (j.wn + kp)
-            err += (j.wn_b * (est - j.wrv_b / j.wn_b) ** 2).sum()
-            wsum += j.wn_b.sum()
-        res_p[kp] = err / wsum
-    kp_cv = min(res_p, key=res_p.get)
-    # Descriptive ranking uses a fixed credibility prior (documented); the CV optimum
-    # is reported as reliability evidence (how much pressure skill persists).
-    kp = PRESSURE_K
-    c = pm[(pm.P == 1) & (pm.n >= 6)]
-    k = {"kp": float(kp), "kp_cv": float(kp_cv), "kn": float(kn), "mun": mun,
-         "c_prior": float((c.rvs > 0).mean()),
-         "cv_n": {str(a): round(v, 5) for a, v in res_n.items()},
-         "cv_p": {str(a): round(v, 5) for a, v in res_p.items()}}
-    log(f"choose_k {role}: kn={kn} kp_cv={kp_cv} (using kp={kp})")
-    return k
-
-
-def player_match_table(b: pd.DataFrame, role: str) -> pd.DataFrame:
+def player_match_table(b: pd.DataFrame, role: str):
+    """Top-level balls for one role, and their totals per player, match and pressure flag."""
+    b = b[b.top_level]
     if role == "bat":
         d = b[~b.is_wide].copy()
         d["pid"], d["pname"], d["rv"] = d.striker_id, d.striker_name, d.rv_bat
@@ -585,76 +511,56 @@ def player_match_table(b: pd.DataFrame, role: str) -> pd.DataFrame:
         d["pid"], d["pname"], d["rv"] = d.bowler_id, d.bowler_name, d.rv_bowl
         d["wpa"] = -d.wpa_bat
         d["r"], d["out"] = d.bowler_runs, d.bowler_wkt
-    d["wb"] = d.comp_weight * d.season_yr.map(SEASON_WEIGHT)  # recency and competition
+    d["w"] = d.season_yr.map(SEASON_WEIGHT)
     d["P"] = d.pressure.astype(int)
     d["R"] = (d.season_yr >= RECENT_FROM).astype(int)
-    # stakes (with match importance) against the average pressure ball. Knockout balls are all in the
-    # pressure set but weighted by their own stakes like any other ball: a minimum weight was tested
-    # and made bowlers' ratings less repeatable (split-half 0.16 to 0.13).
-    stakes = np.clip(d.pi_raw / d.pi_raw[d.pressure].mean(), 0, STAKES_CAP)
-    d["lw"] = np.where(d.pressure, stakes, 1.0)
-    d["w"] = d.wb * d.lw  # ...and stakes, for pressure balls
-    d["rvs"] = d.lw * d.rv  # stakes-weighted runs added (match charts, consistency)
     d["dotb"] = ((d.tot == 0) if role == "bowl" else (d.runs == 0)).astype(int)
     d["bnd"] = (d.is_four | d.is_six).astype(int)
     d["lg"] = d.legal.astype(int)
-    # win probability already grows with the stakes, so WPA is not weighted by them again
-    d["wrv"], d["wrv2"], d["wwpa"] = d.w * d.rv, d.w * d.rv ** 2, d.wb * d.wpa
+    d["wrv"] = d.w * d.rv
     agg = d.groupby(["pid", "match_id", "P", "R"]).agg(
-        n=("rv", "size"), wn=("w", "sum"), wbn=("wb", "sum"), wrv=("wrv", "sum"), wrv2=("wrv2", "sum"),
-        wwpa=("wwpa", "sum"), rv=("rv", "sum"), rvs=("rvs", "sum"), wpa=("wpa", "sum"), r=("r", "sum"),
-        out=("out", "sum"), dotb=("dotb", "sum"), bnd=("bnd", "sum"), lg=("lg", "sum"),
-        li=("li", "sum"),
+        n=("rv", "size"), w=("w", "sum"), wrv=("wrv", "sum"), rv=("rv", "sum"), wpa=("wpa", "sum"),
+        r=("r", "sum"), out=("out", "sum"), li=("li", "sum"),
     ).reset_index()
     return agg, d
 
 
-def rate(pm: pd.DataFrame, role: str, k=None):
-    """Compute rating table from player-match aggregates (also used in bootstrap).
-    Optional column `mult` = how many times a match was drawn (bootstrap)."""
-    pm = pm if "mult" in pm else pm.assign(mult=1)
-    x = pm.copy()
-    for col in ["n", "wn", "wbn", "wrv", "wrv2", "wwpa"]:
+def rate(pm: pd.DataFrame) -> pd.DataFrame:
+    """Rating table from player-match totals. Optional column `mult` = how many times a match was
+    drawn (bootstrap)."""
+    x = pm.assign(mult=pm["mult"] if "mult" in pm else 1)
+    x = x[x["mult"] > 0].copy()
+    single_n = x["n"].copy()
+    for col in ["n", "w", "wrv", "rv", "wpa"]:
         x[col] = x[col] * x["mult"]
-    x = x[x["mult"] > 0]
-    P = x[x.P == 1].groupby("pid")
-    N = x[x.P == 0].groupby("pid")
-    p = P.agg(pn=("n", "sum"), pwn=("wn", "sum"), pwbn=("wbn", "sum"), pwrv=("wrv", "sum"), pwrv2=("wrv2", "sum"),
-              pwwpa=("wwpa", "sum"), pmatches=("mult", "sum"))
-    n = N.agg(nn=("n", "sum"), nwn=("wn", "sum"), nwrv=("wrv", "sum"), nwrv2=("wrv2", "sum"))
-    # consistency: share of matches with >= 6 pressure balls where pressure RV > 0
-    pmm = x[(x.P == 1) & (pm.loc[x.index, "n"] >= 6)]
-    cons = pmm.assign(pos=(pmm.rvs > 0).astype(int) * pmm["mult"]).groupby("pid").agg(
-        c_n=("mult", "sum"), c_pos=("pos", "sum"))
-    r = x[(x.P == 1) & (x.R == 1)].groupby("pid").agg(rn=("n", "sum"), rwn=("wn", "sum"), rwrv=("wrv", "sum"),
+    p = x[x.P == 1].groupby("pid").agg(pn=("n", "sum"), pw=("w", "sum"), pwrv=("wrv", "sum"),
+                                       pwpa=("wpa", "sum"), pmatches=("mult", "sum"))
+    n = x[x.P == 0].groupby("pid").agg(nn=("n", "sum"), nw=("w", "sum"), nwrv=("wrv", "sum"))
+    r = x[(x.P == 1) & (x.R == 1)].groupby("pid").agg(rn=("n", "sum"), rw=("w", "sum"), rwrv=("wrv", "sum"),
                                                       rmatches=("mult", "sum"))
-    t = p.join(n, how="left").join(cons, how="left").join(r, how="left").fillna(0)
-    if k is None:
-        k = choose_k(pm, role)
-    # baseline (non-pressure) level: shrink toward the league mean
-    t["n_rv"] = (t.nwrv + k["kn"] * k["mun"]) / (t.nwn + k["kn"])
-    # clutch deviation: pressure rate minus the player's OWN raw baseline,
-    # shrunk toward zero (no pressure effect) with prior strength kp
-    n_raw = np.where(t.nwn > 0, t.nwrv / np.maximum(t.nwn, 1e-9), k["mun"])
-    t["delta"] = (t.pwrv - t.pwn * n_raw) / (t.pwn + k["kp"])
-    # pressure level = baseline level + clutch deviation (hierarchical decomposition)
-    t["p_rv"] = t.n_rv + t.delta
-    t["wpa100"] = t.pwwpa / np.maximum(t.pwbn, 1) * 100 * (t.pwbn / (t.pwbn + k["kp"]))
-    t["cons"] = (t.c_pos + 8 * k["c_prior"]) / (t.c_n + 8)
-    # recent form: runs added per pressure ball in 2025-26 only, shrunk toward average like the rest
-    t["recent"] = t.rwrv / (t.rwn + k["kp"])
-    return t, k
+    # consistency: pressure innings or spells of 6+ balls in which the player beat the average
+    inn = x[(x.P == 1) & (single_n >= 6)]
+    c = inn.assign(pos=(inn.rv > 0) * inn["mult"]).groupby("pid").agg(c_n=("mult", "sum"), c_pos=("pos", "sum"))
+    t = p.join(n, how="left").join(r, how="left").join(c, how="left").fillna(0)
+    t["normal"] = t.nwrv / (t.nw + K)          # usual level: the other balls, pulled towards average
+    t["share"] = t.pw / (t.pw + K)             # how much of the rating is the player's own pressure record
+    t["rating"] = (t.pwrv + K * t.normal) / (t.pw + K)  # the one number the ranking uses
+    t["lift"] = t.rating - t.normal            # rises (+) or dips (-) under pressure
+    t["recent"] = t.rwrv / (t.rw + K)          # the rating for 2025-26 alone
+    t["wpa100"] = t.pwpa / np.maximum(t.pn, 1) * 100  # win chance added per 100 pressure balls
+    t["cons"] = np.where(t.c_n > 0, t.c_pos / np.maximum(t.c_n, 1), np.nan)
+    return t
 
 
-def score(t: pd.DataFrame, eligible: pd.Index, weights=DEFAULT_WEIGHTS, excluded=frozenset(), ref=None):
-    """Standardise against the eligible pool (or `ref`, so other groups share its scale), then rank.
-    merit_rank ranks everyone; rank (the submitted list) skips players RR cannot sign
-    (its own squad, and Pakistani players, who cannot enter the IPL auction)."""
+def eligible_mask(t: pd.DataFrame) -> pd.Series:
+    return (t.pn >= MIN_PRESSURE_BALLS) & (t.pmatches >= MIN_PRESSURE_MATCHES) & (t.rn >= MIN_RECENT_BALLS)
+
+
+def score(t: pd.DataFrame, eligible: pd.Index, excluded=frozenset()):
+    """Rank by the rating. merit_rank ranks everyone who qualifies; rank (the submitted list) skips
+    players who cannot be bought at the 2027 auction."""
     e = t.loc[t.index.intersection(eligible)].copy()
-    base = e if ref is None else t.loc[t.index.intersection(ref)]
-    for name, col in COMPONENTS.items():
-        e[f"z_{name}"] = (e[col] - base[col].mean()) / base[col].std(ddof=0)
-    e["score"] = sum(weights[n] * e[f"z_{n}"] for n in COMPONENTS)
+    e["score"] = e.rating
     e["merit_rank"] = e.score.rank(ascending=False, method="first").astype(int)
     ok = ~e.index.isin(list(excluded))
     e["rank"] = np.nan
@@ -662,41 +568,69 @@ def score(t: pd.DataFrame, eligible: pd.Index, weights=DEFAULT_WEIGHTS, excluded
     return e
 
 
-def bootstrap(pm: pd.DataFrame, role: str, eligible: pd.Index, k: dict, excluded=frozenset()):
-    """Resample matches with replacement; re-rate; record each player's rank
-    (submitted rank, or merit rank for players outside the submitted list)."""
+def bootstrap(pm: pd.DataFrame, eligible: pd.Index, excluded=frozenset()):
+    """Resample matches with replacement, re-rate and record each player's rank (submitted rank, or
+    merit rank for players outside the submitted list)."""
     matches = pm.match_id.unique()
     codes = pd.Index(matches).get_indexer(pm.match_id)
     ranks = {pid: [] for pid in eligible}
     for i in range(N_BOOT):
         counts = np.bincount(RNG.integers(0, len(matches), len(matches)), minlength=len(matches))
-        t, _ = rate(pm.assign(mult=counts[codes]), role, k)
-        s = score(t, eligible, excluded=excluded)
+        s = score(rate(pm.assign(mult=counts[codes])), eligible, excluded=excluded)
         for pid in s.index:
             ranks[pid].append(s.at[pid, "merit_rank"] if pid in excluded else s.at[pid, "rank"])
         if i % 100 == 0:
-            log(f"  bootstrap {role} {i}/{N_BOOT}")
+            log(f"  bootstrap {i}/{N_BOOT}")
     out = {}
     for pid, rs in ranks.items():
         rs = np.array(rs) if rs else np.array([999])
-        out[pid] = {"p_top10": round(float((rs <= 10).mean()), 3),
-                    "rank_med": int(np.median(rs)),
+        out[pid] = {"p_top10": round(float((rs <= 10).mean()), 3), "rank_med": int(np.median(rs)),
                     "rank_lo": int(np.percentile(rs, 5)), "rank_hi": int(np.percentile(rs, 95))}
     return out
 
 
-def split_half(pm: pd.DataFrame, role: str, eligible: pd.Index, k: dict):
-    odd = pm[pm.match_id % 2 == 1]
-    even = pm[pm.match_id % 2 == 0]
-    to, _ = rate(odd, role, k)
-    te, _ = rate(even, role, k)
-    j = to.join(te, lsuffix="_o", rsuffix="_e", how="inner")
+def split_half(pm: pd.DataFrame, eligible: pd.Index):
+    """Same measures on odd and even matches: how far does each repeat?"""
+    j = rate(pm[pm.match_id % 2 == 1]).join(rate(pm[pm.match_id % 2 == 0]), lsuffix="_o", rsuffix="_e", how="inner")
     j = j.loc[j.index.intersection(eligible)]
-    res = {}
-    for col in ["p_rv", "n_rv", "delta", "cons", "wpa100", "recent"]:
-        r = float(np.corrcoef(j[f"{col}_o"], j[f"{col}_e"])[0, 1])
-        res[col] = round(r, 3)
-    return res
+    return {col: round(float(j[[f"{col}_o", f"{col}_e"]].dropna().corr().iloc[0, 1]), 3)
+            for col in ["rating", "normal", "lift", "wpa100", "cons"]}
+
+
+def forward_check(b: pd.DataFrame, role: str) -> dict:
+    """The test every choice was made on: build ratings from earlier seasons only (2022-24, then
+    2022-25), and see how well they predict each player's runs added per pressure ball in the next
+    season (2025, then 2026). Reported as a correlation pooled over both years (0 = no better than
+    guessing). The alternatives show why the rating is pressure output alone."""
+    global SEASON_WEIGHT
+    keep = dict(SEASON_WEIGHT)
+    rows = []
+    try:
+        for test in (2025, 2026):
+            SEASON_WEIGHT = {y: round(1 - 0.2 * (test - 1 - y), 1) for y in range(2022, test)}
+            pm, _ = player_match_table(b[b.season_yr < test], role)
+            t = rate(pm)
+            t = t[t.pn >= 25]
+            SEASON_WEIGHT = {test: 1.0}
+            _, d = player_match_table(b[b.season_yr == test], role)
+            actual = d[d.P == 1].groupby("pid").rv.agg(["size", "mean"])
+            actual = actual[actual["size"] >= 24]
+            j = t.join(actual, how="inner")
+            j["year"] = test
+            rows.append(j)
+    finally:
+        SEASON_WEIGHT = keep
+    j = pd.concat(rows)
+
+    def corr(col):
+        z = j.groupby("year")[col].transform(lambda s: (s - s.mean()) / s.std())  # compare within a year
+        y, w = j["mean"], j["size"]
+        mz, my = np.average(z, weights=w), np.average(y, weights=w)
+        cov = np.average((z - mz) * (y - my), weights=w)
+        return round(float(cov / np.sqrt(np.average((z - mz) ** 2, weights=w) * np.average((y - my) ** 2, weights=w))), 3)
+
+    return {"n": int(len(j)), "rating": corr("rating"), "normal": corr("normal"), "lift": corr("lift"),
+            "wpa100": corr("wpa100")}
 
 
 # ---------------------------------------------------------------- outputs
@@ -811,17 +745,16 @@ def main():
     re = run_expectancy(b)
     models, wp_metrics = fit_wp(b, re)
     b, outcome_probs = leverage(b, models)
-    # stakes x match importance (knockouts 1.2, late games in the playoff race 1.1)
-    b["pi_raw"] = b.li * b.stage_mult
     # One cut-off for every ball: the top 20% by stakes. (Separate cut-offs for batting first and
     # chasing were tested and rejected: in a first innings they flagged 87% of over-one balls, because
     # the win chance sits near 50% early on, which is where any model is most sensitive.)
     # On top, every ball of a knockout counts: lose and you are out, so the occasion is the pressure,
     # whatever the scoreboard says. That is what credits a first-innings total built in a knockout.
+    b["pi_raw"] = b.li
     live = ~b.short_match
-    thr = float(b[live].pi_raw.quantile(PRESSURE_PCTL))
-    b["pressure"] = live & ((b.pi_raw >= thr) | (b.is_knockout == 1))
-    b["pi"] = (b.pi_raw.rank(pct=True) * 100).round(1)
+    thr = float(b[live].li.quantile(PRESSURE_PCTL))
+    b["pressure"] = live & ((b.li >= thr) | (b.is_knockout == 1))
+    b["pi"] = (b.li.rank(pct=True) * 100).round(1)
     log(f"pressure threshold {thr:.3f}; share {b.pressure.mean():.3f}; "
         f"by innings {b[live].groupby('innings').pressure.mean().round(3).to_dict()}")
     b = run_value(b, re)
@@ -854,32 +787,32 @@ def main():
         return None
 
     results = {}
+    forward = {}
     for role in ("bat", "bowl"):
         pm, d = player_match_table(b, role)
-        t, k = rate(pm, role)
+        t = rate(pm)
         names = d.groupby("pid").pname.agg(lambda x: x.mode().iat[0])
+        eligible = t[eligible_mask(t)].index
         why = {pid: r for pid in t.index if (r := exclusion(pid, names.get(pid)))}
+        # qualified, could be signed, but worse under pressure than usual: not a pressure pick
+        why.update({pid: "dips" for pid in eligible if pid not in why and t.at[pid, "lift"] < 0})
         excluded = frozenset(why)
-        min_balls = MIN_PRESSURE_BALLS_BAT if role == "bat" else MIN_PRESSURE_BALLS_BOWL
-        fresh_ev = (t.rn >= MIN_RECENT_BALLS) & (t.rmatches >= MIN_RECENT_MATCHES)
-        eligible = t[(t.pn >= min_balls) & (t.pmatches >= MIN_PRESSURE_MATCHES) & fresh_ev].index
-        log(f"{role}: {int(((t.pn >= min_balls) & (t.pmatches >= MIN_PRESSURE_MATCHES) & ~fresh_ev).sum())} "
-            "players with enough pressure balls left out for lack of 2025-26 evidence")
         s = score(t, eligible, excluded=excluded)
-        # fresh picks: short careers, same scale as the main pool, signable players only
+        # fresh picks: the qualified newcomers, ranked among themselves (signable non-dippers only)
         debut = d.groupby("pid").season_yr.min()
-        fresh_pool = t[(debut.reindex(t.index) >= FRESH_FROM) & (t.pn >= FRESH_MIN_BALLS)
-                       & (t.pmatches >= FRESH_MIN_MATCHES) & fresh_ev].index
-        fs = score(t, fresh_pool, excluded=excluded, ref=eligible)
+        fresh_pool = eligible[(debut.reindex(eligible) >= FRESH_FROM).to_numpy()]
+        fs = score(t, fresh_pool, excluded=excluded)
         fresh_rank = fs["rank"].dropna().astype(int).to_dict()
-        log(f"{role}: k={k}, eligible={len(eligible)}")
-        boot = bootstrap(pm, role, eligible, k, excluded)
-        sh = split_half(pm, role, eligible, k)
-        log(f"{role} split-half: {sh}")
+        log(f"{role}: eligible={len(eligible)}, signable={int(s['rank'].notna().sum())}, fresh={len(fresh_pool)}")
+        boot = bootstrap(pm, eligible, excluded)
+        sh = split_half(pm, eligible)
+        forward[role] = forward_check(b, role)
+        log(f"{role} split-half: {sh}; forward test: {forward[role]}")
         pool = t[t.pn >= PROFILE_MIN_BALLS].index
         s_all = score(t, pool)
         order = list(s.sort_values("score", ascending=False).index) + [
             pid for pid in s_all.sort_values("score", ascending=False).index if pid not in s.index]
+        r2 = lambda v, k=2: None if pd.isna(v) else round(float(v), k)
         players = []
         for pid in order:
             row = t.loc[pid]
@@ -897,7 +830,7 @@ def main():
                 phases.append({"phase": ph, "balls": int(len(g)),
                                "rv100": round(100 * g.rv.mean(), 1) if len(g) else None})
             mt = (dp[dp.P == 1].groupby("match_id")
-                  .agg(balls=("rv", "size"), rv=("rvs", "sum"), wpa=("wpa", "sum"), r=("r", "sum"),
+                  .agg(balls=("rv", "size"), rv=("rv", "sum"), wpa=("wpa", "sum"), r=("r", "sum"),
                        out=("out", "sum"), date=("match_date", "first"), opp=("opp_name", "first")
                        if role == "bat" else ("team_name", "first"), comp=("comp_name", "first"),
                        li=("li", "mean"))
@@ -913,33 +846,30 @@ def main():
                 "rank": int(s.loc[pid, "rank"]) if pid in s.index and pd.notna(s.loc[pid, "rank"]) else None,
                 "merit_rank": int(s.loc[pid, "merit_rank"]) if pid in s.index else None,
                 "excluded": why.get(pid), "retained_by": retained.get(pid),
-                "score": round(float(s.loc[pid, "score"]), 3) if pid in s.index else None,
+                "score": round(100 * float(s.loc[pid, "score"]), 2) if pid in s.index else None,
                 "country": intl_meta.team_name.get(pid) if pid in intl_meta.index else None,
                 "ipl_team": ipl_team, "ipl_season": ipl_season,
                 "hand": bat_hand.get(pid), "bowl_type": bowl_type.get(pid), "pace": pace.get(pid),
                 "p_balls": int(row.pn), "p_matches": int(row.pmatches), "n_balls": int(row.nn),
-                "p_rv100": round(100 * row.p_rv, 2), "n_rv100": round(100 * row.n_rv, 2),
-                "delta100": round(100 * row.delta, 2), "wpa100": round(float(row.wpa100), 3),
-                "cons": round(float(row.cons), 3),
+                "p_rv100": round(100 * row.rating, 2), "n_rv100": round(100 * row.normal, 2),
+                "delta100": round(100 * row.lift, 2), "wpa100": round(float(row.wpa100), 3),
+                "cons": r2(row.cons, 3), "c_n": int(row.c_n),
                 "recent100": round(100 * row.recent, 2), "r_balls": int(row.rn), "r_matches": int(row.rmatches),
                 "debut": int(debut[pid]), "fresh_rank": fresh_rank.get(pid),
                 "boot": boot.get(pid), "press": press, "norm": norm,
                 "seasons": seasons, "phases": phases, "matches": matches,
                 "moments": big_moments(dp, role),
             })
-        results[role] = {"players": players, "k": k, "split_half": sh,
-                         "eligibility": {"min_pressure_balls": min_balls,
+        results[role] = {"players": players, "k": {"K": K}, "split_half": sh, "forward": forward[role],
+                         "eligibility": {"min_pressure_balls": MIN_PRESSURE_BALLS,
                                          "min_pressure_matches": MIN_PRESSURE_MATCHES,
                                          "recent_from": RECENT_FROM, "min_recent_balls": MIN_RECENT_BALLS,
-                                         "min_recent_matches": MIN_RECENT_MATCHES,
-                                         "fresh_from": FRESH_FROM, "fresh_min_balls": FRESH_MIN_BALLS,
-                                         "fresh_min_matches": FRESH_MIN_MATCHES, "n_fresh": int(len(fresh_pool)),
+                                         "fresh_from": FRESH_FROM,
+                                         "n_fresh": int(len(fresh_pool)),
                                          "n_eligible": int(len(eligible)),
                                          "n_ranked": int(s["rank"].notna().sum()),
-                                         "export_min_balls": EXPORT_MIN_BALLS,
-                                         "export_min_matches": EXPORT_MIN_MATCHES,
+                                         "export_min_balls": 30, "export_min_matches": 3,
                                          "n_exported": int(len(pool)),
-                                         "n_slider_pool": int(((t.pn >= EXPORT_MIN_BALLS) & (t.pmatches >= EXPORT_MIN_MATCHES)).sum()),
                                          "n_players": int(len(t))}}
 
     # ------------------------------------------------ league-level evidence
@@ -1006,11 +936,17 @@ def main():
         "n_ipl_matches": int(b[b.is_ipl == 1].match_id.nunique()),
         "n_t20i_matches": int(b[b.comp_tier.str.startswith("T20I")].match_id.nunique()),
         "seasons": sorted(int(x) for x in b.season_yr.unique()),
+        "n_top_level_matches": int(b[b.top_level].match_id.nunique()),
         "pressure_threshold": round(thr, 3), "pressure_pctl": PRESSURE_PCTL,
-        "race_mult": RACE_MULT,
-        "knockout_mult": KNOCKOUT_MULT, "season_weights": SEASON_WEIGHT,
-        "comp_weights": {"IPL": 1.0, "T20I Full": 1.0, "T20I Assoc": 0.75, "Emerging": 0.6},
-        "weights": DEFAULT_WEIGHTS, "wp_model": wp_metrics,
+        "K": K, "season_weights": SEASON_WEIGHT, "top_level": list(TOP_LEVEL),
+        "min_match_balls": MIN_MATCH_BALLS,
+        "n_reduced_included": int(b[~b.short_match & (b.max_balls < 120)].match_id.nunique()),
+        "n_short_excluded": int(b[b.short_match].match_id.nunique()),
+        "forward": forward,
+        # the same forward test run on the earlier five-part score (pressure 30%, recent 20%, win impact
+        # 20%, lift 15%, consistency 15%) before it was replaced, 17 November 2026
+        "forward_previous": {"bat": -0.030, "bowl": 0.145},
+        "wp_model": wp_metrics,
         "contrast": contrast, "by_phase": by_phase, "by_over": by_over,
         "li_hist": hist, "moments": moments,
     }
@@ -1023,9 +959,13 @@ def main():
         top = [p for p in results[role]["players"] if p["rank"]][:15]
         log(f"\nTOP {role}:")
         for p in top:
-            log(f"{p['rank']:>2} {p['name']:<24} score={p['score']:.2f} P={p['p_rv100']:+.1f} "
-                f"N={p['n_rv100']:+.1f} d={p['delta100']:+.1f} wpa={p['wpa100']:.2f} "
-                f"cons={p['cons']:.2f} balls={p['p_balls']} top10={p['boot']['p_top10']}")
+            log(f"{p['rank']:>2} {p['name']:<24} rating={p['p_rv100']:+.1f} normal={p['n_rv100']:+.1f} "
+                f"lift={p['delta100']:+.1f} wpa={100 * p['wpa100']:+.1f}pts cons={p['cons']} "
+                f"balls={p['p_balls']} top10={p['boot']['p_top10']}")
+        merit = sorted((p for p in results[role]["players"] if p["merit_rank"]), key=lambda p: p["merit_rank"])[:15]
+        log("all qualified, before auction rules: " + ", ".join(f"{p['name']} ({p['excluded'] or '-'})" for p in merit))
+        fresh = sorted((p for p in results[role]["players"] if p["fresh_rank"]), key=lambda p: p["fresh_rank"])[:8]
+        log("fresh picks: " + ", ".join(f"{p['name']} {p['p_rv100']:+.1f}" for p in fresh))
     log("done")
 
 

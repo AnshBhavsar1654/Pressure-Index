@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Term } from '@/components/Term'
-import { getQualified, getRole, getSummary } from '@/lib/data'
+import { getQualified, getRole } from '@/lib/data'
 import { excludedLong } from '@/lib/terms'
 import { fmt } from '@/lib/format'
 import { rescore, type Player, type Role } from '@/lib/types'
@@ -32,10 +32,10 @@ function find(role: Role, id: string) {
   return { p: list[i], prev: list[i - 1], next: list[i + 1], total, bar: getRole(role).eligibility }
 }
 
-/** Rating ingredients as z-scores against the default pool (the player is added if outside it). */
+/** Evidence as z-scores against the default pool (the player is added if outside it). */
 function zFor(role: Role, p: Player) {
   const pool = getQualified(role)
-  const scored = rescore(p.merit_rank != null ? pool : [...pool, p], getSummary().weights)
+  const scored = rescore(p.merit_rank != null ? pool : [...pool, p])
   return scored.find((x) => x.id === p.id)!.z
 }
 
@@ -84,11 +84,11 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
       ]
   const bannerStats: [ReactNode, string][] = [
     [isBat ? 'Strike rate under pressure' : 'Economy under pressure', isBat ? fmt.dec(p.press.sr, 0) : fmt.dec(p.press.econ, 2)],
-    [<Term key="u" k="underPressure" role={role}>{isBat ? 'Runs added per 100' : 'Runs saved per 100'}</Term>, signed(p.p_rv100)],
+    [<Term key="u" k="underPressure" role={role}>Pressure rating</Term>, signed(p.p_rv100)],
     ['Pressure balls', fmt.int(p.p_balls)],
     [<Term key="c" k="confidence" />, p.boot ? fmt.pct(p.boot.p_top10) : '–'],
-    [<Term key="k" k="consistency" role={role}>Delivers under pressure</Term>, `${Math.round(p.cons * 10)} in 10`],
-    ['Matches with pressure', String(p.p_matches)],
+    [<Term key="l" k="lift">Lift over usual level</Term>, signed(p.delta100)],
+    [<Term key="k" k="consistency" role={role}>Delivers under pressure</Term>, p.cons == null ? '–' : `${Math.round(p.cons * 10)} in 10`],
   ]
 
   return (

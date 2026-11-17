@@ -1,14 +1,12 @@
 'use client'
 
-import { ChartFrame, Legend } from '@/components/charts/core'
-import { LineChart } from '@/components/charts/LineChart'
+import { ChartFrame } from '@/components/charts/core'
 import { Calibration, RankRanges } from '@/components/charts/Profile'
-import { rescore, type Player, type RoleData, type Summary, type Weights } from '@/lib/types'
+import { rescore, type Player, type Summary } from '@/lib/types'
 
 // default-pool players in their submitted order, with z-scores filled in
-const WEIGHTS: Weights = { pressure: 0.3, recent: 0.2, impact: 0.2, delta: 0.15, consistency: 0.15 }
 const asScored = (ps: Player[]) =>
-  rescore(ps, WEIGHTS)
+  rescore(ps)
     .filter((p) => p.rank != null)
     .map((p) => ({ ...p, liveRank: p.rank! }))
     .toSorted((a, b) => a.liveRank - b.liveRank)
@@ -39,32 +37,3 @@ export function StabilityPair({ bat, bowl }: { bat: Player[]; bowl: Player[] }) 
   )
 }
 
-export function ShrinkCurve({ batCv, bowlCv }: { batCv: RoleData['k']['cv_p']; bowlCv: RoleData['k']['cv_p'] }) {
-  const series = [
-    { key: 'bat', label: 'Batters', color: 'var(--pink)', cv: batCv },
-    { key: 'bowl', label: 'Bowlers', color: 'var(--blue)', cv: bowlCv },
-  ].map((x) => ({
-    key: x.key,
-    label: x.label,
-    color: x.color,
-    points: Object.entries(x.cv).map(([k, v]) => ({ x: Math.log10(Number(k)), y: v })),
-  }))
-  return (
-    <ChartFrame
-      title="How much to trust a pressure record"
-      subtitle="Error when one half of a player’s matches is used to predict the other half, for different amounts of caution. Lower is better. The curves keep falling, which means a player’s overall quality predicts future pressure output better than their pressure record alone."
-      legend={<Legend items={series.map((c) => ({ label: c.label, color: c.color, shape: 'line' }))} />}
-    >
-      <LineChart
-        series={series}
-        xLabel="Caution: balls of evidence needed before a record counts for half (log scale)"
-        yLabel="Prediction error"
-        xTicks={[25, 100, 400, 1600].map((v) => Math.log10(v))}
-        xFormat={(v) => String(Math.round(10 ** v))}
-        yFormat={(v) => v.toFixed(3)}
-        showPoints
-        height={240}
-      />
-    </ChartFrame>
-  )
-}

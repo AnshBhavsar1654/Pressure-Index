@@ -16,38 +16,34 @@ import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import { fmt } from '@/lib/format'
 import { Term } from '@/components/Term'
-import { excludedNote, term, winPts } from '@/lib/terms'
-import { COMPONENT_LABEL, COMPONENT_TERM, rescore, type ComponentKey, type Player, type Role, type ScoredPlayer, type Weights } from '@/lib/types'
+import { excludedNote, winPts } from '@/lib/terms'
+import { rescore, type Player, type Role, type ScoredPlayer } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type SortKey = 'liveRank' | 'p_rv100' | 'n_rv100' | 'delta100' | 'wpa100' | 'cons' | 'p_balls' | 'p_top10' | 'trad'
-const KEYS = Object.keys(COMPONENT_LABEL) as ComponentKey[]
 
 export function Leaderboard({
   role,
   players: all,
-  defaults,
   bar,
   total: everyone,
 }: {
   role: Role
   players: Player[]
-  defaults: Weights
-  /** recentBalls / recentMatches: the fixed 2025-26 evidence rule */
-  bar: { balls: number; matches: number; minBalls: number; minMatches: number; recentBalls: number; recentMatches: number }
+  /** recentBalls: the fixed 2025-26 evidence rule */
+  bar: { balls: number; matches: number; minBalls: number; minMatches: number; recentBalls: number }
   /** every player with a pressure ball, not only those the sliders can reach */
   total: number
 }) {
   const router = useRouter()
-  const [weights, setWeights] = useState<Weights>(defaults)
   const [minBalls, setMinBalls] = useState(bar.balls)
   const [minMatches, setMinMatches] = useState(bar.matches)
   const dBalls = useDeferredValue(minBalls)
   const dMatches = useDeferredValue(minMatches)
   // who qualifies: everyone at or above the chosen bar is rated against each other
   const raw = useMemo(
-    () => all.filter((p) => p.p_balls >= dBalls && p.p_matches >= dMatches && p.r_balls >= bar.recentBalls && p.r_matches >= bar.recentMatches),
-    [all, dBalls, dMatches, bar.recentBalls, bar.recentMatches],
+    () => all.filter((p) => p.p_balls >= dBalls && p.p_matches >= dMatches && p.r_balls >= bar.recentBalls),
+    [all, dBalls, dMatches, bar.recentBalls],
   )
   const barChanged = minBalls !== bar.balls || minMatches !== bar.matches
   const [q, setQ] = useState('')
@@ -58,21 +54,17 @@ export function Leaderboard({
   const teams = useMemo(() => [...new Set(all.map((p) => p.ipl_team).filter((t): t is string => !!t))].sort(), [all])
   const countries = useMemo(() => [...new Set(all.map((p) => p.country).filter((t): t is string => !!t))].sort(), [all])
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'liveRank', dir: 1 })
-  // keep slider dragging smooth: the scatter and table re-rank from a deferred copy
-  const deferred = useDeferredValue(weights)
-  const players = useMemo(() => rescore(raw, deferred), [raw, deferred])
+  const players = useMemo(() => rescore(raw), [raw])
   const top10 = useMemo(() => new Set(players.filter((p) => p.liveRank != null && p.liveRank <= 10).map((p) => p.id)), [players])
   const signable = players.filter((p) => p.liveRank != null).length
   const noun = role === 'bat' ? 'batters' : 'bowlers'
   const open = (id: number) => router.push(`/players/${role}/${id}/`)
-  const total = KEYS.reduce((a, k) => a + weights[k], 0) || 1
-  const changed = KEYS.some((k) => Math.abs(weights[k] - defaults[k]) > 1e-9)
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase()
     const val = (p: ScoredPlayer): number =>
-      // rank order follows the score, so players RR cannot sign sit where their score puts them
-      sort.key === 'liveRank' ? -p.liveScore : sort.key === 'p_top10' ? (p.boot?.p_top10 ?? -1) : sort.key === 'trad' ? ((role === 'bat' ? p.press.sr : p.press.econ) ?? 0) : (p[sort.key] as number)
+      // rank order follows the rating, so players RR cannot recommend sit where their rating puts them
+      sort.key === 'liveRank' ? -p.liveScore : sort.key === 'p_top10' ? (p.boot?.p_top10 ?? -1) : sort.key === 'trad' ? ((role === 'bat' ? p.press.sr : p.press.econ) ?? 0) : ((p[sort.key] as number | null) ?? -1)
     return players
       .filter((p) => !term || [p.name, p.country ?? '', p.ipl_team ?? ''].some((s) => s.toLowerCase().includes(term)))
       .filter((p) => natMatch(nat, p.country) && (team === 'all' || p.ipl_team === team) && (country === 'all' || p.country === country))
@@ -98,9 +90,9 @@ export function Leaderboard({
         <CardHeader>
           <CardTitle>Who qualifies</CardTitle>
           <CardDescription>
-            My ranking needs {bar.balls}+ pressure balls across {bar.matches}+ matches. Lower the bar to see more
-            players, or raise it to keep only long records. Small samples are pulled towards each
-            player’s normal level, so short records cannot run away with the top spots.
+            My ranking needs {bar.balls}+ pressure balls across {bar.matches}+ matches, {bar.recentBalls}+ of them in 2025–26.
+            Lower the bar to see more players, or raise it to keep only long records. The rating leans on each player’s usual
+            level until his pressure record is long, so short records cannot run away with the top spots.
           </CardDescription>
           <CardAction>
             <Button
@@ -150,40 +142,6 @@ export function Leaderboard({
               {noun} qualify, of {everyone}
             </span>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Build your own ranking</CardTitle>
-          <CardDescription>The rating blends four ingredients. Change how much each one counts and watch the order move.</CardDescription>
-          <CardAction>
-            <Button variant="outline" className="rounded-lg" disabled={!changed} onClick={() => setWeights(defaults)}>
-              <ArrowCounterClockwiseIcon data-icon="inline-start" />
-              Reset to my weights
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {KEYS.map((k) => (
-            <div key={k} className="flex flex-col gap-3 rounded-lg border border-line bg-panel-2/60 p-4">
-              <div className="flex items-baseline justify-between gap-2">
-                <span id={`w-${k}`} className="text-[14px] font-semibold">
-                  {COMPONENT_LABEL[k]}
-                </span>
-                <span className="display num text-[1.6rem] text-pink">{Math.round((weights[k] / total) * 100)}%</span>
-              </div>
-              <Slider
-                aria-labelledby={`w-${k}`}
-                min={0}
-                max={1}
-                step={0.05}
-                value={[weights[k]]}
-                onValueChange={([v]) => setWeights((w) => ({ ...w, [k]: v }))}
-              />
-              <span className="text-[12.5px] leading-snug text-ink-3">{term(COMPONENT_TERM[k], role).def}</span>
-            </div>
-          ))}
         </CardContent>
       </Card>
 

@@ -29,8 +29,17 @@ export function SanityChecks({ pools }: { pools: Pools }) {
   const tushar = find(pools, 'bowl', 'Tushar Deshpande', '2026-04-04')
   const short = find(pools, 'bat', 'Matthew Short', '2026-04-18')
   const patidar = find(pools, 'bat', 'Rajat Patidar', '2026-05-26')
+  const jadeja = find(pools, 'bat', 'Ravindra Jadeja', '2023-05-29')
+  const mohit = find(pools, 'bowl', 'Mohit Sharma', '2023-05-29')
 
   const cards: { title: string; story: string; verdict: string; href?: string }[] = []
+  if (jadeja?.mo)
+    cards.push({
+      title: 'Ravindra Jadeja v Gujarat Titans, IPL final 2023',
+      story: `Rain cut the chase to 171 off 15 overs. ${jadeja.mo.headline ?? momentLine(jadeja.mo, 'bat')}: a six and a four off the last two balls to win the title.`,
+      verdict: `CSK were ${fmt.chance(jadeja.mo.wp_from)} to win when he took strike in the last over. His balls carried ${jadeja.m.li.toFixed(0)}× a typical ball’s stakes and added ${pts(jadeja.m.wpa)} of win chance, the biggest of his ${jadeja.p.matches.length} pressure matches.${mohit ? ` The other side: Mohit Sharma’s spell that night took ${pts(mohit.m.wpa).replace('−', '')} off Gujarat, the worst of his ${mohit.p.matches.length}.` : ''} Rain-reduced games are judged on their revised target, so this final counts like any other.`,
+      href: `/players/bat/${jadeja.p.id}/`,
+    })
   if (rinku?.mo)
     cards.push({
       title: 'Rinku Singh v Gujarat Titans, 2023',
@@ -57,7 +66,7 @@ export function SanityChecks({ pools }: { pools: Pools }) {
     cards.push({
       title: 'Rajat Patidar v Gujarat Titans, Qualifier 1, 2026',
       story: `Batting first in a knockout, he made ${patidar.m.r} off ${patidar.m.balls} balls as RCB set 254; Gujarat’s chase fell 92 runs short.`,
-      verdict: `A first-innings knock, but in a knockout every ball is a pressure ball: all ${patidar.m.balls} count, adding ${patidar.m.rv > 0 ? '+' : ''}${patidar.m.rv.toFixed(0)} runs against an average batter once each ball is weighted by its stakes. In a league game the same innings would count towards his normal level instead.`,
+      verdict: `A first-innings knock, but in a knockout every ball is a pressure ball: all ${patidar.m.balls} count, adding ${patidar.m.rv > 0 ? '+' : ''}${patidar.m.rv.toFixed(0)} runs against an average batter in the same spots and ${pts(patidar.m.wpa)} of win chance. In a league game the same innings would count towards his usual level instead.`,
       href: `/players/bat/${patidar.p.id}/`,
     })
   if (short)

@@ -20,8 +20,8 @@ export function ProfileCharts({ p, role }: { p: Player; role: Role }) {
     <div className="flex flex-col gap-6">
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)]">
         <section className="panel p-5">
-          <h2 className="display mb-1 text-[1.5rem]">What drives the rating</h2>
-          <p className="mb-4 text-[13px] text-ink-2">The four things the rating weighs. The number is the share of qualified {role === 'bat' ? 'batters' : 'bowlers'} this player beats on each one.</p>
+          <h2 className="display mb-1 text-[1.5rem]">The evidence</h2>
+          <p className="mb-4 text-[13px] text-ink-2">The rating decides the rank; the rest show whether it holds up. The number is the share of qualified {role === 'bat' ? 'batters' : 'bowlers'} this player beats on each one.</p>
           <ComponentBars z={p.z ?? {}} labels={COMPONENT_LABEL} />
         </section>
         <ChartFrame

@@ -11,39 +11,39 @@ type Term = { label: string; def: string; bowl?: { label?: string; def?: string 
 export const TERMS = {
   pressureBall: {
     label: 'Pressure ball',
-    def: 'One of the 20% of balls where the next delivery could swing the result the most, plus every ball of a knockout. Late league games with a playoff place on the line count a little more.',
+    def: 'One of the 20% of balls where the next delivery could swing the result the most, plus every ball of a knockout, where losing means going out.',
   },
   pressureBalls: {
     label: 'Pressure balls',
-    def: 'How many pressure balls the player has faced or bowled since 2022. More balls means more evidence behind the numbers.',
+    def: 'How many pressure balls the player has faced or bowled since 2022 in the IPL and in T20Is between full-member nations. More balls means more of the rating is the player’s own pressure record.',
   },
   underPressure: {
-    label: 'Under pressure',
-    def: 'Runs added per 100 pressure balls, compared with an average batter in exactly the same situation. Balls with more at stake count for more. +10 means 10 runs better than average; 0 is average.',
+    label: 'Pressure rating',
+    def: 'The one number the ranking uses: runs added per 100 pressure balls, compared with an average batter in exactly the same situation. Until a player has a long pressure record, the rating leans on his usual level (half and half at 200 pressure balls). +10 means 10 runs better than average; 0 is average.',
     bowl: {
-      def: 'Runs saved per 100 pressure balls, compared with an average bowler in exactly the same situation. Balls with more at stake count for more. +10 means 10 fewer runs conceded than average; 0 is average.',
+      def: 'The one number the ranking uses: runs saved per 100 pressure balls, compared with an average bowler in exactly the same situation. Until a player has a long pressure record, the rating leans on his usual level (half and half at 200 pressure balls). +10 means 10 fewer runs conceded than average; 0 is average.',
     },
   },
   recentForm: {
     label: 'Recent form',
-    def: 'The under-pressure measure for 2025 and 2026 only: is the player still doing it? Shrunk towards average like the rest, so a few recent balls cannot carry it.',
+    def: 'The pressure rating worked out on 2025 and 2026 alone: is the player still doing it?',
   },
   normal: {
-    label: 'Normal',
-    def: 'The same measure in the other 80% of balls, when little is at stake.',
+    label: 'Usual level',
+    def: 'The same measure on every other ball, when less is at stake: how good the player normally is.',
   },
   lift: {
     label: 'Lift',
-    def: 'Under pressure minus normal. Positive means the player gets better when it matters; negative means they fade.',
+    def: 'Pressure rating minus usual level. Positive means the player gets better when it matters; negative means he dips. Players who dip are never recommended.',
   },
   winImpact: {
     label: 'Win impact',
-    def: 'How much the player moved their team’s chance of winning, in percentage points per 100 pressure balls. +25 pts means a quarter of a win added every 100 balls.',
+    def: 'How much the player moved his team’s chance of winning on his pressure balls, in percentage points per 100 balls. +25 pts means a quarter of a win added every 100 balls. Shown as evidence; not part of the rating.',
   },
   consistency: {
     label: 'Consistency',
-    def: 'Share of pressure innings (6 balls or more) where the player beat the average. 70% means they delivered 7 times out of 10.',
-    bowl: { def: 'Share of pressure spells (6 balls or more) where the player beat the average. 70% means they delivered 7 times out of 10.' },
+    def: 'Share of pressure innings (6 balls or more) where the player beat the average. 70% means he delivered 7 times out of 10. Shown as evidence; not part of the rating.',
+    bowl: { def: 'Share of pressure spells (6 balls or more) where the player beat the average. 70% means he delivered 7 times out of 10. Shown as evidence; not part of the rating.' },
   },
   confidence: {
     label: 'Top-10 confidence',
@@ -55,11 +55,11 @@ export const TERMS = {
   },
   rank: {
     label: 'Rank',
-    def: 'My ranking of players RR could sign. It leaves out Rajasthan Royals’ own players, players retained by other teams, and Pakistani players, who cannot enter the IPL auction.',
+    def: 'My ranking of players RR could buy at the 2027 auction, by pressure rating. It leaves out Rajasthan Royals’ own players, players retained by other teams, retired players and Pakistani players, who cannot enter the IPL auction, and anyone who is worse under pressure than usual.',
   },
   qualified: {
     label: 'Qualified',
-    def: 'At least 25 pressure balls across 3 or more matches, with at least 20 of them in 2 matches in 2025–26, so every pick has been seen under pressure recently. The bar is low on purpose so newcomers can be ranked; short records are pulled towards average until they prove themselves.',
+    def: 'At least 60 pressure balls across 5 or more matches, with at least 20 of them in 2025–26, so every pick has been seen under pressure recently. A short record is safe because the rating leans on the player’s usual level until his pressure record grows.',
   },
   rate: {
     label: 'Strike rate',
@@ -99,7 +99,7 @@ export const runsWord = (role: Role) => (role === 'bat' ? 'runs added' : 'runs s
 export const winPts = (v: number | null | undefined) =>
   v == null ? '–' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${Math.abs(v * 100).toFixed(0)} pts`
 
-/** Rating ingredients are z-scores in the qualified pool; this turns one into "better than X%". */
+/** Evidence is put on a common scale (z-scores) within the pool; this turns one into "better than X%". */
 export function betterThan(z: number) {
   // Abramowitz-Stegun approximation of the normal CDF; plenty for a label
   const t = 1 / (1 + 0.2316419 * Math.abs(z))
@@ -114,12 +114,14 @@ export const EXCLUDED_NOTE = {
   pakistan: 'Can’t enter the IPL auction',
   retained: 'Retained by their team',
   retired: 'Retired from the IPL',
+  dips: 'Dips under pressure',
 } as const
 export const EXCLUDED_LONG = {
   rr: 'Already in the Rajasthan Royals squad, so left out of my ranking of players to target.',
   pakistan: 'Pakistani players cannot register for the IPL auction, so left out of my ranking.',
   retained: 'Retained by their IPL team for 2027, so not in the auction and left out of my ranking.',
   retired: 'Retired from the IPL, so not available and left out of my ranking.',
+  dips: 'Worse under pressure than usual (negative lift), so not recommended as a pressure pick, however good the usual level is.',
 } as const
 
 type Excludable = Pick<Player, 'excluded' | 'retained_by'>

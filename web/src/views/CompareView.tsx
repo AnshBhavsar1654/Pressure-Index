@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { fmt } from '@/lib/format'
 import { betterThan, excludedLong, term, winPts } from '@/lib/terms'
-import { COMPONENT_LABEL, rescore, type ComponentKey, type Player, type Role, type Weights } from '@/lib/types'
+import { COMPONENT_LABEL, rescore, type ComponentKey, type Player, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const MAX = 3
@@ -37,9 +37,9 @@ function rowsFor(role: Role): Row[] {
   const bat = role === 'bat'
   const d = (n: number) => (v: number | null | undefined) => fmt.dec(v, n)
   return [
-    { label: `Under pressure (${bat ? 'runs added' : 'runs saved'} per 100)`, hint: term('underPressure', role).def, get: (p) => p.p_rv100, fmt: (v) => fmt.signed(v), better: 1 },
+    { label: `Pressure rating (${bat ? 'runs added' : 'runs saved'} per 100)`, hint: term('underPressure', role).def, get: (p) => p.p_rv100, fmt: (v) => fmt.signed(v), better: 1 },
     { label: 'Recent form (2025–26)', hint: term('recentForm').def, get: (p) => p.recent100, fmt: (v) => fmt.signed(v), better: 1 },
-    { label: `Normal (${bat ? 'runs added' : 'runs saved'} per 100)`, hint: term('normal').def, get: (p) => p.n_rv100, fmt: (v) => fmt.signed(v), better: 1 },
+    { label: `Usual level (${bat ? 'runs added' : 'runs saved'} per 100)`, hint: term('normal').def, get: (p) => p.n_rv100, fmt: (v) => fmt.signed(v), better: 1 },
     { label: 'Lift under pressure', hint: term('lift').def, get: (p) => p.delta100, fmt: (v) => fmt.signed(v), better: 1 },
     { label: 'Win impact', hint: term('winImpact').def, get: (p) => p.wpa100, fmt: winPts, better: 1 },
     { label: 'Consistency', hint: term('consistency', role).def, get: (p) => p.cons, fmt: (v) => fmt.pct(v), better: 1 },
@@ -59,7 +59,7 @@ function rowsFor(role: Role): Row[] {
   ]
 }
 
-export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>; weights: Weights }) {
+export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
   const [role, setRole] = useState<Role>('bat')
   const [ids, setIds] = useState<number[]>([])
   const [q, setQ] = useState('')
@@ -79,10 +79,10 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
   const pool = pools[role]
   const chosen = useMemo(() => ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Player => !!p), [ids, pool])
   const qualified = useMemo(() => pool.filter((p) => p.merit_rank != null), [pool])
-  // rating ingredients as z-scores against the submitted pool, adding the player if outside it
+  // evidence as z-scores against the qualified pool, adding the player if outside it
   const zs = useMemo(
-    () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.merit_rank != null ? qualified : [...qualified, p], weights).find((x) => x.id === p.id)!.z])),
-    [chosen, qualified, weights],
+    () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.merit_rank != null ? qualified : [...qualified, p]).find((x) => x.id === p.id)!.z])),
+    [chosen, qualified],
   )
 
   const suggestions = useMemo(() => {
@@ -273,9 +273,9 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
 
           <Card>
             <CardHeader>
-              <CardTitle>What drives the rating</CardTitle>
+              <CardTitle>The evidence, side by side</CardTitle>
               <CardDescription>
-                The four things the rating weighs. The number is the share of qualified {noun}s each player beats; right of centre is above average.
+                The pressure rating decides the rank; the rest show whether it holds up. The number is the share of qualified {noun}s each player beats; right of centre is above average.
               </CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col gap-5">

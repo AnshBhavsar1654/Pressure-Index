@@ -1,8 +1,8 @@
 import type { TermKey } from './terms'
 
 export type Role = 'bat' | 'bowl'
-export type ComponentKey = 'pressure' | 'recent' | 'impact' | 'delta' | 'consistency'
-export type Weights = Record<ComponentKey, number>
+/** The evidence shown beside each rating. Only `pressure` (the rating itself) decides the rank. */
+export type ComponentKey = 'pressure' | 'normal' | 'delta' | 'impact' | 'consistency'
 
 export interface TradStats {
   balls: number
@@ -49,12 +49,12 @@ export interface PlayerMatch {
 export interface Player {
   id: number
   name: string
-  /** rank in the submitted ranking (25+ pressure balls in 3+ matches, 20+ of them in 2025-26, and signable by RR); null otherwise */
+  /** rank in the submitted ranking (qualified, signable at the 2027 auction, not worse under pressure than usual); null otherwise */
   rank: number | null
-  /** rank among every qualified player, including those RR cannot sign */
+  /** rank among every qualified player by rating, before any auction rule */
   merit_rank: number | null
-  /** why the player is outside the submitted ranking despite qualifying */
-  excluded: 'rr' | 'pakistan' | 'retained' | 'retired' | null
+  /** why a player is outside the submitted ranking: cannot be signed, or dips under pressure */
+  excluded: 'rr' | 'pakistan' | 'retained' | 'retired' | 'dips' | null
   /** franchise that retained the player for IPL 2027, from the announced lists */
   retained_by: string | null
   score: number | null
@@ -67,19 +67,25 @@ export interface Player {
   p_balls: number
   p_matches: number
   n_balls: number
+  /** THE rating: runs added per 100 pressure balls, leaning on the usual level until the record is long */
   p_rv100: number
+  /** usual level: the same measure on the other balls */
   n_rv100: number
+  /** lift: rating minus usual level */
   delta100: number
+  /** win chance added per 100 pressure balls (a fraction; ×100 for points) */
   wpa100: number
-  cons: number
-  /** runs added per 100 pressure balls in 2025-26 only, shrunk toward average */
+  /** share of pressure innings or spells (6+ balls) that beat the average; null if none */
+  cons: number | null
+  c_n: number
+  /** the rating for 2025-26 alone */
   recent100: number
   /** pressure balls and matches in 2025-26 */
   r_balls: number
   r_matches: number
   /** first season the player appears in the data */
   debut: number
-  /** rank among fresh picks (first match 2024 or later, lower bar), signable players only */
+  /** rank among fresh picks (qualified newcomers, first top-level match 2024 or later), signable players only */
   fresh_rank: number | null
   z?: Record<ComponentKey, number>
   /** bootstrap rank stability, computed for the default pool only */
@@ -95,13 +101,16 @@ export interface Player {
 
 export interface RoleData {
   players: Player[]
-  k: { kp: number; kp_cv: number; kn: number; mun: number; c_prior: number; cv_n: Record<string, number>; cv_p: Record<string, number> }
-  split_half: Record<string, number>
+  k: { K: number }
+  /** odd against even matches, for rating / normal / lift / wpa100 / cons */
+  split_half: Record<'rating' | 'normal' | 'lift' | 'wpa100' | 'cons', number>
+  /** forward test: ratings from earlier seasons against the next season's pressure output */
+  forward: { n: number; rating: number; normal: number; lift: number; wpa100: number }
   eligibility: {
     min_pressure_balls: number
     min_pressure_matches: number
-    recent_from: number; min_recent_balls: number; min_recent_matches: number
-    fresh_from: number; fresh_min_balls: number; fresh_min_matches: number; n_fresh: number
+    recent_from: number; min_recent_balls: number
+    fresh_from: number; n_fresh: number
     n_eligible: number
     /** qualified players RR can sign: the submitted ranking */
     n_ranked: number
@@ -137,13 +146,17 @@ export interface Summary {
   n_ipl_matches: number
   n_t20i_matches: number
   seasons: number[]
+  n_top_level_matches: number
   pressure_threshold: number
-  race_mult: number
   pressure_pctl: number
-  knockout_mult: number
+  K: number
   season_weights: Record<string, number>
-  comp_weights: Record<string, number>
-  weights: Weights
+  top_level: string[]
+  min_match_balls: number
+  n_reduced_included: number
+  n_short_excluded: number
+  forward: Record<Role, { n: number; rating: number; normal: number; lift: number; wpa100: number }>
+  forward_previous: Record<Role, number>
   wp_model: Record<'1' | '2', WpMetrics> & {
     /** final over of a chase: the smooth model against the exact calculation, checked against results */
     endgame: { balls: number; brier_old: number; brier_new: number; rows: { situation: string; n: number; actual: number; old: number; new: number }[] }
@@ -160,57 +173,57 @@ export interface ChaseGrid {
   rows: [number, number, number, number, number][] // wkts, overs_left, need, wp, li
 }
 
-/** Re-score players client-side from their component z-scores. */
-const COMP_FIELD: Record<ComponentKey, 'p_rv100' | 'recent100' | 'wpa100' | 'delta100' | 'cons'> = {
+const COMP_FIELD: Record<ComponentKey, 'p_rv100' | 'n_rv100' | 'delta100' | 'wpa100' | 'cons'> = {
   pressure: 'p_rv100',
-  recent: 'recent100',
-  impact: 'wpa100',
+  normal: 'n_rv100',
   delta: 'delta100',
+  impact: 'wpa100',
   consistency: 'cons',
 }
 
+/** A player can be recommended if RR can sign him and he is not worse under pressure than usual. */
+export const recommendable = (p: Pick<Player, 'excluded' | 'delta100'>) => !p.excluded && p.delta100 >= 0
+
 /**
- * Standardise each rating ingredient within the given pool (z-scores), blend them
- * with the weights and rank. Re-run whenever the pool changes, so a player is always
- * compared with the group currently on screen.
+ * Rank a pool by the rating. Each piece of evidence is also put on a common scale within the pool
+ * (z, shown as "better than X%"), but only the rating decides the order. Players who cannot be
+ * signed, or who dip under pressure, stay in the pool and keep their place in the order but take no rank.
  */
-export function rescore(players: Player[], w: Weights) {
+export function rescore(players: Player[]) {
   const keys = Object.keys(COMP_FIELD) as ComponentKey[]
   const stats = Object.fromEntries(
     keys.map((k) => {
-      const v = players.map((p) => p[COMP_FIELD[k]])
+      const v = players.map((p) => p[COMP_FIELD[k]]).filter((x): x is number => x != null)
       const mean = v.reduce((a, b) => a + b, 0) / (v.length || 1)
       const sd = Math.sqrt(v.reduce((a, b) => a + (b - mean) ** 2, 0) / (v.length || 1)) || 1
       return [k, { mean, sd }]
     }),
   ) as Record<ComponentKey, { mean: number; sd: number }>
-  const total = keys.reduce((a, k) => a + w[k], 0) || 1
   const scored = players.map((p) => {
-    const z = Object.fromEntries(keys.map((k) => [k, (p[COMP_FIELD[k]] - stats[k].mean) / stats[k].sd])) as Record<ComponentKey, number>
-    return { ...p, z, liveScore: keys.reduce((a, k) => a + w[k] * z[k], 0) / total }
+    const z = Object.fromEntries(keys.map((k) => [k, ((p[COMP_FIELD[k]] ?? stats[k].mean) - stats[k].mean) / stats[k].sd])) as Record<ComponentKey, number>
+    return { ...p, z, liveScore: p.p_rv100 }
   })
   scored.sort((a, b) => b.liveScore - a.liveScore)
-  // players RR cannot sign stay in the pool (they shape the averages) but take no rank
   let n = 0
-  return scored.map((p) => ({ ...p, liveRank: p.excluded ? null : ++n }))
+  return scored.map((p) => ({ ...p, liveRank: recommendable(p) ? ++n : null }))
 }
 
 export type ScoredPlayer = ReturnType<typeof rescore>[number]
 
 export const COMPONENT_LABEL: Record<ComponentKey, string> = {
-  pressure: 'Under pressure',
-  recent: 'Recent form',
-  impact: 'Win impact',
+  pressure: 'Pressure rating',
+  normal: 'Usual level',
   delta: 'Lift under pressure',
+  impact: 'Win impact',
   consistency: 'Consistency',
 }
 
-/** The vocabulary entry that explains each rating ingredient. */
+/** The vocabulary entry that explains each piece of evidence. */
 export const COMPONENT_TERM: Record<ComponentKey, TermKey> = {
   pressure: 'underPressure',
-  recent: 'recentForm',
-  impact: 'winImpact',
+  normal: 'normal',
   delta: 'lift',
+  impact: 'winImpact',
   consistency: 'consistency',
 }
 

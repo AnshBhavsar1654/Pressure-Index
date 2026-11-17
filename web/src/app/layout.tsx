@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </div>
                 <nav aria-label="Legal" className="flex gap-5">
                   <Link href="/method/" className="hover:text-foreground">
-                    Methodology
+                    How it works
                   </Link>
                   <Link href="/privacy/" className="hover:text-foreground">
                     Privacy

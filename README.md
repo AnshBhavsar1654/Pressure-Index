@@ -8,16 +8,17 @@ The submission is an interactive dashboard (Next.js, built with Bun, exported as
 |---|---|
 | Overview | The top 10 batters and bowlers under pressure, told through a real RR match |
 | My picks | The 20 submitted picks, why each one is reliable and whether they fill an RR gap or add depth (gap-fillers first), then the fresh picks among them who are new at the top level |
-| How pressure works | What counts as pressure, in plain words, and proof that the definition works |
-| Batters / Bowlers | Full rankings, a "build your own ranking" weight panel, and a profile page for every player |
-| All players | Every player with a high-pressure ball since 2022, searchable and filterable, each with a profile page |
+| How it works | The method in four steps, proof the pressure label works, known clutch moments checked, a worked example with every sum, where each number comes from, the submitted top 10s, and the forward test behind every choice |
+| Batters / Bowlers | Full rankings with an adjustable evidence bar, and a profile page for every player |
+| All players | Every player with a top-level pressure ball since 2022, searchable and filterable, each with a profile page |
 | IPL 2026 review | RR's season: all 16 matches ball by ball, where runs were won and lost, and the squad player by player |
 | Compare players | Up to three batters or bowlers side by side |
-| Method in plain words | The whole approach in four steps, a glossary, and the evidence behind it |
 
 ## The idea in one paragraph
 
-A win-probability model reads the scoreboard before every ball. A ball is **high pressure** when its possible outcomes could move that probability a lot. In the final over of a chase the win probability is worked out exactly, ball by ball, from how often each outcome happens at that stage, because the smooth model is far too gloomy there (it gave a side needing a boundary off the last ball a 4% chance; such sides win about a quarter of the time). The top 20% of balls by those stakes are pressure moments, and every ball of a knockout counts too, because losing means going out (so a big first-innings total in a knockout is a pressure performance). Knockout stakes count 1.2 times, and late IPL league games with a team within one win of the playoff places 1.1 times. Inside the pressure set, each ball is weighted by its stakes (capped at 1.5 times the average), and the 34 rain-shortened matches are left out of pressure and win impact. Players are judged on **runs added**: what they did compared with an average player in exactly the same situation, with each wicket charged at the runs it costs from there. The rating blends output under pressure (30%), recent form under pressure in 2025-26 (20%), win impact (20%), lift above their own normal level (15%) and consistency (15%). To be ranked a player needs 25 pressure balls in 3 matches, at least 20 of them in 2 matches in 2025-26: a low bar so newcomers can show up, with short records shrunk towards average. Players whose first match is 2024 or later are also pulled out as fresh picks. Every player who qualifies is rated, but the submitted top 10s leave out players RR cannot sign: its own squad, players retained by other teams, and Pakistani players, who cannot enter the IPL auction. Small samples are shrunk towards average, results are weighted for opposition strength and recency (2026 counts fully, 2025 90%, 2024 65%, 2023 40%, 2022 25%), and the ranking is re-run 400 times on resampled matches to show which ranks are solid.
+A win-probability model reads the scoreboard before every ball (in the final over of a chase it is worked out exactly, ball by ball). A ball's **stakes** are how far the next delivery could move that chance; the top 20% of balls by stakes are **pressure balls**, and so is every ball of a knockout. Each ball is judged on **runs added**: runs scored against what an average player gets from exactly the same spot, with a wicket charged at the runs it costs from there. A player's **pressure rating** is runs added per 100 pressure balls, leaning on his **usual level** (the same sum on every other ball) until his pressure record is long: `rating = (Σ recency × pressure runs added + 200 × usual level) ÷ (Σ recency + 200)`. Each year back counts 20% less. **Lift** = rating − usual level. Ratings use the IPL and T20Is between full-member nations only. To be ranked a player needs 60 pressure balls in 5 matches, 20 of them in 2025–26. The submitted top 10s are ranked by the rating alone, among players RR can buy at the 2027 auction (not RR's own squad, other teams' retentions, retired players or Pakistani players) who do not dip under pressure (lift ≥ 0). Rain-reduced matches are judged on their revised target, so the 2023 IPL final counts; only games cut below 10 overs a side are left out of pressure.
+
+Four settings in all (the 20% line, K = 200, the recency step, the evidence bar), each chosen with a **forward test**: ratings built from 2022–24 and 2022–25 only, scored on how players actually did under pressure in 2025 and 2026. The rating beats the earlier five-part blend for batters and bowlers alike. Win impact, consistency and recent form are shown beside each rating as evidence, not blended in, because blending them made predictions worse. Ranks are stress-tested with 400 re-runs on resampled matches.
 
 ## Data and trust
 
@@ -26,14 +27,14 @@ A win-probability model reads the scoreboard before every ball. A ball is **high
 - `analysis/nationality_overrides.json` corrects nationality for a few players with no T20Is in the window (for example Sunil Narine), so the overseas labels are right.
 - Team crests are kit-colour roundels with each side's short code. Official logos are trademarked, so they are not bundled; to use them, place the files in `web/public/logos/` and set the `logo` path for each team in `web/src/lib/teams.ts`.
 - Country flags are SVGs from the MIT-licensed `country-flag-icons` package, copied into `web/public/flags/`.
-- Every cut-off can be changed in the dashboard: minimum pressure balls and matches on the rankings pages (default 120 and 8, down to 30 and 3), minimum balls in a role on the auction page (default 90 batting, 120 bowling, down to 30), and minimum balls in the RR squad tables.
+- The evidence bar can be changed on the rankings pages (default 60 pressure balls in 5 matches, down to 30 and 3); the no-dip and auction rules apply live.
 - `analysis/auction_pool.json` takes the official retention list (17 November 2026): add every retained player to `retained` (names as they appear in the data, or player ids) and rerun both analysis scripts. Retained players leave the top 10s and the auction lists, and RR players RR did not keep become buyable. Names the scripts cannot match are printed as a warning.
 - Every statistic is named once, in plain words, in `web/src/lib/terms.ts`. Tables, charts and the glossary all read from it, and every underlined term explains itself on hover.
 
 ## Repo layout
 
 ```
-analysis/pipeline.py      pressure model, run value, player ratings, bootstrap  -> web/data/*.json
+analysis/pipeline.py      pressure model, run value, player ratings, forward test, bootstrap  -> web/data/*.json
 analysis/rr2026.py        RR 2026 diagnosis, auction targets, cross-checks      -> web/data/rr2026.json
 web/                      Next.js dashboard (Bun, Tailwind, hand-built SVG charts)
 Data Pack/                raw data pack (not committed)

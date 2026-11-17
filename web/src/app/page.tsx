@@ -51,7 +51,7 @@ export default function Overview() {
           <h1 className="display text-[3rem] text-white sm:text-[4.2rem]">Who delivers when the match is on the line?</h1>
           <p className="max-w-[34rem] text-[16px] leading-relaxed text-white/85">
             Every one of {fmt.int(s.n_balls)} IPL and T20I deliveries since 2022 is scored for how much it could swing the
-            result. Players are rated on what they did in the moments that mattered most.
+            result. Players are rated on what they did in the moments that mattered most, set against their own usual level.
           </p>
         </div>
         <div className="flex flex-wrap items-end justify-between gap-6">

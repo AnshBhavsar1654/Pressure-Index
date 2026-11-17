@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpenTextIcon, CrownIcon, GaugeIcon, HouseIcon, ScalesIcon, TrophyIcon, UsersThreeIcon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, CrownIcon, HouseIcon, ScalesIcon, TrophyIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ComponentType } from 'react'
@@ -14,7 +14,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: '/', label: 'Overview', icon: HouseIcon },
       { href: '/picks/', label: 'My picks', icon: TrophyIcon },
-      { href: '/pressure/', label: 'What is pressure', icon: GaugeIcon },
+      { href: '/method/', label: 'How it works', icon: BookOpenTextIcon },
     ],
   },
   {
@@ -31,10 +31,6 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { href: '/rajasthan/', label: 'IPL 2026 review', icon: CrownIcon },
     ],
-  },
-  {
-    title: 'About',
-    items: [{ href: '/method/', label: 'Methodology', icon: BookOpenTextIcon }],
   },
 ]
 
