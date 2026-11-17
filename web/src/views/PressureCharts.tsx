@@ -47,7 +47,7 @@ export function PressureShape({ s }: { s: Summary }) {
       </ChartFrame>
       <ChartFrame
         title="Share of balls that count as pressure"
-        subtitle="By phase. Once a target exists, each ball matters far more, so chases hold most pressure moments."
+        subtitle="By phase. Once a target exists, each ball can swing the result more, so chases hold most pressure moments. Every ball of a knockout counts, whichever innings it is in."
         legend={
           <Legend
             items={[
@@ -62,7 +62,7 @@ export function PressureShape({ s }: { s: Summary }) {
       <ChartFrame
         className="lg:col-span-2"
         title="Most balls carry little at stake"
-        subtitle="Every delivery, sorted by its stakes. Only the top fifth, right of the line, count as high pressure."
+        subtitle="Every delivery, sorted by its stakes. The top fifth, right of the line, count as high pressure, along with every ball of a knockout."
       >
         <LiHistogram bins={s.li_hist} threshold={s.pressure_threshold} />
       </ChartFrame>

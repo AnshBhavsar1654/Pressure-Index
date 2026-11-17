@@ -28,6 +28,7 @@ export function SanityChecks({ pools }: { pools: Pools }) {
   const rcb = find(pools, 'bat', 'Jos Buttler', '2024-04-06')
   const tushar = find(pools, 'bowl', 'Tushar Deshpande', '2026-04-04')
   const short = find(pools, 'bat', 'Matthew Short', '2026-04-18')
+  const patidar = find(pools, 'bat', 'Rajat Patidar', '2026-05-26')
 
   const cards: { title: string; story: string; verdict: string; href?: string }[] = []
   if (rinku?.mo)
@@ -52,6 +53,13 @@ export function SanityChecks({ pools }: { pools: Pools }) {
       href: `/players/bowl/${tushar.p.id}/`,
     })
 
+  if (patidar)
+    cards.push({
+      title: 'Rajat Patidar v Gujarat Titans, Qualifier 1, 2026',
+      story: `Batting first in a knockout, he made ${patidar.m.r} off ${patidar.m.balls} balls as RCB set 254; Gujarat’s chase fell 92 runs short.`,
+      verdict: `A first-innings knock, but in a knockout every ball is a pressure ball: all ${patidar.m.balls} count, adding ${patidar.m.rv > 0 ? '+' : ''}${patidar.m.rv.toFixed(0)} runs against an average batter once each ball is weighted by its stakes. In a league game the same innings would count towards his normal level instead.`,
+      href: `/players/bat/${patidar.p.id}/`,
+    })
   if (short)
     cards.push({
       title: 'Matthew Short v Sunrisers Hyderabad, 2026',

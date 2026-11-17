@@ -24,7 +24,7 @@ export default function MethodPage() {
   const steps: { t: string; d: ReactNode; e: ReactNode }[] = [
     {
       t: 'Find the moments that matter',
-      d: 'A win-probability model reads the scoreboard before every ball (in the final over of a chase, an exact ball-by-ball calculation takes over). I ask how much the next ball could move it. The 20% of balls that could move it most are pressure moments.',
+      d: 'A win-probability model reads the scoreboard before every ball (in the final over of a chase, an exact ball-by-ball calculation takes over). I ask how much the next ball could move it. The 20% of balls that could move it most are pressure moments, and so is every ball of a knockout.',
       e: (
         <>
           {mo.match}, {fmt.date(mo.date)}: <b>{mo.state}</b>. The chasing side’s chance stood at {fmt.pct(mo.wp)}, and one ball
@@ -133,6 +133,13 @@ export default function MethodPage() {
           matches: {bat.eligibility.n_eligible} batters and {bowl.eligibility.n_eligible} bowlers qualify. RR’s own players and Pakistani players are rated but left out of my ranking, since RR cannot sign them: that leaves {bat.eligibility.n_ranked} and {bowl.eligibility.n_ranked}.
         </li>
         <li className="panel p-4">
+          <b>Batting first, and knockouts.</b> A first-innings ball moves the result less than a chase ball, because the chase is
+          still to come, so few first-innings balls clear the pressure line. I tested giving each innings its own line, but in a
+          first innings that flagged the opening two overs almost entirely (the win chance sits near 50% early on), which is not
+          pressure. Instead every ball of a knockout counts, since losing means going out: a big total set in a knockout is a
+          pressure performance. A first-innings knock in any game still counts fully towards the player’s normal level.
+        </li>
+        <li className="panel p-4">
           <b>Bigger moments count more.</b> Once a ball counts as pressure, it is weighted by how much was at stake: a final-over
           ball counts one and a half times an average pressure ball, and about two and a half times one just over the line. I tested
           bigger weights, but they made ratings less repeatable from one set of matches to the next, so big moments count more, not
@@ -143,6 +150,12 @@ export default function MethodPage() {
           <b>Rain-shortened matches.</b> The 34 matches cut below 20 overs or given a revised target are left out of pressure
           and win impact, because a model of 20-over games cannot judge the stakes of a five-over one. Their runs still count
           towards each player’s normal level.
+        </li>
+        <li className="panel p-4">
+          <b>Economy and wickets both count.</b> A bowler is credited for every run kept below what an average bowler concedes
+          from the same spot, and for each wicket at the runs it costs the batting side from there (about 10.6 in the powerplay,
+          7 in the middle overs, 2.6 at the death). So four tight death overs for 26 and no wicket (about +13) beat three wickets
+          for 50 (about −3), while in the powerplay the wickets are worth more.
         </li>
         <li className="panel p-4">
           <b>Wickets in hand.</b> Every ball is judged against an average player with the same balls left and the same wickets
@@ -234,7 +247,8 @@ export default function MethodPage() {
             </li>
             <li>
               Leverage index = Σ P(outcome | phase) × |ΔWP| over 0, 1, 2, 3, 4, 6, wicket and wide, divided by its mean. Knockouts
-              ×{s.knockout_mult}. Pressure = top 20% (index ≥ {s.pressure_threshold.toFixed(2)}).
+              ×{s.knockout_mult}, late IPL league games with a team within one win of the playoff places ×{s.race_mult}. Pressure = top
+              20% (index ≥ {s.pressure_threshold.toFixed(2)}) plus every knockout ball, each weighted by its own stakes.
             </li>
             <li>
               Run value: monotonic gradient-boosted run-expectancy model by competition and season, smoothed along balls left.

@@ -27,7 +27,7 @@ export function CandidateTable({
   isBat: boolean
   phase: string
   defaultMin: number
-  /** true once the official released list is loaded; until then availability is an estimate */
+  /** true once every franchise has announced; until then availability is partly an estimate */
   poolKnown: boolean
 }) {
   const [nat, setNat] = useState<Nat>('all')
@@ -36,8 +36,9 @@ export function CandidateTable({
   const [show, setShow] = useState<'10' | '20' | '40'>('10')
   const [avail, setAvail] = useState<'likely' | 'all'>('likely')
   const [keep, setKeep] = useState(6)
-  // until the retention list is out, assume each franchise keeps the N players who added the most runs for it
-  const retained = (c: Candidate) => !poolKnown && c.core_rank != null && c.core_rank <= keep
+  // retained players are already removed; for franchises yet to announce, assume each keeps the N players
+  // who added the most runs for it in 2026
+  const retained = (c: Candidate) => !poolKnown && c.status !== 'in auction pool' && c.core_rank != null && c.core_rank <= keep
   const floor = Math.min(...candidates.map((c) => c.balls))
   const maxFit = Math.max(...candidates.map((c) => c.fit))
   const minFit = Math.min(...candidates.map((c) => c.fit))
@@ -158,6 +159,7 @@ export function CandidateTable({
                           {c.overseas && <OverseasMark country={c.nat} size={12} />}
                           {c.ipl_balls === 0 && <Tag>No IPL games since 2024</Tag>}
                           {retained(c) && <Tag tone="blue">Likely retained (estimate)</Tag>}
+                          {!poolKnown && c.status === 'in auction pool' && c.ipl_team_2026 && <Tag tone="pink">Released</Tag>}
                           {c.balls < defaultMin && <Tag>Small sample</Tag>}
                         </span>
                         <span className="max-w-[34ch] text-[12px] leading-snug text-ink-3">

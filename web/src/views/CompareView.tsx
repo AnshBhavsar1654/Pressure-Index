@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { fmt } from '@/lib/format'
-import { betterThan, EXCLUDED_LONG, term, winPts } from '@/lib/terms'
+import { betterThan, excludedLong, term, winPts } from '@/lib/terms'
 import { COMPONENT_LABEL, rescore, type ComponentKey, type Player, type Role, type Weights } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -218,7 +218,7 @@ export function CompareView({ pools, weights }: { pools: Record<Role, Player[]>;
               </div>
               {p.rank == null && (
                 <p className="text-[12px] leading-snug text-ink-3">
-                  {p.excluded ? EXCLUDED_LONG[p.excluded] : 'Not enough pressure balls to be ranked, so these figures rest on a small sample.'}
+                  {p.excluded ? excludedLong(p) : 'Not enough pressure balls to be ranked, so these figures rest on a small sample.'}
                 </p>
               )}
             </section>

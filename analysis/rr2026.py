@@ -28,6 +28,7 @@ DATA = ROOT / "Data Pack"
 OUT = ROOT / "web" / "data"
 CACHE = ROOT / "analysis" / "cache" / "balls.parquet"
 POOL = ROOT / "analysis" / "auction_pool.json"
+IPL_2026 = 3298  # comp_id of IPL 2026, the squads the 2027 retentions are made from
 
 RR = "Rajasthan Royals"
 SEASON = 2026
@@ -103,14 +104,28 @@ def team_phase(d: pd.DataFrame, team: str, n_matches: dict):
     return out
 
 
-def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[set, list]:
-    """Player ids named in auction_pool.json `retained` (ids or names); also returns names not found."""
-    raw = cfg.get("retained", [])
-    ids = {int(x) for x in raw if str(x).strip().isdigit()}
-    names = {str(x).strip().lower(): str(x).strip() for x in raw if not str(x).strip().isdigit()}
-    lookup = mp.assign(key=mp.player_name.str.strip().str.lower()).groupby("key").player_id.first()
-    ids |= {int(lookup[k]) for k in names if k in lookup.index}
-    return ids, [v for k, v in names.items() if k not in lookup.index]
+def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[dict, list, set]:
+    """Retentions from auction_pool.json. `retained` maps each franchise that has announced to its list
+    (names as written in the data, or player ids). Returns {player id: franchise}, the names not found,
+    and the franchises that have announced. Names are matched to IPL 2026 squads first, so a namesake
+    elsewhere in the data cannot be picked up by mistake."""
+    raw = cfg.get("retained", {})
+    if isinstance(raw, list):  # a single list with no franchise attached
+        raw = {"": raw}
+    key = mp.player_name.str.strip().str.lower()
+    lookup = mp.assign(key=key).groupby("key").player_id.first()
+    lookup26 = mp[mp.comp_id == IPL_2026].assign(key=key).groupby("key").player_id.first()
+    ids, missing = {}, []
+    for team, names in raw.items():
+        for x in names:
+            x = str(x).strip()
+            k = x.lower()
+            pid = int(x) if x.isdigit() else lookup26.get(k, lookup.get(k))
+            if pid is None:
+                missing.append(x)
+            else:
+                ids[int(pid)] = team or None
+    return ids, missing, {t for t in raw if t}
 
 
 def main():
@@ -313,13 +328,13 @@ def main():
     core = pd.DataFrame({"team": pd.Series(ipl26_team), "net": imp}).dropna()
     core["core_rank"] = core.groupby("team").net.rank(ascending=False, method="first")
     released = set(pool.get("released_ids", []))
-    retained, unmatched = retained_ids(mp, pool)
+    retained, unmatched, announced = retained_ids(mp, pool)
     if unmatched:
         print("WARNING retained names not found in the data:", unmatched)
-    know_retained = bool(pool.get("retained"))
-    pool_known = bool(released) or know_retained
-    # RR players RR keeps are never targets; once the list is out, the ones it lets go can be bought back
-    off_limits = (squad_ids & retained) if know_retained else squad_ids
+    # the pool is final once every franchise has announced (or an official released list is given)
+    pool_known = bool(released) or announced >= set(teams)
+    # RR players RR keeps are never targets; once RR announce, the ones they let go can be bought back
+    off_limits = (squad_ids & set(retained)) if RR in announced else squad_ids
 
     def role_table(disc, ph, min_balls):
         if disc == "bat":
@@ -372,8 +387,9 @@ def main():
             else:
                 c["econ"] = r1(6 * r.runs / max(r.legal, 1), 2)
                 c["bpw"] = r1(r.legal / r.wkt) if r.wkt else None
-            c["status"] = ("in auction pool" if pid in released or (know_retained and pid not in retained) else
-                           ("retained elsewhere" if pool_known else "check retention list"))
+            # known available: released, or from a franchise that has announced and did not keep them
+            c["status"] = ("in auction pool" if pid in released or (ipl26_team.get(pid) in announced) else
+                           ("in auction pool" if pool_known else "check retention list"))
             return c
 
         # Pakistani players cannot register for the IPL auction, so they are never recommended
@@ -404,7 +420,7 @@ def main():
         "squad": squad,
         "gaps": gaps,
         "recommendations": recs,
-        "pool": {"known": pool_known, "updated": pool.get("updated")},
+        "pool": {"known": pool_known, "updated": pool.get("updated"), "announced": sorted(announced)},
     }
     # ------------------------------------------------------------ provenance + cross-checks
     # Reference figures from the public record (Wikipedia, "2026 Rajasthan Royals season",

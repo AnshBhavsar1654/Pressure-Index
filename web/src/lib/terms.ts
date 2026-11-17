@@ -1,4 +1,5 @@
-import type { Role } from './types'
+import { iplCode } from './format'
+import type { Player, Role } from './types'
 
 /**
  * Every statistic on the dashboard, named once in plain words. Tables, charts and the
@@ -10,7 +11,7 @@ type Term = { label: string; def: string; bowl?: { label?: string; def?: string 
 export const TERMS = {
   pressureBall: {
     label: 'Pressure ball',
-    def: 'One of the 20% of balls where the next delivery could swing the result the most. Knockout games count a little more.',
+    def: 'One of the 20% of balls where the next delivery could swing the result the most, plus every ball of a knockout. Late league games with a playoff place on the line count a little more.',
   },
   pressureBalls: {
     label: 'Pressure balls',
@@ -114,3 +115,15 @@ export const EXCLUDED_LONG = {
   pakistan: 'Pakistani players cannot register for the IPL auction, so left out of my ranking.',
   retained: 'Retained by their IPL team for 2027, so not in the auction and left out of my ranking.',
 } as const
+
+type Excludable = Pick<Player, 'excluded' | 'retained_by'>
+/** Short reason, naming the franchise for a retained player ("Retained by CSK"). */
+export const excludedNote = (p: Excludable) =>
+  p.excluded === 'retained' && p.retained_by ? `Retained by ${iplCode(p.retained_by)}` : p.excluded ? EXCLUDED_NOTE[p.excluded] : ''
+/** Long reason for profiles. */
+export const excludedLong = (p: Excludable) =>
+  p.excluded === 'retained' && p.retained_by
+    ? `Retained by ${p.retained_by} for IPL 2027, so not in the auction and left out of my ranking.`
+    : p.excluded
+      ? EXCLUDED_LONG[p.excluded]
+      : ''

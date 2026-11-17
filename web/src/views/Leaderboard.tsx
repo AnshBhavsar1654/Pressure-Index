@@ -16,7 +16,7 @@ import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import { fmt } from '@/lib/format'
 import { Term } from '@/components/Term'
-import { EXCLUDED_NOTE, term, winPts } from '@/lib/terms'
+import { excludedNote, term, winPts } from '@/lib/terms'
 import { COMPONENT_LABEL, COMPONENT_TERM, rescore, type ComponentKey, type Player, type Role, type ScoredPlayer, type Weights } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
@@ -256,7 +256,7 @@ export function Leaderboard({
                       {p.rank != null && p.liveRank !== p.rank && <span className="num ml-1.5 text-[11.5px] text-ink-3">was {p.rank}</span>}
                     </>
                   ) : (
-                    <span className="block max-w-[7rem] text-[11.5px] leading-tight text-ink-3">{p.excluded ? EXCLUDED_NOTE[p.excluded] : '–'}</span>
+                    <span className="block max-w-[7rem] text-[11.5px] leading-tight text-ink-3">{p.excluded ? excludedNote(p) : '–'}</span>
                   )}
                 </TableCell>
                 <TableCell className="py-2.5">

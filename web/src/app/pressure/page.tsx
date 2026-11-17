@@ -20,8 +20,8 @@ export default function PressurePage() {
       d: 'I imagine every possible outcome (a dot, a single, a four, a six, a wicket, a wide) and see how much each would move that chance. A big possible swing means big stakes.',
     },
     {
-      t: 'Keep the top fifth',
-      d: `The 20% of balls with the biggest stakes are “pressure moments”. Knockout games count 1.2 times more. Everything else is a player’s normal level.`,
+      t: 'Keep the top fifth, and every knockout ball',
+      d: `The 20% of balls with the biggest stakes are “pressure moments”. In a knockout every ball counts, because losing means going out whatever the scoreboard says, so a big first-innings total in a knockout is a pressure performance. Late league games with a playoff place on the line count 1.1 times. Everything else is a player’s normal level.`,
     },
   ]
   return (

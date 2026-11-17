@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Term } from '@/components/Term'
 import { getQualified, getRole, getSummary } from '@/lib/data'
-import { EXCLUDED_LONG } from '@/lib/terms'
+import { excludedLong } from '@/lib/terms'
 import { fmt } from '@/lib/format'
 import { rescore, type Player, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -157,7 +157,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
             {p.rank != null
               ? `Ranked ${p.rank} of the ${total} qualified ${isBat ? 'batters' : 'bowlers'} RR could sign.`
               : p.excluded
-                ? `${EXCLUDED_LONG[p.excluded]}${p.merit_rank != null ? ` On the numbers alone, they would rank ${p.merit_rank} of ${bar.n_eligible} qualified ${isBat ? 'batters' : 'bowlers'}.` : ''}`
+                ? `${excludedLong(p)}${p.merit_rank != null ? ` On the numbers alone, they would rank ${p.merit_rank} of ${bar.n_eligible} qualified ${isBat ? 'batters' : 'bowlers'}.` : ''}`
                 : `Fewer than ${bar.min_pressure_balls} pressure balls across ${bar.min_pressure_matches} matches, so not enough evidence to rank them yet. Treat these numbers as an early read.`}
           </p>
         </div>

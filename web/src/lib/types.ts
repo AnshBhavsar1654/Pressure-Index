@@ -55,6 +55,8 @@ export interface Player {
   merit_rank: number | null
   /** why the player is outside the submitted ranking despite qualifying */
   excluded: 'rr' | 'pakistan' | 'retained' | null
+  /** franchise that retained the player for IPL 2027, from the announced lists */
+  retained_by: string | null
   score: number | null
   country: string | null
   ipl_team: string | null
@@ -125,6 +127,7 @@ export interface Summary {
   n_t20i_matches: number
   seasons: number[]
   pressure_threshold: number
+  race_mult: number
   pressure_pctl: number
   knockout_mult: number
   season_weights: Record<string, number>
@@ -250,7 +253,8 @@ export interface RRData {
   joined: { id: number; name: string; from_team: string | null; from_season: number | null; returning: boolean; ipl_seasons: number }[]
   gaps: Gap[]
   recommendations: Recommendation[]
-  pool: { known: boolean; updated: string | null }
+  /** known: every franchise has announced; announced: the franchises whose retentions are in */
+  pool: { known: boolean; updated: string | null; announced: string[] }
   provenance: Provenance
 }
 

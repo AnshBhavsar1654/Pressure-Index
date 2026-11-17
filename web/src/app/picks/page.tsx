@@ -7,7 +7,7 @@ import { Term } from '@/components/Term'
 import { getRole, getRR, getSummary } from '@/lib/data'
 import { momentLine } from '@/views/Moments'
 import { PoolNotice, RoleBlock } from '@/views/RoleShortlist'
-import { fmt } from '@/lib/format'
+import { fmt, iplCode } from '@/lib/format'
 import { betterThan, winPts } from '@/lib/terms'
 import { rescore, type ComponentKey, type Gap, type Player, type Role } from '@/lib/types'
 
@@ -82,9 +82,10 @@ function fit(p: Player, role: Role, gaps: Gap[], targets: Set<string>) {
   return { fills: false, text: `${lead} RR were already above average there in 2026 (${ordinal(g.rank)} of 10), so they would add depth rather than fix a gap.` }
 }
 
-function availability(p: Player) {
+function availability(p: Player, poolKnown: boolean) {
   if (!p.ipl_team) return 'No IPL squad since 2022: a fresh signing through the auction.'
-  return p.ipl_season === 2026 ? `In the ${p.ipl_team} squad in 2026.` : `Last IPL squad: ${p.ipl_team}, ${p.ipl_season}.`
+  if (p.ipl_season !== 2026) return `Last IPL squad: ${p.ipl_team}, ${p.ipl_season}. In the auction.`
+  return poolKnown ? `Released by ${p.ipl_team} after 2026, so in the auction.` : `In the ${p.ipl_team} squad in 2026.`
 }
 
 export default function PicksPage() {
@@ -110,7 +111,12 @@ export default function PicksPage() {
         <div className="max-w-sm">
           <Note title="Who is left out">
             RR’s own players are already in the squad, and Pakistani players cannot enter the IPL auction, so neither is listed
-            here. Once teams announce their retentions, retained players come out too and the next best move up.
+            here.{' '}
+            {rr.pool.known
+              ? 'Players retained by their teams are out too, so every name here can be bought at the auction.'
+              : rr.pool.announced.length
+                ? `Players retained by ${rr.pool.announced.map(iplCode).join(', ')} are out too and the next best moved up; the other teams follow as they announce.`
+                : 'Once teams announce their retentions, retained players come out too and the next best move up.'}
           </Note>
         </div>
       </PageHead>
@@ -194,7 +200,7 @@ export default function PicksPage() {
                     </h3>
                     <p className="text-[13.5px] leading-relaxed text-ink-2">{f.text}</p>
                   </div>
-                  <p className="text-[12.5px] text-ink-3">{availability(p)}</p>
+                  <p className="text-[12.5px] text-ink-3">{availability(p, rr.pool.known)}</p>
                 </article>
               )
             })}

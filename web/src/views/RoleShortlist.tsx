@@ -1,5 +1,6 @@
 import { InfoIcon } from '@phosphor-icons/react/dist/ssr'
 import { Note, ordinal, signed } from '@/components/kit'
+import { iplCode } from '@/lib/format'
 import type { Recommendation, RRData } from '@/lib/types'
 import { CandidateTable } from '@/views/CandidateTable'
 
@@ -14,6 +15,15 @@ export function PoolNotice({ pool }: { pool: RRData['pool'] }) {
       <div className="text-ink-2">
         {pool.known ? (
           <>Players retained by their teams have been removed{pool.updated ? ` (list of ${pool.updated})` : ''}, so every name below can be bought at the auction.</>
+        ) : pool.announced.length ? (
+          <>
+            <b className="text-ink">
+              Retentions are in for {pool.announced.length} of 10 teams ({pool.announced.map(iplCode).join(', ')})
+            </b>
+            . Players they kept are removed, and the ones they let go are marked Released. For the other teams the lists still
+            assume each keeps the six players who added the most runs for it in 2026; change that number, or switch to Everyone.
+            Pakistani players are left out because they cannot register for the auction.
+          </>
         ) : (
           <>
             <b className="text-ink">Retention lists are due on 17 November 2026</b>, so the auction pool is not final yet. Each list

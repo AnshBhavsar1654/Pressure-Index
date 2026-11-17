@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "Data Pack"
 OUT = ROOT / "web" / "data"
 POOL = ROOT / "analysis" / "auction_pool.json"
+IPL_2026 = 3298  # comp_id of IPL 2026, the squads the 2027 retentions are made from
 OUT.mkdir(parents=True, exist_ok=True)
 
 RNG = np.random.default_rng(27)
@@ -37,6 +38,7 @@ RNG = np.random.default_rng(27)
 # ---------------------------------------------------------------- config
 PRESSURE_PCTL = 0.80          # top 20% of Pressure Index = "high pressure" delivery
 KNOCKOUT_MULT = 1.20          # knockout / playoff stakes multiplier
+RACE_MULT = 1.10              # late IPL league game involving a team still in the playoff race
 FULL_MEMBERS = {
     "India", "Pakistan", "Australia", "England", "New Zealand", "South Africa",
     "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan", "Ireland", "Zimbabwe",
@@ -85,7 +87,39 @@ def load():
     )
     m["is_knockout"] = ((m["knock_out"] == 1) | m["stage"].isin(
         ["Final", "Qualifier", "Eliminator", "Semi Final"])).astype(int)
+    m["is_race"] = playoff_race(m)
+    m["stage_mult"] = np.where(m.is_knockout == 1, KNOCKOUT_MULT, np.where(m.is_race == 1, RACE_MULT, 1.0))
     return b, m, mp
+
+
+def playoff_race(m: pd.DataFrame) -> np.ndarray:
+    """IPL league games among a team's last five, when that team finished within one
+    win (2 points) of the fourth playoff place: a game with qualification on the line. The data has
+    no live table, so the final table stands in for 'still in the race at the time'."""
+    race = pd.Series(0, index=m.index)
+    for _, g in m[(m.is_ipl == 1) & (m.stage == "League")].groupby("comp_id"):
+        pts: dict = {}
+        for r in g.itertuples():
+            for t in (r.home_team_id, r.away_team_id):
+                pts.setdefault(t, 0)
+            if pd.isna(r.win_team_id):
+                pts[r.home_team_id] += 1
+                pts[r.away_team_id] += 1
+            else:
+                pts[int(r.win_team_id)] = pts.get(int(r.win_team_id), 0) + 2
+        if len(pts) < 5:
+            continue
+        p4 = sorted(pts.values(), reverse=True)[3]
+        alive = {t for t, v in pts.items() if abs(v - p4) <= 2}
+        g = g.sort_values(["match_date", "match_number"])
+        played: dict = {}
+        for idx, r in g.iterrows():
+            late = False
+            for t in (r.home_team_id, r.away_team_id):
+                played[t] = played.get(t, 0) + 1
+                late |= t in alive and played[t] > 9  # the last five games of the league stage
+            race[idx] = int(late)
+    return race.to_numpy()
 
 
 # ---------------------------------------------------------------- state
@@ -111,7 +145,7 @@ def build_state(b: pd.DataFrame, m: pd.DataFrame) -> pd.DataFrame:
 
     inn_tot = b.groupby(["match_id", "innings"]).tot.sum().unstack()
     b = b.merge(
-        m[["match_id", "season_yr", "is_ipl", "comp_tier", "comp_weight", "is_knockout",
+        m[["match_id", "season_yr", "is_ipl", "comp_tier", "comp_weight", "is_knockout", "is_race", "stage_mult",
            "first_inn_revised_overs", "second_inn_revised_overs", "revised_target",
            "win_team_id", "match_date", "comp_name", "home_team", "away_team",
            "home_team_id", "away_team_id", "stage", "result"]],
@@ -537,7 +571,10 @@ def player_match_table(b: pd.DataFrame, role: str) -> pd.DataFrame:
         d["r"], d["out"] = d.bowler_runs, d.bowler_wkt
     d["wb"] = d.comp_weight * d.season_yr.map(SEASON_WEIGHT)  # recency and competition
     d["P"] = d.pressure.astype(int)
-    stakes = np.clip(d.li / d.li[d.pressure].mean(), 0, STAKES_CAP)
+    # stakes (with match importance) against the average pressure ball. Knockout balls are all in the
+    # pressure set but weighted by their own stakes like any other ball: a minimum weight was tested
+    # and made bowlers' ratings less repeatable (split-half 0.16 to 0.13).
+    stakes = np.clip(d.pi_raw / d.pi_raw[d.pressure].mean(), 0, STAKES_CAP)
     d["lw"] = np.where(d.pressure, stakes, 1.0)
     d["w"] = d.wb * d.lw  # ...and stakes, for pressure balls
     d["rvs"] = d.lw * d.rv  # stakes-weighted runs added (match charts, consistency)
@@ -711,14 +748,28 @@ def player_meta(mp: pd.DataFrame, m: pd.DataFrame, b: pd.DataFrame):
     return ipl, intl, bat_hand, bowl_type, pace
 
 
-def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[set, list]:
-    """Player ids named in auction_pool.json `retained` (ids or names); also returns names not found."""
-    raw = cfg.get("retained", [])
-    ids = {int(x) for x in raw if str(x).strip().isdigit()}
-    names = {str(x).strip().lower(): str(x).strip() for x in raw if not str(x).strip().isdigit()}
-    lookup = mp.assign(key=mp.player_name.str.strip().str.lower()).groupby("key").player_id.first()
-    ids |= {int(lookup[k]) for k in names if k in lookup.index}
-    return ids, [v for k, v in names.items() if k not in lookup.index]
+def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[dict, list, set]:
+    """Retentions from auction_pool.json. `retained` maps each franchise that has announced to its list
+    (names as written in the data, or player ids). Returns {player id: franchise}, the names not found,
+    and the franchises that have announced. Names are matched to IPL 2026 squads first, so a namesake
+    elsewhere in the data cannot be picked up by mistake."""
+    raw = cfg.get("retained", {})
+    if isinstance(raw, list):  # a single list with no franchise attached
+        raw = {"": raw}
+    key = mp.player_name.str.strip().str.lower()
+    lookup = mp.assign(key=key).groupby("key").player_id.first()
+    lookup26 = mp[mp.comp_id == IPL_2026].assign(key=key).groupby("key").player_id.first()
+    ids, missing = {}, []
+    for team, names in raw.items():
+        for x in names:
+            x = str(x).strip()
+            k = x.lower()
+            pid = int(x) if x.isdigit() else lookup26.get(k, lookup.get(k))
+            if pid is None:
+                missing.append(x)
+            else:
+                ids[int(pid)] = team or None
+    return ids, missing, {t for t in raw if t}
 
 
 def main():
@@ -728,11 +779,19 @@ def main():
     re = run_expectancy(b)
     models, wp_metrics = fit_wp(b, re)
     b, outcome_probs = leverage(b, models)
-    b["pi_raw"] = b.li * np.where(b.is_knockout == 1, KNOCKOUT_MULT, 1.0)
+    # stakes x match importance (knockouts 1.2, late games in the playoff race 1.1)
+    b["pi_raw"] = b.li * b.stage_mult
+    # One cut-off for every ball: the top 20% by stakes. (Separate cut-offs for batting first and
+    # chasing were tested and rejected: in a first innings they flagged 87% of over-one balls, because
+    # the win chance sits near 50% early on, which is where any model is most sensitive.)
+    # On top, every ball of a knockout counts: lose and you are out, so the occasion is the pressure,
+    # whatever the scoreboard says. That is what credits a first-innings total built in a knockout.
+    live = ~b.short_match
+    thr = float(b[live].pi_raw.quantile(PRESSURE_PCTL))
+    b["pressure"] = live & ((b.pi_raw >= thr) | (b.is_knockout == 1))
     b["pi"] = (b.pi_raw.rank(pct=True) * 100).round(1)
-    thr = b.pi_raw.quantile(PRESSURE_PCTL)
-    b["pressure"] = b.pi_raw >= thr
-    log(f"pressure threshold LI*stage >= {thr:.3f}; share {b.pressure.mean():.3f}")
+    log(f"pressure threshold {thr:.3f}; share {b.pressure.mean():.3f}; "
+        f"by innings {b[live].groupby('innings').pressure.mean().round(3).to_dict()}")
     b = run_value(b, re)
     # cache ball-level output for downstream analyses (rr2026.py)
     cache = ROOT / "analysis" / "cache"
@@ -743,19 +802,21 @@ def main():
     ipl_meta, intl_meta, bat_hand, bowl_type, pace = player_meta(mp, m, b)
     overrides = json.loads((ROOT / "analysis" / "nationality_overrides.json").read_text())["overrides"]
     pool_cfg = json.loads(POOL.read_text()) if POOL.exists() else {}
-    retained, unmatched = retained_ids(mp, pool_cfg)
+    retained, unmatched, announced = retained_ids(mp, pool_cfg)
     if unmatched:
         log("WARNING retained names not found in the data:", unmatched)
-    know_retained = bool(pool_cfg.get("retained"))
+    log(f"retentions: {len(retained)} players from {sorted(announced)}")
+    rr_squad = set(mp[(mp.comp_id == IPL_2026) & (mp.team_name == "Rajasthan Royals")].player_id)
 
     def exclusion(pid, name):
-        """Why a player is left out of the submitted top 10, if he is."""
+        """Why a player is left out of the submitted top 10, if they are."""
         if (overrides.get(name) or intl_meta.team_name.get(pid)) == "Pakistan":
             return "pakistan"  # cannot register for the IPL auction
-        at_rr = ipl_meta.team_name.get(pid) == "Rajasthan Royals"
-        if know_retained:  # official list: only retained players are out of reach
-            return ("rr" if at_rr else "retained") if pid in retained else None
-        return "rr" if at_rr else None  # before the list: RR's own squad is left out
+        if pid in retained:  # on a franchise's announced list
+            return "rr" if retained[pid] == "Rajasthan Royals" else "retained"
+        if pid in rr_squad and "Rajasthan Royals" not in announced:
+            return "rr"  # until RR announce, their whole 2026 squad is treated as kept
+        return None
 
     results = {}
     for role in ("bat", "bowl"):
@@ -807,7 +868,7 @@ def main():
                 "id": int(pid), "name": names[pid],
                 "rank": int(s.loc[pid, "rank"]) if pid in s.index and pd.notna(s.loc[pid, "rank"]) else None,
                 "merit_rank": int(s.loc[pid, "merit_rank"]) if pid in s.index else None,
-                "excluded": why.get(pid),
+                "excluded": why.get(pid), "retained_by": retained.get(pid),
                 "score": round(float(s.loc[pid, "score"]), 3) if pid in s.index else None,
                 "country": intl_meta.team_name.get(pid) if pid in intl_meta.index else None,
                 "ipl_team": ipl_team, "ipl_season": ipl_season,
@@ -832,7 +893,7 @@ def main():
                                          "n_players": int(len(t))}}
 
     # ------------------------------------------------ league-level evidence
-    lb = b.copy()
+    lb = b[~b.short_match].copy()
     lb["dotb"] = (lb.tot == 0) & lb.legal
     lb["bnd"] = lb.is_four | lb.is_six
 
@@ -858,10 +919,10 @@ def main():
                .reset_index())
     by_over = [{"innings": int(r.innings), "over": int(r.over), "li": round(float(r.li), 3),
                 "share": round(100 * float(r.share), 1)} for r in by_over.itertuples()]
-    li_hist = np.histogram(np.clip(lb.li, 0, 6), bins=60, range=(0, 6))
-    hist = [{"x": round(float(li_hist[1][i]), 2), "n": int(li_hist[0][i]),
-             "p": int(lb[(lb.li >= li_hist[1][i]) & (lb.li < li_hist[1][i + 1])].pressure.mean() > 0.5)
-             if li_hist[0][i] else 0} for i in range(60)]
+    h = np.histogram(np.clip(lb.li, 0, 6), bins=60, range=(0, 6))
+    hist = [{"x": round(float(h[1][i]), 2), "n": int(h[0][i]),
+             "p": int(lb[(lb.li >= h[1][i]) & (lb.li < h[1][i + 1])].pressure.mean() > 0.5)
+             if h[0][i] else 0} for i in range(60)]
 
     # chase pressure grid: overs left x runs needed x wickets in hand
     grid = []
@@ -895,7 +956,8 @@ def main():
         "n_ipl_matches": int(b[b.is_ipl == 1].match_id.nunique()),
         "n_t20i_matches": int(b[b.comp_tier.str.startswith("T20I")].match_id.nunique()),
         "seasons": sorted(int(x) for x in b.season_yr.unique()),
-        "pressure_threshold": round(float(thr), 3), "pressure_pctl": PRESSURE_PCTL,
+        "pressure_threshold": round(thr, 3), "pressure_pctl": PRESSURE_PCTL,
+        "race_mult": RACE_MULT,
         "knockout_mult": KNOCKOUT_MULT, "season_weights": SEASON_WEIGHT,
         "comp_weights": {"IPL": 1.0, "T20I Full": 1.0, "T20I Assoc": 0.75, "Emerging": 0.6},
         "weights": DEFAULT_WEIGHTS, "wp_model": wp_metrics,
