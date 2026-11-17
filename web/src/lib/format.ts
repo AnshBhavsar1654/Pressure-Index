@@ -4,6 +4,9 @@ export const fmt = {
   signed: (n: number | null | undefined, d = 1) =>
     n == null || Number.isNaN(n) ? '–' : `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toFixed(d)}`,
   pct: (n: number | null | undefined, d = 0) => (n == null ? '–' : `${(n * 100).toFixed(d)}%`),
+  /** a chance of winning: tiny ones read "<1%", not a misleading "0%" */
+  chance: (p: number | null | undefined) =>
+    p == null ? '–' : p > 0 && p < 0.005 ? '<1%' : p < 1 && p > 0.995 ? '>99%' : `${(p * 100).toFixed(0)}%`,
   date: (s: string) =>
     new Date(s).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
 }

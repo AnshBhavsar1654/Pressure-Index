@@ -50,6 +50,11 @@ MIN_PRESSURE_MATCHES = 8
 EXPORT_MIN_BALLS = 30     # lowest bar offered by the ranking sliders
 EXPORT_MIN_MATCHES = 3
 PROFILE_MIN_BALLS = 1     # every player with any pressure ball gets a profile page
+# Inside the pressure set, a ball counts in proportion to its stakes: one at 10x a typical ball
+# matters more than one just over the line. Weight = stakes / average pressure-ball stakes,
+# capped at 1.5: higher caps made ratings less repeatable between odd and even matches
+# (bowlers' split-half fell from 0.16 to 0.07 at a cap of 3), so big moments count more, not most.
+STAKES_CAP = 1.5
 DEFAULT_WEIGHTS = {"pressure": 0.40, "impact": 0.20, "delta": 0.20, "consistency": 0.20}
 PRESSURE_K = 250              # credibility prior: pressure balls before a player's own record counts 50%
 N_BOOT = int(__import__('os').environ.get('N_BOOT', 400))
@@ -171,6 +176,99 @@ class WPModel:
         return self.coef[inn].predict_proba(X)[:, 1]
 
 
+# ---------------------------------------------------------------- end of a chase
+# The logistic WP is smooth, which is what leverage needs, but it is far too pessimistic in
+# the last over of a chase: it gave 4 off the last ball a 9% chance when one boundary wins it.
+# In the final over the game is short enough to calculate exactly: from how often each
+# outcome happens in the last two overs of a chase (by competition, runs needed per ball and
+# wickets in hand), work backwards ball by ball to the chance of getting home.
+ENDGAME_BALLS = 6                 # use the exact calculation for the final over
+ENDGAME_FIT_BALLS = 12            # outcome frequencies come from the last two overs
+ENDGAME_NMAX = 60                 # more than 60 needed off an over cannot be chased
+EG_OUT = ["0", "1", "2", "3", "4", "6", "W", "X"]   # X = wide or no-ball: a run, ball bowled again
+EG_RUNS = [0, 1, 2, 3, 4, 6]
+EG_NEED = [1.5, 3.0]              # runs needed per ball: under 1.5, 1.5 to 3, 3 or more
+EG_WKTS = [2, 4, 6]               # wickets in hand: 1, 2-3, 4-5, 6 or more
+EG_PRIOR = 150                    # small cells lean on the competition-wide mix
+
+
+def _eg_label(d: pd.DataFrame) -> np.ndarray:
+    lab = np.where(d.is_wide | d.is_nb, "X", np.where(d.wkt == 1, "W", np.clip(d.tot, 0, 6).astype(int).astype(str)))
+    return np.where(lab == "5", "4", lab)
+
+
+class EndgameWP:
+    """Exact chase win probability for the final over, by backward recursion."""
+
+    def fit(self, b: pd.DataFrame):
+        c = b[(b.innings == 2) & (b.balls_left <= ENDGAME_FIT_BALLS) & (b.runs_needed > 0)]
+        lab = pd.Series(_eg_label(c), index=c.index)
+        nb = np.searchsorted(EG_NEED, (c.runs_needed / c.balls_left).to_numpy(), side="right")
+        wb = np.searchsorted(EG_WKTS, c.wkts_in_hand.to_numpy(), side="right")
+        self.dist = np.zeros((2, len(EG_NEED) + 1, len(EG_WKTS) + 1, len(EG_OUT)))
+        for g in (0, 1):
+            m = (c.is_ipl == g).to_numpy()
+            pooled = lab[m].value_counts(normalize=True).reindex(EG_OUT, fill_value=0).to_numpy()
+            for i in range(len(EG_NEED) + 1):
+                for j in range(len(EG_WKTS) + 1):
+                    cnt = lab[m & (nb == i) & (wb == j)].value_counts().reindex(EG_OUT, fill_value=0).to_numpy()
+                    self.dist[g, i, j] = (cnt + EG_PRIOR * pooled) / (cnt.sum() + EG_PRIOR)
+        self.table = np.zeros((2, ENDGAME_NMAX + 1, ENDGAME_BALLS + 1, 11))
+        for g in (0, 1):
+            T = self.table[g]
+
+            def v(n, bl, w):
+                if n <= 0:
+                    return 1.0
+                if bl == 0 or w == 0:
+                    return 0.5 if n == 1 else 0.0  # scores level: a super over, a coin flip
+                return 0.0 if n > ENDGAME_NMAX else T[n, bl, w]
+
+            for bl in range(1, ENDGAME_BALLS + 1):
+                for w in range(1, 11):
+                    for n in range(1, ENDGAME_NMAX + 1):  # ascending, so a wide's state is ready
+                        p = self.dist[g, np.searchsorted(EG_NEED, n / bl, side="right"),
+                                      np.searchsorted(EG_WKTS, w, side="right")]
+                        T[n, bl, w] = (sum(p[i] * v(n - r, bl - 1, w) for i, r in enumerate(EG_RUNS))
+                                       + p[6] * v(n, bl - 1, w - 1) + p[7] * v(n - 1, bl, w))
+        return self
+
+    def predict(self, need, balls_left, wkts_in_hand, is_ipl):
+        n = np.asarray(need, float).astype(int)
+        out = self.table[np.asarray(is_ipl, float).astype(int), np.clip(n, 0, ENDGAME_NMAX),
+                         np.clip(np.asarray(balls_left, float).astype(int), 0, ENDGAME_BALLS),
+                         np.clip(np.asarray(wkts_in_hand, float).astype(int), 0, 10)]
+        return np.where(n > ENDGAME_NMAX, 0.0, out)
+
+
+def endgame_evidence(b: pd.DataFrame, model) -> dict:
+    """How the smooth model and the exact final-over model compare with what actually happened."""
+    d = b[(b.innings == 2) & (b.balls_left <= ENDGAME_BALLS) & (b.runs_needed > 0) & b.bat_won.notna()
+          & b.result.str.contains("won", case=False, na=False)]
+    X = model.features(2, d.runs_needed.to_numpy(float), d.balls_left.to_numpy(float), d.wkts_in_hand.to_numpy(float),
+                       d.is_ipl.to_numpy(float), d.season_yr.to_numpy(float))
+    old = model.predict(2, X)
+    new = model.endgame.predict(d.runs_needed, d.balls_left, d.wkts_in_hand, d.is_ipl)
+    y = d.bat_won.to_numpy(float)
+    groups = [
+        ("Last ball, 2 or 3 needed", (d.balls_left == 1) & d.runs_needed.between(2, 3)),
+        ("Last ball, a boundary needed (4 to 6)", (d.balls_left == 1) & d.runs_needed.between(4, 6)),
+        ("Last 2 balls, 7 to 12 needed", (d.balls_left == 2) & d.runs_needed.between(7, 12)),
+        ("Last 3 balls, 7 to 12 needed", (d.balls_left == 3) & d.runs_needed.between(7, 12)),
+        ("Last over, 6 to 10 needed", (d.balls_left == 6) & d.runs_needed.between(6, 10)),
+        ("Last over, 11 to 16 needed", (d.balls_left == 6) & d.runs_needed.between(11, 16)),
+    ]
+    rows = []
+    for label, mask in groups:
+        m = mask.to_numpy()
+        first = ~d[m].duplicated("match_id").to_numpy()  # one state per match
+        idx = np.flatnonzero(m)[first]
+        rows.append({"situation": label, "n": int(len(idx)), "actual": round(float(y[idx].mean()), 3),
+                     "old": round(float(old[idx].mean()), 3), "new": round(float(new[idx].mean()), 3)})
+    brier = lambda p: round(float(((p - y) ** 2).mean()), 4)
+    return {"balls": int(len(d)), "brier_old": brier(old), "brier_new": brier(new), "rows": rows}
+
+
 def fit_wp(b: pd.DataFrame, re: dict):
     from sklearn.linear_model import LogisticRegression
     full1 = b[(b.innings == 1) & (b.max_balls == 120)]
@@ -203,6 +301,9 @@ def fit_wp(b: pd.DataFrame, re: dict):
         ]
         model.fit(inn, X, y)
         log(f"WP innings {inn}: auc={metrics[inn]['auc']} brier={metrics[inn]['brier']}")
+    model.endgame = EndgameWP().fit(b)
+    metrics["endgame"] = endgame_evidence(b, model)
+    log("endgame:", metrics["endgame"])
     return model, metrics
 
 
@@ -216,13 +317,18 @@ def wp_eval(model, inn, runs_or_need, balls_left, wkts_in_hand, is_ipl, season_y
     out = np.full(runs_or_need.shape, np.nan)
     if inn == 2:
         won = runs_or_need <= 0
-        lost = (~won) & ((wkts_in_hand <= 0) | (balls_left <= 0))
-        live = ~(won | lost)
-        out[won], out[lost] = 1.0, 0.0
+        over = (~won) & ((wkts_in_hand <= 0) | (balls_left <= 0))
+        live = ~(won | over)
+        out[won] = 1.0
+        out[over] = np.where(runs_or_need[over] == 1, 0.5, 0.0)  # level scores go to a super over
         if live.any():
             X = model.features(2, runs_or_need[live], balls_left[live], wkts_in_hand[live],
                                is_ipl[live], season_yr[live])
             out[live] = model.predict(2, X)
+            # final over: the exact calculation replaces the smooth model
+            last = live & (balls_left <= ENDGAME_BALLS)
+            if last.any() and getattr(model, "endgame", None) is not None:
+                out[last] = model.endgame.predict(runs_or_need[last], balls_left[last], wkts_in_hand[last], is_ipl[last])
     else:
         done = (wkts_in_hand <= 0) | (balls_left <= 0)
         live = ~done
@@ -271,18 +377,31 @@ def leverage(b: pd.DataFrame, models):
             else:
                 wp_o = wp_eval(models, 2, d.runs_needed.to_numpy(float) - r, bl, wk, is_ipl[idx], yr[idx])
             exp_swing[idx] += p * np.abs(wp_o - wp_now[idx])
+    # Rain-shortened matches (fewer than 20 overs, or a revised target) are left out of pressure and
+    # win impact: the model is built for 20-over games and cannot judge the stakes of a 5-over one.
+    # Their runs still count towards each player's normal level.
+    g = b.groupby("match_id")
+    short = ((g.max_balls.transform("min") < 120) | g.revised_target.transform(lambda x: x.notna().any())).to_numpy()
+    exp_swing = np.where(short, 0.0, exp_swing)
     b["wp_before"] = wp_now
     b["exp_swing"] = exp_swing
-    b["li"] = exp_swing / exp_swing.mean()
+    b["li"] = exp_swing / exp_swing[~short].mean()
+    b["short_match"] = short
     # realised WP after the ball (for WPA)
     nb = b.groupby(["match_id", "innings"]).wp_before.shift(-1)
     # end-of-innings fallback
     end_inn1 = wp_eval(models, 1, (b.runs_before + b.tot).to_numpy(float), np.zeros(len(b)),
                        np.zeros(len(b)), is_ipl, yr)
-    end_inn2 = np.where(b.runs_needed - b.tot <= 0, 1.0, 0.0)
+    # last ball of a chase: the actual result (covers rain-shortened DLS finishes), a coin flip for a tie
+    left = b.runs_needed - b.tot
+    end_inn2 = np.where(left <= 0, 1.0, np.where(left == 1, 0.5, b.bat_won.fillna(0.0)))
+    # end of the first innings: the batting side's chance is the one the chase actually starts from
+    # (this carries a rain-revised target and overs; the projection is only for abandoned matches)
+    chase_start = b.match_id.map(1 - b[b.innings == 2].groupby("match_id").wp_before.first())
+    end_inn1 = chase_start.fillna(pd.Series(end_inn1, index=b.index)).to_numpy()
     fallback = np.where(b.innings == 1, end_inn1, end_inn2)
     b["wp_after"] = nb.fillna(pd.Series(fallback, index=b.index))
-    b["wpa_bat"] = b.wp_after - b.wp_before
+    b["wpa_bat"] = np.where(b.short_match, 0.0, b.wp_after - b.wp_before)
     return b, probs
 
 
@@ -398,7 +517,7 @@ def choose_k(pm: pd.DataFrame, role: str) -> dict:
     kp = PRESSURE_K
     c = pm[(pm.P == 1) & (pm.n >= 6)]
     k = {"kp": float(kp), "kp_cv": float(kp_cv), "kn": float(kn), "mun": mun,
-         "c_prior": float((c.rv > 0).mean()),
+         "c_prior": float((c.rvs > 0).mean()),
          "cv_n": {str(a): round(v, 5) for a, v in res_n.items()},
          "cv_p": {str(a): round(v, 5) for a, v in res_p.items()}}
     log(f"choose_k {role}: kn={kn} kp_cv={kp_cv} (using kp={kp})")
@@ -416,15 +535,20 @@ def player_match_table(b: pd.DataFrame, role: str) -> pd.DataFrame:
         d["pid"], d["pname"], d["rv"] = d.bowler_id, d.bowler_name, d.rv_bowl
         d["wpa"] = -d.wpa_bat
         d["r"], d["out"] = d.bowler_runs, d.bowler_wkt
-    d["w"] = d.comp_weight * d.season_yr.map(SEASON_WEIGHT)
+    d["wb"] = d.comp_weight * d.season_yr.map(SEASON_WEIGHT)  # recency and competition
     d["P"] = d.pressure.astype(int)
+    stakes = np.clip(d.li / d.li[d.pressure].mean(), 0, STAKES_CAP)
+    d["lw"] = np.where(d.pressure, stakes, 1.0)
+    d["w"] = d.wb * d.lw  # ...and stakes, for pressure balls
+    d["rvs"] = d.lw * d.rv  # stakes-weighted runs added (match charts, consistency)
     d["dotb"] = ((d.tot == 0) if role == "bowl" else (d.runs == 0)).astype(int)
     d["bnd"] = (d.is_four | d.is_six).astype(int)
     d["lg"] = d.legal.astype(int)
-    d["wrv"], d["wrv2"], d["wwpa"] = d.w * d.rv, d.w * d.rv ** 2, d.w * d.wpa
+    # win probability already grows with the stakes, so WPA is not weighted by them again
+    d["wrv"], d["wrv2"], d["wwpa"] = d.w * d.rv, d.w * d.rv ** 2, d.wb * d.wpa
     agg = d.groupby(["pid", "match_id", "P"]).agg(
-        n=("rv", "size"), wn=("w", "sum"), wrv=("wrv", "sum"), wrv2=("wrv2", "sum"),
-        wwpa=("wwpa", "sum"), rv=("rv", "sum"), wpa=("wpa", "sum"), r=("r", "sum"),
+        n=("rv", "size"), wn=("w", "sum"), wbn=("wb", "sum"), wrv=("wrv", "sum"), wrv2=("wrv2", "sum"),
+        wwpa=("wwpa", "sum"), rv=("rv", "sum"), rvs=("rvs", "sum"), wpa=("wpa", "sum"), r=("r", "sum"),
         out=("out", "sum"), dotb=("dotb", "sum"), bnd=("bnd", "sum"), lg=("lg", "sum"),
         li=("li", "sum"),
     ).reset_index()
@@ -436,17 +560,17 @@ def rate(pm: pd.DataFrame, role: str, k=None):
     Optional column `mult` = how many times a match was drawn (bootstrap)."""
     pm = pm if "mult" in pm else pm.assign(mult=1)
     x = pm.copy()
-    for col in ["n", "wn", "wrv", "wrv2", "wwpa"]:
+    for col in ["n", "wn", "wbn", "wrv", "wrv2", "wwpa"]:
         x[col] = x[col] * x["mult"]
     x = x[x["mult"] > 0]
     P = x[x.P == 1].groupby("pid")
     N = x[x.P == 0].groupby("pid")
-    p = P.agg(pn=("n", "sum"), pwn=("wn", "sum"), pwrv=("wrv", "sum"), pwrv2=("wrv2", "sum"),
+    p = P.agg(pn=("n", "sum"), pwn=("wn", "sum"), pwbn=("wbn", "sum"), pwrv=("wrv", "sum"), pwrv2=("wrv2", "sum"),
               pwwpa=("wwpa", "sum"), pmatches=("mult", "sum"))
     n = N.agg(nn=("n", "sum"), nwn=("wn", "sum"), nwrv=("wrv", "sum"), nwrv2=("wrv2", "sum"))
     # consistency: share of matches with >= 6 pressure balls where pressure RV > 0
     pmm = x[(x.P == 1) & (pm.loc[x.index, "n"] >= 6)]
-    cons = pmm.assign(pos=(pmm.rv > 0).astype(int) * pmm["mult"]).groupby("pid").agg(
+    cons = pmm.assign(pos=(pmm.rvs > 0).astype(int) * pmm["mult"]).groupby("pid").agg(
         c_n=("mult", "sum"), c_pos=("pos", "sum"))
     t = p.join(n, how="left").join(cons, how="left").fillna(0)
     if k is None:
@@ -459,7 +583,7 @@ def rate(pm: pd.DataFrame, role: str, k=None):
     t["delta"] = (t.pwrv - t.pwn * n_raw) / (t.pwn + k["kp"])
     # pressure level = baseline level + clutch deviation (hierarchical decomposition)
     t["p_rv"] = t.n_rv + t.delta
-    t["wpa100"] = t.pwwpa / np.maximum(t.pwn, 1) * 100 * (t.pwn / (t.pwn + k["kp"]))
+    t["wpa100"] = t.pwwpa / np.maximum(t.pwbn, 1) * 100 * (t.pwbn / (t.pwbn + k["kp"]))
     t["cons"] = (t.c_pos + 8 * k["c_prior"]) / (t.c_n + 8)
     return t, k
 
@@ -535,6 +659,43 @@ def traditional(d: pd.DataFrame, role: str, mask) -> dict:
         res["sr"] = round(balls / outs, 1) if outs else None
         res["avg"] = round(runs / outs, 1) if outs else None
     return res
+
+
+def big_moments(dp: pd.DataFrame, role: str, k: int = 3) -> list:
+    """A player's biggest pressure performances: the matches where their pressure balls moved
+    their team's chance of winning most, with a plain headline for finishes and final-over defences."""
+    g = dp[dp.P == 1]
+    if g.empty:
+        return []
+    side = (lambda wp: wp) if role == "bat" else (lambda wp: 1 - wp)  # the player's team's chance
+    best = g.groupby("match_id").wpa.sum().sort_values(ascending=False)
+    out = []
+    for mid, wpa in best.head(k).items():
+        if wpa <= 0:
+            break
+        gm = g[g.match_id == mid].sort_values(["innings", "innings_ball_num"])
+        first, last = gm.iloc[0], gm.iloc[-1]
+        won = bool(last.bat_won == 1) if role == "bat" else bool(last.bat_won == 0)
+        headline, wp_from = None, side(first.wp_before)
+        fo = dp[(dp.match_id == mid) & (dp.innings == 2) & (dp.balls_left <= 6)].sort_values("innings_ball_num")
+        if won and len(fo):
+            need, left = int(fo.iloc[0].runs_needed), int(fo.iloc[0].balls_left)
+            span_from = side(fo.iloc[0].wp_before)  # the chance when the headline situation began
+            span = "the final over" if left == 6 else f"the last {left} balls"
+            if role == "bat":
+                headline = f"Needed {need} off {span} and made {int(fo.r.sum())} of them to win"
+                wp_from = span_from
+            elif need <= 15:  # only a tight defence is a headline; defending 40 is not clutch
+                headline = f"Defended {need} in {span}" if left == 6 else f"Defended {need} off {span}"
+                wp_from = span_from
+        out.append({
+            "id": int(mid), "date": str(first.match_date)[:10], "comp": first.comp_name,
+            "opp": first.opp_name if role == "bat" else first.team_name,
+            "balls": int(len(gm)), "r": int(gm.r.sum()), "out": int(gm.out.sum()), "wpa": round(float(wpa), 3),
+            "wp_from": round(float(wp_from), 4), "wp_to": round(float(side(last.wp_after)), 3),
+            "won": won, "headline": headline,
+        })
+    return out
 
 
 def player_meta(mp: pd.DataFrame, m: pd.DataFrame, b: pd.DataFrame):
@@ -631,7 +792,7 @@ def main():
                 phases.append({"phase": ph, "balls": int(len(g)),
                                "rv100": round(100 * g.rv.mean(), 1) if len(g) else None})
             mt = (dp[dp.P == 1].groupby("match_id")
-                  .agg(balls=("rv", "size"), rv=("rv", "sum"), wpa=("wpa", "sum"), r=("r", "sum"),
+                  .agg(balls=("rv", "size"), rv=("rvs", "sum"), wpa=("wpa", "sum"), r=("r", "sum"),
                        out=("out", "sum"), date=("match_date", "first"), opp=("opp_name", "first")
                        if role == "bat" else ("team_name", "first"), comp=("comp_name", "first"),
                        li=("li", "mean"))
@@ -657,6 +818,7 @@ def main():
                 "cons": round(float(row.cons), 3),
                 "boot": boot.get(pid), "press": press, "norm": norm,
                 "seasons": seasons, "phases": phases, "matches": matches,
+                "moments": big_moments(dp, role),
             })
         results[role] = {"players": players, "k": k, "split_half": sh,
                          "eligibility": {"min_pressure_balls": min_balls,

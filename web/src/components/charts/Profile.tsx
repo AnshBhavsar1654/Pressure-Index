@@ -21,7 +21,10 @@ export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'b
     .domain(matches.map((_, i) => i))
     .range([m.l, width - m.r])
     .paddingInner(matches.length > 60 ? 0.15 : 0.25)
-  const ext = Math.max(4, ...matches.map((d) => Math.abs(d.rv)))
+  // bar = win chance added by the player's pressure balls in that match, in percentage points:
+  // the measure that tells a match-winning finish from runs in a game already decided
+  const val = (d: PlayerMatch) => d.wpa * 100
+  const ext = Math.max(10, ...matches.map((d) => Math.abs(val(d))))
   const y = scaleLinear().domain([-ext, ext]).nice().range([height - m.b, m.t])
   const years = matches.reduce<{ i: number; yr: string }[]>((acc, d, i) => {
     const yr = d.date.slice(0, 4)
@@ -30,7 +33,7 @@ export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'b
   }, [])
   return (
     <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
-      <svg width={width} height={height} role="img" aria-label="Run value in each match with pressure exposure">
+      <svg width={width} height={height} role="img" aria-label="Win chance added in each match with pressure balls">
         {y.ticks(4).map((t) => (
           <g key={t}>
             <line x1={m.l} x2={width - m.r} y1={y(t)} y2={y(t)} stroke={t === 0 ? AXIS.rule : AXIS.grid} />
@@ -48,9 +51,10 @@ export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'b
           </g>
         ))}
         {matches.map((d, i) => {
-          const pos = d.rv >= 0
-          const top = y(Math.max(0, d.rv))
-          const h = Math.max(1, Math.abs(y(d.rv) - y(0)))
+          const v = val(d)
+          const pos = v >= 0
+          const top = y(Math.max(0, v))
+          const h = Math.max(1, Math.abs(y(v) - y(0)))
           return (
             <rect
               key={d.id}
@@ -73,7 +77,7 @@ export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'b
                       </div>
                       <TipRow label="Pressure balls" value={d.balls} />
                       <TipRow label={role === 'bat' ? 'Runs / out' : 'Runs / wkts'} value={`${d.r} / ${d.out}`} />
-                      <TipRow label={role === 'bat' ? 'Runs added' : 'Runs saved'} value={fmt.signed(d.rv, 1)} />
+                      <TipRow label={role === 'bat' ? 'Runs added (by stakes)' : 'Runs saved (by stakes)'} value={fmt.signed(d.rv, 1)} />
                       <TipRow label="Win chance added" value={fmt.signed(d.wpa * 100, 1) + ' pts'} />
                     </div>
                   ),

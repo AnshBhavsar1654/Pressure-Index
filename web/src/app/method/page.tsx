@@ -4,6 +4,8 @@ import type { ReactNode } from 'react'
 import { PageHead, SectionHead } from '@/components/kit'
 import { getExample, getRole, getRR, getSummary } from '@/lib/data'
 import { WorkedExample } from '@/views/WorkedExample'
+import { EndgameTable } from '@/views/EndgameTable'
+import { SanityChecks } from '@/views/SanityChecks'
 import { TERMS } from '@/lib/terms'
 import { fmt } from '@/lib/format'
 import { CalibrationPair, ShrinkCurve, StabilityPair } from '@/views/MethodCharts'
@@ -22,7 +24,7 @@ export default function MethodPage() {
   const steps: { t: string; d: ReactNode; e: ReactNode }[] = [
     {
       t: 'Find the moments that matter',
-      d: 'A win-probability model reads the scoreboard before every ball. I ask how much the next ball could move it. The 20% of balls that could move it most are pressure moments.',
+      d: 'A win-probability model reads the scoreboard before every ball (in the final over of a chase, an exact ball-by-ball calculation takes over). I ask how much the next ball could move it. The 20% of balls that could move it most are pressure moments.',
       e: (
         <>
           {mo.match}, {fmt.date(mo.date)}: <b>{mo.state}</b>. The chasing side’s chance stood at {fmt.pct(mo.wp)}, and one ball
@@ -110,11 +112,42 @@ export default function MethodPage() {
         ))}
       </dl>
 
+      <SectionHead title="The last over, worked out exactly" id="last-over">
+        A smooth model is right for most of a match but too gloomy at the very end of a chase: it gave a side needing a
+        boundary off the last ball almost no chance. So for the final over of a chase I calculate the chance directly, ball by
+        ball, from how often each outcome (dot, single, four, six, wicket, wide) really happens at that stage. That is what lets
+        a last-over finish or a last-over defence count as the pressure it is.
+      </SectionHead>
+      <EndgameTable e={s.wp_model.endgame} />
+
+      <SectionHead title="Does it find the right moments?" id="checks">
+        A pressure measure is only worth trusting if it agrees with what anyone who watched would say. Here are known clutch
+        performances and the model’s verdict on each, then the biggest match-winning performances it found on its own.
+      </SectionHead>
+      <SanityChecks pools={{ bat: bat.players, bowl: bowl.players }} />
+
       <SectionHead title="Keeping it fair">These choices stop the rankings from rewarding the wrong things.</SectionHead>
       <ul className="grid gap-3 text-[14.5px] leading-relaxed text-ink-2 md:grid-cols-2 [&_b]:text-ink">
         <li className="panel p-4">
           <b>Enough evidence.</b> At least {bat.eligibility.min_pressure_balls} pressure balls across {bat.eligibility.min_pressure_matches}{' '}
           matches: {bat.eligibility.n_eligible} batters and {bowl.eligibility.n_eligible} bowlers qualify. RR’s own players and Pakistani players are rated but left out of my ranking, since RR cannot sign them: that leaves {bat.eligibility.n_ranked} and {bowl.eligibility.n_ranked}.
+        </li>
+        <li className="panel p-4">
+          <b>Bigger moments count more.</b> Once a ball counts as pressure, it is weighted by how much was at stake: a final-over
+          ball counts one and a half times an average pressure ball, and about two and a half times one just over the line. I tested
+          bigger weights, but they made ratings less repeatable from one set of matches to the next, so big moments count more, not
+          most. Win impact, which follows the team’s chance of winning ball by ball, already gives the decisive finishes their full
+          weight.
+        </li>
+        <li className="panel p-4">
+          <b>Rain-shortened matches.</b> The 34 matches cut below 20 overs or given a revised target are left out of pressure
+          and win impact, because a model of 20-over games cannot judge the stakes of a five-over one. Their runs still count
+          towards each player’s normal level.
+        </li>
+        <li className="panel p-4">
+          <b>Wickets in hand.</b> Every ball is judged against an average player with the same balls left and the same wickets
+          in hand. In the last three overs of IPL 2026 that is about 1.25 runs a ball with two wickets left but 2.1 with seven, so
+          30 off 18 balls with the tail exposed earns more credit than 40 with the top order intact.
         </li>
         <li className="panel p-4">
           <b>Era-aware.</b> Scoring jumped in the 2024 to 2026 IPL. Every comparison is made within the same competition and season,

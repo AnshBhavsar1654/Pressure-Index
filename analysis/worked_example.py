@@ -53,7 +53,8 @@ def main():
     p_raw = r.pwrv / r.pwn
     steps = {
         "p_balls": int(r.pn), "p_matches": int(r.pmatches), "n_balls": int(r.nn),
-        "p_weighted": round(float(r.pwn), 1), "n_weighted": round(float(r.nwn), 1),
+        "p_weighted": round(float(r.pwn), 1), "p_plain": round(float(r.pwbn), 1), "n_weighted": round(float(r.nwn), 1),
+        "stakes_avg": round(float(r.pwn / r.pwbn), 2), "stakes_cap": P.STAKES_CAP,
         "p_raw100": round(100 * p_raw, 2), "n_raw100": round(100 * n_raw, 2),
         "league100": round(100 * k["mun"], 2), "kn": k["kn"], "kp": k["kp"],
         "n_keep": round(float(r.nwn / (r.nwn + k["kn"])), 3),
@@ -62,7 +63,8 @@ def main():
         "p_keep": round(float(r.pwn / (r.pwn + k["kp"])), 3),
         "delta100": round(100 * float(r.delta), 2),
         "p_rv100": round(100 * float(r.p_rv), 2),
-        "wpa_raw100": round(float(r.pwwpa / r.pwn * 100), 3), "wpa100": round(float(r.wpa100), 3),
+        "wpa_raw100": round(float(r.pwwpa / r.pwbn * 100), 3), "wpa_keep": round(float(r.pwbn / (r.pwbn + k["kp"])), 3),
+        "wpa100": round(float(r.wpa100), 3),
         "c_n": int(r.c_n), "c_pos": int(r.c_pos), "c_prior": round(k["c_prior"], 3), "cons": round(float(r.cons), 3),
     }
     for key in ("p_rv100", "n_rv100", "delta100"):

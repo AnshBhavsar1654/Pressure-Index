@@ -16,6 +16,23 @@ export interface TradStats {
   econ?: number
 }
 
+export interface Moment {
+  id: number
+  date: string
+  comp: string
+  opp: string
+  balls: number
+  r: number
+  out: number
+  wpa: number
+  /** the player's team's chance of winning before their first and after their last pressure ball */
+  wp_from: number
+  wp_to: number
+  won: boolean
+  /** plain headline for a finish or a final-over defence */
+  headline: string | null
+}
+
 export interface PlayerMatch {
   id: number
   date: string
@@ -61,6 +78,8 @@ export interface Player {
   seasons: { season: number; p_balls: number; p_rv100: number | null; n_rv100: number | null }[]
   phases: { phase: string; balls: number; rv100: number | null }[]
   matches: PlayerMatch[]
+  /** biggest pressure performances, largest win-chance swing first */
+  moments: Moment[]
 }
 
 export interface RoleData {
@@ -111,7 +130,10 @@ export interface Summary {
   season_weights: Record<string, number>
   comp_weights: Record<string, number>
   weights: Weights
-  wp_model: Record<'1' | '2', WpMetrics>
+  wp_model: Record<'1' | '2', WpMetrics> & {
+    /** final over of a chase: the smooth model against the exact calculation, checked against results */
+    endgame: { balls: number; brier_old: number; brier_new: number; rows: { situation: string; n: number; actual: number; old: number; new: number }[] }
+  }
   contrast: { pressure: LeagueSlice; normal: LeagueSlice }
   by_phase: { innings: number; phase: string; balls: number; pressure_share: number; li: number }[]
   by_over: { innings: number; over: number; li: number; share: number }[]

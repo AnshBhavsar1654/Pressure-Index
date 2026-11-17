@@ -5,6 +5,7 @@ import { Note, PageHead, PlayerAvatar, SectionHead, Tag, ordinal, signed } from 
 import { TeamBadge } from '@/components/TeamBadge'
 import { Term } from '@/components/Term'
 import { getRole, getRR, getSummary } from '@/lib/data'
+import { momentLine } from '@/views/Moments'
 import { PoolNotice, RoleBlock } from '@/views/RoleShortlist'
 import { fmt } from '@/lib/format'
 import { betterThan, winPts } from '@/lib/terms'
@@ -54,6 +55,9 @@ function why({ p, z }: Pick, role: Role): string[] {
   return [
     ...best.map((k) => `${say[k]} Better than ${betterThan(z[k])}% of qualified ${noun}s on ${ON[k]}.`),
     `Backed by ${fmt.int(p.p_balls)} pressure balls in ${p.p_matches} matches, and top 10 in ${fmt.pct(p.boot?.p_top10)} of 400 re-runs.`,
+    ...(p.moments[0]
+      ? [`Biggest moment: ${momentLine(p.moments[0], role)} v ${p.moments[0].opp} (${fmt.date(p.moments[0].date)}), taking the team’s chance of winning from ${fmt.chance(p.moments[0].wp_from)} to ${fmt.chance(p.moments[0].wp_to)}${p.moments[0].won ? '' : ', though they lost'}.`]
+      : []),
   ]
 }
 

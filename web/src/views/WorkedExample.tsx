@@ -13,7 +13,8 @@ export interface Example {
     wp: number; stakes: number; runs: number; out: number; expected: number; wkt_cost: number; rv: number; centre: number
   }
   steps: {
-    p_balls: number; p_matches: number; n_balls: number; p_weighted: number; n_weighted: number
+    p_balls: number; p_matches: number; n_balls: number; p_weighted: number; p_plain: number; n_weighted: number
+    stakes_avg: number; stakes_cap: number; wpa_keep: number
     p_raw100: number; n_raw100: number; league100: number; kn: number; kp: number; n_keep: number; n_rv100: number
     gap100: number; p_keep: number; delta100: number; p_rv100: number; wpa_raw100: number; wpa100: number
     c_n: number; c_pos: number; c_prior: number; cons: number
@@ -54,7 +55,7 @@ function Step({ n, title, children, sum }: { n: number; title: string; children:
 export function WorkedExample({ e }: { e: Example }) {
   const s = e.steps
   const b = e.ball
-  const last = e.name.split(' ').slice(-1)[0]
+  const last = e.name // full names read naturally for every naming style
   return (
     <ol className="flex flex-col gap-px overflow-hidden rounded-[10px] border border-line bg-line">
       <Step
@@ -78,7 +79,7 @@ export function WorkedExample({ e }: { e: Example }) {
         title="Add up every pressure ball"
         sum={
           <>
-            {fmt.int(s.p_balls)} balls count as <b>{s.p_weighted}</b> after weighting
+            {fmt.int(s.p_balls)} balls → {s.p_plain} after recency and competition → <b>{s.p_weighted}</b> after stakes ({s.stakes_avg}× on average)
             <br />
             Raw level under pressure: <b>{sg(s.p_raw100)}</b> runs per 100 balls
             <br />
@@ -87,8 +88,9 @@ export function WorkedExample({ e }: { e: Example }) {
         }
       >
         The same sum for all {fmt.int(s.p_balls)} of {last}’s pressure balls in {s.p_matches} matches, and for every normal ball. Older seasons
-        and weaker competitions count for less (2026 counts fully, 2022 counts 60%), so the balls are weighted before they are
-        averaged.
+        and weaker competitions count for less (2026 counts fully, 2022 counts 60%). Pressure balls with more at stake count for
+        more: a ball at twice the stakes of the average pressure ball counts twice, up to {s.stakes_cap} times, so a last-over ball outweighs one just
+        over the pressure line.
       </Step>
       <Step
         n={3}
@@ -115,7 +117,7 @@ export function WorkedExample({ e }: { e: Example }) {
           <>
             <Term k="underPressure">Under pressure</Term>: {sg(s.n_rv100)} {op(s.delta100)} = <b>{sg(s.p_rv100)}</b>
             <br />
-            <Term k="winImpact">Win impact</Term>: {(s.wpa_raw100 * 100).toFixed(1)} pts × {fmt.pct(s.p_keep)} = <b>{winPts(s.wpa100)}</b>
+            <Term k="winImpact">Win impact</Term>: {(s.wpa_raw100 * 100).toFixed(1)} pts × {fmt.pct(s.wpa_keep)} = <b>{winPts(s.wpa100)}</b>
             <br />
             <Term k="consistency">Consistency</Term>: ({s.c_pos} + 8 × {s.c_prior}) ÷ ({s.c_n} + 8) = <b>{fmt.pct(s.cons)}</b>
           </>

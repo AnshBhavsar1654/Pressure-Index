@@ -4,7 +4,7 @@ import { Zoomable } from '@/components/charts/Zoom'
 import { ordinal, signed } from '@/components/kit'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { getRanked, getRR, getSummary } from '@/lib/data'
+import { getRanked, getRole, getRR, getSummary } from '@/lib/data'
 import { fmt, iplCode } from '@/lib/format'
 import type { Gap, Player, Role } from '@/lib/types'
 import { Spotlight, TopTen, type Lite } from '@/views/OverviewCards'
@@ -30,7 +30,14 @@ export default function Overview() {
   const rr = getRR()
   const bat = getRanked('bat')
   const bowl = getRanked('bowl')
-  const hero = rr.matches.filter((m) => m.won).toSorted((a, b) => b.pressure_balls - a.pressure_balls)[0]
+  // the RR win of 2026 that holds an RR player's biggest headline moment (a finish or a final-over defence)
+  const rrIds = new Set(rr.squad.map((p) => p.id))
+  const wins = new Map(rr.matches.filter((m) => m.won).map((m) => [m.id, m]))
+  const star = (['bat', 'bowl'] as const)
+    .flatMap((role) => getRole(role).players.filter((p) => rrIds.has(p.id)).flatMap((p) => p.moments.map((mo) => ({ p, mo }))))
+    .filter(({ mo }) => mo.headline && wins.has(mo.id))
+    .toSorted((a, b) => b.mo.wpa - a.mo.wpa)[0]
+  const hero = star ? wins.get(star.mo.id)! : [...wins.values()].toSorted((a, b) => b.pressure_balls - a.pressure_balls)[0]
   const first = hero.scores['1']
   const second = hero.scores['2']
   const worst = rr.gaps[0]
@@ -78,7 +85,7 @@ export default function Overview() {
       <section className="panel flex min-w-0 flex-col gap-3 p-5 xl:col-span-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="display text-[1.6rem]">The tensest RR win of 2026</h2>
+            <h2 className="display text-[1.6rem]">{star ? 'RR’s biggest finish of 2026' : 'The tensest RR win of 2026'}</h2>
             <p className="text-[13.5px] text-ink-3">
               v {hero.opp}, {fmt.date(hero.date)}. RR’s chance of winning before every ball; pink bands are pressure moments.
             </p>
@@ -91,8 +98,10 @@ export default function Overview() {
           <WinWorm worm={hero.worm} animate height={300} labels={{ first: `${first.team} batting`, second: `${second.team} batting` }} />
         </Zoomable>
         <p className="text-[13.5px] text-ink-2">
-          <b className="text-foreground">{hero.result}.</b> GT needed 11 off the last over with three wickets left. Tushar
-          Deshpande gave away four singles and took a wicket: the kind of moment the rankings are built on.
+          <b className="text-foreground">{hero.result}.</b>{' '}
+          {star
+            ? `${star.p.name}: ${star.mo.headline!.replace(/^./, (c) => c.toLowerCase())}, taking RR from ${fmt.chance(star.mo.wp_from)} to a win. The kind of moment the rankings are built on.`
+            : 'The kind of finish the rankings are built on.'}
         </p>
       </section>
 

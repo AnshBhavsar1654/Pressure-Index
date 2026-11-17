@@ -18,9 +18,9 @@ export const TERMS = {
   },
   underPressure: {
     label: 'Under pressure',
-    def: 'Runs added per 100 pressure balls, compared with an average batter in exactly the same situation. +10 means 10 runs better than average; 0 is average.',
+    def: 'Runs added per 100 pressure balls, compared with an average batter in exactly the same situation. Balls with more at stake count for more. +10 means 10 runs better than average; 0 is average.',
     bowl: {
-      def: 'Runs saved per 100 pressure balls, compared with an average bowler in exactly the same situation. +10 means 10 fewer runs conceded than average; 0 is average.',
+      def: 'Runs saved per 100 pressure balls, compared with an average bowler in exactly the same situation. Balls with more at stake count for more. +10 means 10 fewer runs conceded than average; 0 is average.',
     },
   },
   normal: {

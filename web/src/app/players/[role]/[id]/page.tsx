@@ -16,6 +16,7 @@ import { EXCLUDED_LONG } from '@/lib/terms'
 import { fmt } from '@/lib/format'
 import { rescore, type Player, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { Moments } from '@/views/Moments'
 import { ProfileCharts } from '@/views/Profile'
 
 type Params = { role: Role; id: string }
@@ -86,7 +87,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
     [<Term key="u" k="underPressure" role={role}>{isBat ? 'Runs added per 100' : 'Runs saved per 100'}</Term>, signed(p.p_rv100)],
     ['Pressure balls', fmt.int(p.p_balls)],
     [<Term key="c" k="confidence" />, p.boot ? fmt.pct(p.boot.p_top10) : '–'],
-    [<Term key="r" k="rankRange" />, p.boot ? `${p.boot.rank_lo}–${p.boot.rank_hi}` : '–'],
+    [<Term key="k" k="consistency" role={role}>Delivers under pressure</Term>, `${Math.round(p.cons * 10)} in 10`],
     ['Matches with pressure', String(p.p_matches)],
   ]
 
@@ -203,6 +204,8 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
           ))}
         </CardContent>
       </Card>
+
+      <Moments moments={p.moments} role={role} />
 
       <ProfileCharts p={{ ...p, z: zFor(role, p) }} role={role} />
     </div>

@@ -13,7 +13,7 @@ export default function PressurePage() {
   const steps = [
     {
       t: 'Work out who is winning',
-      d: 'For every ball, a model trained on all 867 matches estimates each side’s chance of winning from the score, wickets, balls left and target.',
+      d: 'For every ball, a model trained on all 867 matches estimates each side’s chance of winning from the score, wickets, balls left and target. In the final over of a chase it is worked out exactly, ball by ball.',
     },
     {
       t: 'Ask what the next ball could change',
