@@ -159,7 +159,7 @@ export function RankRanges({ players, n = 15 }: { players: ScoredPlayer[]; n?: n
 }
 
 /** Component z-scores as horizontal diverging bars. */
-export function ComponentBars({ z, labels }: { z: Record<string, number>; labels: Record<string, string> }) {
+export function ComponentBars({ z, beats, labels }: { z: Record<string, number>; beats?: Record<string, number>; labels: Record<string, string> }) {
   const keys = Object.keys(labels)
   const ext = Math.max(2, ...keys.map((k) => Math.abs(z[k])))
   return (
@@ -181,8 +181,8 @@ export function ComponentBars({ z, labels }: { z: Record<string, number>; labels
                 }}
               />
             </div>
-            <span className="num text-right font-medium" title={`Better than about ${betterThan(v)}% of qualified players`}>
-              {betterThan(v)}%
+            <span className="num text-right font-medium" title={`Better than ${beats?.[k] ?? betterThan(v)}% of qualified players`}>
+              {beats?.[k] ?? betterThan(v)}%
             </span>
           </div>
         )

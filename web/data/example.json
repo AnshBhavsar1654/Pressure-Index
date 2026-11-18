@@ -1,138 +1,140 @@
 {
- "id": 6280,
- "name": "Harry Brook",
+ "id": 6931,
+ "name": "Pathum Nissanka",
  "role": "bat",
  "ball": {
-  "match": "England v West Indies",
-  "comp": "England in West Indies T20I Series 2023",
-  "date": "2023-12-16",
-  "over": "19.5",
-  "score": "220/3",
-  "need": 3,
-  "balls_left": 2,
+  "match": "Sri Lanka v India",
+  "comp": "Asia Cup 2025",
+  "date": "2025-09-26",
+  "over": "16.6",
+  "score": "164/4",
+  "need": 39,
+  "balls_left": 19,
   "knockout": false,
   "threshold": null,
-  "wp": 0.636,
-  "wp_after": 1.0,
-  "stakes": 16.7,
+  "wp": 0.387,
+  "wp_after": 0.559,
+  "stakes": 4.7,
   "runs": 6,
   "out": 0,
-  "expected": 2.45,
+  "expected": 1.58,
   "wkt_cost": 0.0,
-  "centre": 0.08,
-  "rv": 3.63
+  "centre": 0.29,
+  "rv": 4.71
  },
  "seasons": [
   {
    "season": 2022,
    "weight": 0.2,
-   "p_balls": 40,
-   "p_runs": 2.4,
-   "n_balls": 172,
-   "n_runs": 58.7
+   "p_balls": 208,
+   "p_runs": 68.3,
+   "n_balls": 163,
+   "n_runs": -17.4
   },
   {
    "season": 2023,
    "weight": 0.4,
-   "p_balls": 26,
-   "p_runs": -15.7,
-   "n_balls": 234,
-   "n_runs": -27.4
+   "p_balls": 3,
+   "p_runs": -9.6,
+   "n_balls": 87,
+   "n_runs": -30.9
   },
   {
    "season": 2024,
    "weight": 0.6,
-   "p_balls": 0,
-   "p_runs": 0.0,
-   "n_balls": 16,
-   "n_runs": -3.6
+   "p_balls": 105,
+   "p_runs": 30.6,
+   "n_balls": 318,
+   "n_runs": 76.7
   },
   {
    "season": 2025,
    "weight": 0.8,
-   "p_balls": 43,
-   "p_runs": 26.3,
-   "n_balls": 140,
-   "n_runs": 12.7
+   "p_balls": 125,
+   "p_runs": 28.9,
+   "n_balls": 238,
+   "n_runs": 78.8
   },
   {
    "season": 2026,
    "weight": 1.0,
-   "p_balls": 18,
-   "p_runs": 18.8,
-   "n_balls": 200,
-   "n_runs": 122.3
+   "p_balls": 82,
+   "p_runs": 6.7,
+   "n_balls": 258,
+   "n_runs": 10.5
   }
  ],
  "steps": {
   "K": 200,
-  "p_balls": 127,
-  "p_matches": 12,
-  "p_weighted": 70.8,
-  "p_sum": 34.0,
-  "p_raw100": 48.1,
-  "n_balls": 762,
-  "n_weighted": 449.6,
-  "n_sum": 131.1,
-  "n_raw100": 29.2,
-  "n_rv100": 20.2,
-  "n_keep": 0.692,
-  "share": 0.261,
-  "rating100": 27.5,
-  "lift100": 7.3,
-  "wpa_sum": 1.07,
-  "wpa100": 0.843,
-  "c_pos": 6,
-  "c_n": 9,
-  "recent_balls": 61,
-  "recent100": 15.8,
+  "p_balls": 523,
+  "p_matches": 36,
+  "p_weighted": 287.8,
+  "p_sum": 58.1,
+  "p_raw100": 20.2,
+  "n_balls": 1064,
+  "n_weighted": 706.6,
+  "n_sum": 103.8,
+  "n_raw100": 14.7,
+  "n_rv100": 11.5,
+  "n_keep": 0.779,
+  "share": 0.59,
+  "rating100": 16.6,
+  "lift100": 5.1,
+  "wpa_sum": 0.728,
+  "wpa100": 0.139,
+  "c_pos": 18,
+  "c_n": 27,
+  "recent_balls": 207,
+  "recent100": 7.8,
   "recent_from": 2025
  },
  "rank": 1,
- "merit_rank": 4,
- "n_qualified": 126,
- "n_ranked": 21,
+ "merit_rank": 13,
+ "n_qualified": 186,
+ "n_ranked": 31,
  "next": [
   {
    "rank": 2,
-   "name": "Pathum Nissanka",
-   "rating": 10.27
+   "name": "Daryl Mitchell",
+   "rating": 14.13
   },
   {
    "rank": 3,
-   "name": "Jonny Bairstow",
-   "rating": 7.52
+   "name": "Kamindu Mendis",
+   "rating": 12.88
   },
   {
    "rank": 4,
-   "name": "Kamindu Mendis",
-   "rating": 5.62
+   "name": "Kusal Mendis",
+   "rating": 12.62
   }
  ],
  "boot": {
-  "p_top10": 0.968,
-  "rank_med": 1,
+  "p_top10": 0.775,
+  "rank_med": 4,
   "rank_lo": 1,
-  "rank_hi": 9
+  "rank_hi": 19
  },
  "press": {
-  "balls": 127,
-  "runs": 218,
-  "outs": 8,
-  "dot_pct": 26.8,
-  "bnd_pct": 23.6,
-  "rv100": 25.0,
-  "sr": 171.7,
-  "avg": 27.2
+  "balls": 523,
+  "runs": 730,
+  "outs": 21,
+  "dot_pct": 36.9,
+  "bnd_pct": 19.5,
+  "rv100": 23.9,
+  "sr": 139.6,
+  "par_sr": 129.3,
+  "avg": 34.8
  },
  "norm": {
-  "balls": 762,
-  "runs": 1238,
-  "outs": 33,
-  "dot_pct": 31.2,
-  "bnd_pct": 22.0,
-  "rv100": 21.4,
-  "sr": 162.5,
-  "avg": 37.5
+  "balls": 1064,
+  "runs": 1411,
+  "outs": 48,
+  "dot_pct": 39.5,
+  "bnd_pct": 18.5,
+  "rv100": 11.1,
+  "sr": 132.6,
+  "par_sr": 136.0,
+  "avg": 29.4
  }
 }

@@ -32,9 +32,10 @@ def main():
     r = t.loc[pid]
     mine = d[d.pid == pid]
 
-    # ---- one real ball: the player's highest-stakes pressure ball that went for a boundary or a wicket
+    # ---- one real ball: the player's highest-stakes pressure boundary (a wicket only if he never hit one)
     press = mine[mine.P == 1]
-    ball = press[(press.runs >= 4) | (press.out == 1)].sort_values("li", ascending=False).iloc[0]
+    pool = press[press.runs >= 4] if (press.runs >= 4).any() else press[press.out == 1]
+    ball = pool.sort_values("li", ascending=False).iloc[0]
     centre = float(ball.rv - (ball.runs - ball.x_runs - ball.wkt_cost * ball.out))
     one_ball = {
         "match": f"{ball.team_name} v {ball.opp_name}", "comp": ball.comp_name, "date": str(ball.match_date)[:10],

@@ -36,7 +36,8 @@ function find(role: Role, id: string) {
 function zFor(role: Role, p: Player) {
   const pool = getQualified(role)
   const scored = rescore(p.merit_rank != null ? pool : [...pool, p])
-  return scored.find((x) => x.id === p.id)!.z
+  const me = scored.find((x) => x.id === p.id)!
+  return { z: me.z, beats: me.beats }
 }
 
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
@@ -50,10 +51,10 @@ function story(p: Player, role: Role) {
   const last = p.name.split(' ').slice(-1)[0]
   if (role === 'bat') {
     const up = (p.press.sr ?? 0) >= (p.norm.sr ?? 0)
-    return `Under pressure ${last} strikes at ${fmt.dec(p.press.sr, 0)}, ${up ? 'up from' : 'down from'} ${fmt.dec(p.norm.sr, 0)} in normal moments, and averages ${fmt.dec(p.press.avg, 1)} runs per dismissal. Allowing for how hard those situations were, that is ${signed(p.p_rv100)} runs per 100 balls against an average batter.`
+    return `Under pressure ${last} strikes at ${fmt.dec(p.press.sr, 0)}, ${up ? 'up from' : 'down from'} ${fmt.dec(p.norm.sr, 0)} in normal moments, where an average batter facing the same balls would strike at ${fmt.dec(p.press.par_sr, 0)} and ${fmt.dec(p.norm.par_sr, 0)}. He averages ${fmt.dec(p.press.avg, 1)} runs per dismissal under pressure. Allowing for the situations and the wickets, his pressure rating is ${signed(p.p_rv100)} runs per 100 balls against an average batter, ${signed(p.delta100)} on his usual level.`
   }
   const up = (p.press.econ ?? 99) <= (p.norm.econ ?? 99)
-  return `Under pressure ${last} concedes ${fmt.dec(p.press.econ, 2)} an over (${up ? 'tighter than' : 'looser than'} ${fmt.dec(p.norm.econ, 2)} normally) and takes a wicket every ${fmt.dec(p.press.sr, 0)} balls. Allowing for the situations, that saves ${signed(p.p_rv100)} runs per 100 balls against an average bowler.`
+  return `Under pressure ${last} concedes ${fmt.dec(p.press.econ, 2)} an over (${up ? 'tighter than' : 'looser than'} ${fmt.dec(p.norm.econ, 2)} normally), where an average bowler on the same balls would concede ${fmt.dec(p.press.par_econ, 2)} (and ${fmt.dec(p.norm.par_econ, 2)} normally). He takes a wicket every ${fmt.dec(p.press.sr, 0)} balls under pressure. Allowing for the situations and the wickets, his pressure rating saves ${signed(p.p_rv100)} runs per 100 balls against an average bowler, ${signed(p.delta100)} on his usual level.`
 }
 
 function cmp(a: number | null | undefined, b: number | null | undefined, dir: 1 | -1): boolean | null {
@@ -70,6 +71,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
   const rows: [string, string, string, boolean | null][] = isBat
     ? [
         ['Strike rate', fmt.dec(p.press.sr), fmt.dec(p.norm.sr), cmp(p.press.sr, p.norm.sr, 1)],
+        ['Average batter, same balls', fmt.dec(p.press.par_sr), fmt.dec(p.norm.par_sr), null],
         ['Runs per dismissal', fmt.dec(p.press.avg), fmt.dec(p.norm.avg), cmp(p.press.avg, p.norm.avg, 1)],
         ['Dot balls', `${fmt.dec(p.press.dot_pct)}%`, `${fmt.dec(p.norm.dot_pct)}%`, cmp(p.press.dot_pct, p.norm.dot_pct, -1)],
         ['Boundary balls', `${fmt.dec(p.press.bnd_pct)}%`, `${fmt.dec(p.norm.bnd_pct)}%`, cmp(p.press.bnd_pct, p.norm.bnd_pct, 1)],
@@ -77,6 +79,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
       ]
     : [
         ['Economy', fmt.dec(p.press.econ, 2), fmt.dec(p.norm.econ, 2), cmp(p.press.econ, p.norm.econ, -1)],
+        ['Average bowler, same balls', fmt.dec(p.press.par_econ, 2), fmt.dec(p.norm.par_econ, 2), null],
         ['Balls per wicket', fmt.dec(p.press.sr), fmt.dec(p.norm.sr), cmp(p.press.sr, p.norm.sr, -1)],
         ['Dot balls', `${fmt.dec(p.press.dot_pct)}%`, `${fmt.dec(p.norm.dot_pct)}%`, cmp(p.press.dot_pct, p.norm.dot_pct, 1)],
         ['Boundaries conceded', `${fmt.dec(p.press.bnd_pct)}%`, `${fmt.dec(p.norm.bnd_pct)}%`, cmp(p.press.bnd_pct, p.norm.bnd_pct, -1)],
@@ -210,7 +213,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
 
       <Moments moments={p.moments} role={role} />
 
-      <ProfileCharts p={{ ...p, z: zFor(role, p) }} role={role} />
+      <ProfileCharts p={{ ...p, ...zFor(role, p) }} role={role} />
     </div>
   )
 }

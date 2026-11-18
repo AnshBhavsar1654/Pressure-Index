@@ -81,7 +81,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
   const qualified = useMemo(() => pool.filter((p) => p.merit_rank != null), [pool])
   // evidence as z-scores against the qualified pool, adding the player if outside it
   const zs = useMemo(
-    () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.merit_rank != null ? qualified : [...qualified, p]).find((x) => x.id === p.id)!.z])),
+    () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.merit_rank != null ? qualified : [...qualified, p]).find((x) => x.id === p.id)!])),
     [chosen, qualified],
   )
 
@@ -285,7 +285,8 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
                   <div key={k} className="flex flex-col gap-2">
                     <span className="text-[13.5px] font-semibold">{COMPONENT_LABEL[k]}</span>
                     {chosen.map((p, i) => {
-                      const z = zs[p.id]?.[k] ?? 0
+                      const z = zs[p.id]?.z[k] ?? 0
+                      const beats = zs[p.id]?.beats[k] ?? betterThan(z)
                       const w = Math.min(50, (Math.abs(z) / 3) * 50)
                       return (
                         <div key={p.id} className="flex items-center gap-3">
@@ -293,7 +294,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
                             <span className="absolute inset-y-0 left-1/2 w-px bg-line" />
                             <span className="absolute inset-y-0 rounded-full" style={{ background: COLORS[i], width: `${w}%`, left: z >= 0 ? '50%' : `${50 - w}%` }} />
                           </span>
-                          <span className="num w-10 text-right text-[12.5px] text-ink-2">{betterThan(z)}%</span>
+                          <span className="num w-10 text-right text-[12.5px] text-ink-2">{beats}%</span>
                         </div>
                       )
                     })}

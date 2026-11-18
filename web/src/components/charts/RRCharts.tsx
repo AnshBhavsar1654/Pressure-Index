@@ -97,9 +97,9 @@ export function SeasonExplorer({ matches }: { matches: RRMatch[] }) {
 
 /**
  * Runs per match RR gained (pink) or lost (blue) in each phase compared with an average
- * IPL 2026 side, batting and bowling, with the top-four average marked.
+ * IPL 2026 side, batting and bowling, with the average of the other playoff sides marked.
  */
-export function PhaseGaps({ phases }: { phases: RRPhase[] }) {
+export function PhaseGaps({ phases, bench }: { phases: RRPhase[]; bench: string[] }) {
   const [ref, width] = useWidth<HTMLDivElement>()
   const [tip, setTip] = useState<TipState | null>(null)
   const rows = phases.flatMap((p) =>
@@ -110,6 +110,7 @@ export function PhaseGaps({ phases }: { phases: RRPhase[] }) {
       v: p.rr[`${d}_rv_pm`],
       top4: p.top4[`${d}_rv_pm`],
       rank: d === 'bat' ? p.bat_rank : p.bowl_rank,
+      best: p.best[d],
     })),
   )
   const rowH = 46
@@ -150,8 +151,9 @@ export function PhaseGaps({ phases }: { phases: RRPhase[] }) {
                     <div className="flex flex-col gap-1">
                       <div className="font-semibold">{r.label}</div>
                       <TipRow label="RR per match" value={`${signed(r.v)} runs`} />
-                      <TipRow label="Top-four average" value={`${signed(r.top4)} runs`} />
-                      <TipRow label="Rank of 10" value={r.rank} />
+                      <TipRow label={`Other playoff sides (${bench.map(iplCode).join(', ')})`} value={`${signed(r.top4)} runs`} />
+                      <TipRow label={`Best side (${iplCode(r.best.team)})`} value={`${signed(r.best.v)} runs`} />
+                      <TipRow label="RR’s rank of 10" value={r.rank} />
                     </div>
                   ),
                 })

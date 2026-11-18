@@ -47,7 +47,7 @@ export const TERMS = {
   },
   confidence: {
     label: 'Top-10 confidence',
-    def: 'I re-ran the whole ranking 400 times with the matches reshuffled. This is how often the player stayed in the top 10. Above 50% is a safe pick; below 30% is a close call.',
+    def: 'I re-ran the whole ranking 400 times with the matches reshuffled. This is how often the player stayed in the top 10. Above 50% is a safe pick; below 30% is a close call. It can differ from the rank order: a long record is steadier than a short one with a similar rating.',
   },
   rankRange: {
     label: 'Likely rank range',
@@ -55,16 +55,16 @@ export const TERMS = {
   },
   rank: {
     label: 'Rank',
-    def: 'My ranking of players RR could buy at the 2027 auction, by pressure rating. It leaves out Rajasthan Royals’ own players, players retained by other teams, retired players and Pakistani players, who cannot enter the IPL auction, and anyone who is worse under pressure than usual.',
+    def: 'My ranking of players RR could buy at the 2027 auction, by pressure rating. It leaves out Rajasthan Royals’ own players, players retained by other teams, retired or banned players and Pakistani players, who cannot enter the IPL auction, and anyone who is worse under pressure than usual. Each Indian player who is above average under pressure is guaranteed a top-10 place (up to 5), because RR’s squad has only 3 overseas places left; the other places go on merit, with at most one Bangladeshi player, because the Bangladesh board often limits how long its players may stay in the IPL.',
   },
   qualified: {
     label: 'Qualified',
-    def: 'At least 60 pressure balls across 5 or more matches, with at least 20 of them in 2025–26, so every pick has been seen under pressure recently. A short record is safe because the rating leans on the player’s usual level until his pressure record grows.',
+    def: 'At least 30 pressure balls across 3 or more matches, with at least 10 of them in 2025–26, so every pick has been seen under pressure recently. Indian players need a third of that (10 balls, 1 match, 4 in 2025–26), because the data pack has no domestic cricket: their only top-level cricket here is the IPL. A short record is safe because the rating leans on the player’s usual level until his pressure record grows.',
   },
   rate: {
     label: 'Strike rate',
-    def: 'Runs per 100 balls under pressure, with the normal figure after the slash. Raw numbers, not adjusted for the situation.',
-    bowl: { label: 'Economy', def: 'Runs conceded per over under pressure, with the normal figure after the slash. Lower is better. Raw numbers, not adjusted for the situation.' },
+    def: 'Runs per 100 balls under pressure, with the normal figure after the slash. Raw numbers, not adjusted for the situation: pressure balls are harder, so a raw rate can fall under pressure while the player still beats the average by more. The rating is the adjusted figure.',
+    bowl: { label: 'Economy', def: 'Runs conceded per over under pressure, with the normal figure after the slash. Lower is better. Raw numbers, not adjusted for the situation: pressure overs cost more for everyone, so a raw economy can rise under pressure while the bowler still beats the average by more. The rating is the adjusted figure, and counts wickets too.' },
   },
   stakes: {
     label: 'Stakes',
@@ -114,6 +114,7 @@ export const EXCLUDED_NOTE = {
   pakistan: 'Can’t enter the IPL auction',
   retained: 'Retained by their team',
   retired: 'Retired from the IPL',
+  unavailable: 'Can’t play IPL 2027',
   dips: 'Dips under pressure',
 } as const
 export const EXCLUDED_LONG = {
@@ -121,6 +122,7 @@ export const EXCLUDED_LONG = {
   pakistan: 'Pakistani players cannot register for the IPL auction, so left out of my ranking.',
   retained: 'Retained by their IPL team for 2027, so not in the auction and left out of my ranking.',
   retired: 'Retired from the IPL, so not available and left out of my ranking.',
+  unavailable: 'Cannot play IPL 2027 (banned from the IPL for withdrawing from a season), so left out of my ranking.',
   dips: 'Worse under pressure than usual (negative lift), so not recommended as a pressure pick, however good the usual level is.',
 } as const
 

@@ -124,6 +124,59 @@ def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[dict, list, set]:
     return ids, missing, {t for t in raw if t}
 
 
+def six_signings(bat_json: dict, bowl_json: dict, recs: list, gaps: list, slots: dict | None) -> list:
+    """RR's buy list for the places its retentions leave open, drawn only from the two submitted top 10s.
+    Indian places (open places minus overseas places) go to the best-rated Indian players in the top 10s.
+    Each signing is matched to the RR gap where he is strongest under pressure: his runs added per 100
+    pressure balls in that phase, from 30+ pressure balls there. The overseas places first cover the gaps
+    the Indian buys leave open, in RR's priority order (most behind the other playoff sides first); a
+    spare place adds depth to the highest-priority gap. Nothing here changes the rankings."""
+    if not slots:
+        return []
+    top = {role: sorted((p for p in js["players"] if p["rank"] and p["rank"] <= 10), key=lambda p: p["rank"])
+           for role, js in (("bat", bat_json), ("bowl", bowl_json))}
+    order = [r["gap"]["key"] for r in recs]
+    rank_of = {g["key"]: g["rank"] for g in gaps}
+
+    def phase(p, key):
+        ph = key.split("_")[1]
+        return next((x for x in p["phases"] if x["phase"].lower() == ph), None)
+
+    def strength(p, key):
+        x = phase(p, key)
+        return x["rv100"] if x and x["balls"] >= 30 and x["rv100"] is not None and x["rv100"] > 0 else None
+
+    def entry(role, p, key, why):
+        x = phase(p, key) if key else None
+        return {"id": p["id"], "name": p["name"], "role": role, "indian": p["indian"], "rank": p["rank"],
+                "rating": p["p_rv100"], "gap": key, "gap_rank": rank_of.get(key) if key else None,
+                "phase_rv100": x["rv100"] if x else None, "phase_balls": x["balls"] if x else 0, "why": why}
+
+    n_indian = max(slots["open"] - slots["open_overseas"], 0)
+    indians = sorted(((r, p) for r in top for p in top[r] if p["indian"]), key=lambda rp: -rp[1]["p_rv100"])[:n_indian]
+    chosen, covered = [], set()
+    for role, p in indians:
+        fits = [(strength(p, k), k) for k in order if k.startswith(role) and strength(p, k) is not None]
+        key = max(fits)[1] if fits else None
+        chosen.append(entry(role, p, key, "indian"))
+        if key:
+            covered.add(key)
+    taken = {c["id"] for c in chosen}
+    overseas = []
+    for first_pass in (True, False):
+        for key in order:
+            if len(overseas) >= slots["open_overseas"] or (first_pass and key in covered):
+                continue
+            role = key.split("_")[0]
+            cands = [(strength(p, key), p) for p in top[role] if not p["indian"] and p["id"] not in taken and strength(p, key) is not None]
+            if cands:
+                _, p = max(cands, key=lambda c: c[0])
+                overseas.append(entry(role, p, key, "covers a gap" if first_pass else "adds depth"))
+                taken.add(p["id"])
+                covered.add(key)
+    return overseas + chosen
+
+
 def main():
     b, mp, bat_json, bowl_json, pool = load()
     d = b[(b.is_ipl == 1) & (b.season_yr == SEASON)].copy()
@@ -133,6 +186,8 @@ def main():
 
     table = points_table(d)
     top4 = table.head(4).team.tolist()
+    # RR's benchmark is the OTHER playoff sides: an average that includes RR would partly compare RR with itself
+    bench = [t for t in top4 if t != RR]
 
     # ------------------------------------------------------------ phase diagnosis
     phase_rows = {t: team_phase(d, t, n_matches) for t in teams}
@@ -145,9 +200,12 @@ def main():
             "phase": ph, "overs": PHASE_OVERS[ph],
             "rr": {k: r1(v, 2) for k, v in rr.items() if k != "phase"},
             "league": {k: r1(avg(k, teams), 2) for k in rr if k != "phase"},
-            "top4": {k: r1(avg(k, top4), 2) for k in rr if k != "phase"},
+            "top4": {k: r1(avg(k, bench), 2) for k in rr if k != "phase"},
             "bat_rank": int(sorted(teams, key=lambda t: -phase_rows[t][i]["bat_rv_pm"]).index(RR) + 1),
             "bowl_rank": int(sorted(teams, key=lambda t: -phase_rows[t][i]["bowl_rv_pm"]).index(RR) + 1),
+            # the best side in the phase: the playoff average is not the bar for a rank, so show both
+            "best": {disc: (lambda t: {"team": t, "v": r1(phase_rows[t][i][f"{disc}_rv_pm"], 2)})(
+                max(teams, key=lambda t: phase_rows[t][i][f"{disc}_rv_pm"])) for disc in ("bat", "bowl")},
             "teams": [{"team": t, "bat": r1(phase_rows[t][i]["bat_rv_pm"], 2),
                        "bowl": r1(phase_rows[t][i]["bowl_rv_pm"], 2)} for t in teams],
         })
@@ -319,12 +377,19 @@ def main():
     pool_known = bool(released) or announced >= set(teams)
     for row in squad:
         row["retained"] = retained.get(row["id"]) == RR
+    # IPL squad rules: at most 25 players, at most 8 from overseas. What RR's retentions leave open.
+    # counted from the retained list itself: some retained players have no 2026 balls, so no squad row
+    kept = [pid for pid, team in retained.items() if team == RR]
+    kept_os = sum(nat(pid) not in ("India", "India (uncapped)") for pid in kept)
+    slots = {"squad_max": 25, "overseas_max": 8, "retained": len(kept), "retained_overseas": kept_os,
+             "open": 25 - len(kept), "open_overseas": 8 - kept_os} if RR in announced else None
 
     # Target every area that was a leak against an average side, or that left RR behind the top four
     # (the bar for winning the title). Most behind the top four first. My picks marks which of the
     # top-10 players fill these roles.
     targets = sorted([g for g in gaps if g["gap_vs_avg"] < 0 or g["gap_vs_top4"] < 0], key=lambda g: g["gap_vs_top4"])
     recs = [{"gap": gp, "role": ROLE[gp["key"]][0], "role_desc": ROLE[gp["key"]][1]} for gp in targets]
+    signings = six_signings(bat_json, bowl_json, recs, gaps, slots)
 
     rr_row = table[table.team == RR].iloc[0]
     out = {
@@ -336,6 +401,7 @@ def main():
                     "matches": len(matches), "wins_all": sum(m["won"] for m in matches)},
         "table": table.to_dict(orient="records"),
         "top4": top4,
+        "bench": bench,
         "phases": league_phase,
         "matchups": matchups,
         "order": order,
@@ -345,6 +411,8 @@ def main():
         "gaps": gaps,
         "recommendations": recs,
         "pool": {"known": pool_known, "updated": pool.get("updated"), "announced": sorted(announced)},
+        "slots": slots,
+        "signings": signings,
     }
     # ------------------------------------------------------------ provenance + cross-checks
     # Reference figures from the public record (Wikipedia, "2026 Rajasthan Royals season",

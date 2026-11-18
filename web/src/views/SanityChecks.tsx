@@ -77,11 +77,14 @@ export function SanityChecks({ pools }: { pools: Pools }) {
       href: `/players/bat/${short.p.id}/`,
     })
 
-  // the largest single-match pressure performances anywhere in the data
+  // the biggest turnarounds anywhere in the data, ordered by the swing the table shows (team's chance of winning
+  // from when the player's pressure work began to when it ended), one row per player
+  const swing = (mo: Player['moments'][number]) => mo.wp_to - mo.wp_from
   const top = (role: Role) =>
     pools[role]
-      .flatMap((p) => p.moments.map((mo) => ({ p, mo })))
-      .toSorted((a, b) => b.mo.wpa - a.mo.wpa)
+      .flatMap((p) => p.moments.filter((mo) => mo.won).map((mo) => ({ p, mo })))
+      .toSorted((a, b) => swing(b.mo) - swing(a.mo))
+      .filter((x, i, all) => all.findIndex((y) => y.p.id === x.p.id) === i)
       .slice(0, 8)
 
   return (
@@ -109,13 +112,16 @@ export function SanityChecks({ pools }: { pools: Pools }) {
           <Card key={role} className="gap-0 pb-0">
             <h3 className="border-b px-5 py-3 text-[14.5px] font-semibold">
               Biggest match-winning {role === 'bat' ? 'innings' : 'spells'} under pressure, found by the model
+              <span className="mt-0.5 block text-[12.5px] font-normal text-ink-3">
+                Biggest turnaround first: the team’s chance of winning when the player’s pressure work began, and when it ended.
+              </span>
             </h3>
             <Table className="min-w-[520px] text-[13.5px]">
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="pl-5 text-ink-3">Player and match</TableHead>
                   <TableHead className="text-ink-3">What happened</TableHead>
-                  <TableHead className="pr-5 text-right text-ink-3">Win chance</TableHead>
+                  <TableHead className="pr-5 text-right text-ink-3">Team’s win chance</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -132,8 +138,11 @@ export function SanityChecks({ pools }: { pools: Pools }) {
                     <TableCell className="text-ink-2">
                       {momentLine(mo, role)} {!mo.won && <Tag>Lost</Tag>}
                     </TableCell>
-                    <TableCell className="num pr-5 text-right font-semibold">
-                      {fmt.chance(mo.wp_from)} → {fmt.chance(mo.wp_to)}
+                    <TableCell className="num pr-5 text-right">
+                      <span className="font-semibold">
+                        {fmt.chance(mo.wp_from)} → {fmt.chance(mo.wp_to)}
+                      </span>
+                      <span className="block text-[12px] text-pink-ink">{pts(swing(mo))}</span>
                     </TableCell>
                   </TableRow>
                 ))}

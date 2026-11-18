@@ -14,6 +14,10 @@ export interface TradStats {
   sr: number | null
   avg: number | null
   econ?: number
+  /** what an average batter would strike at on exactly these balls (before wickets) */
+  par_sr?: number | null
+  /** what an average bowler would concede per over on exactly these balls (before wickets) */
+  par_econ?: number | null
 }
 
 export interface Moment {
@@ -54,7 +58,11 @@ export interface Player {
   /** rank among every qualified player by rating, before any auction rule */
   merit_rank: number | null
   /** why a player is outside the submitted ranking: cannot be signed, or dips under pressure */
-  excluded: 'rr' | 'pakistan' | 'retained' | 'retired' | 'dips' | null
+  excluded: 'rr' | 'pakistan' | 'retained' | 'retired' | 'unavailable' | 'dips' | null
+  /** Indian player: a third of the evidence bar, and a priority top-10 place if above average */
+  indian: boolean
+  /** rank among Indian options beyond the top 10 (signable, in a 2026 squad, above average, not dipping) */
+  india_rank: number | null
   /** franchise that retained the player for IPL 2027, from the announced lists */
   retained_by: string | null
   score: number | null
@@ -71,6 +79,8 @@ export interface Player {
   p_rv100: number
   /** usual level: the same measure on the other balls */
   n_rv100: number
+  /** the raw pressure record (recency-weighted runs added per 100 pressure balls), before leaning on the usual level */
+  p_raw100: number
   /** lift: rating minus usual level */
   delta100: number
   /** win chance added per 100 pressure balls (a fraction; ×100 for points) */
@@ -88,6 +98,8 @@ export interface Player {
   /** rank among fresh picks (qualified newcomers, first top-level match 2024 or later), signable players only */
   fresh_rank: number | null
   z?: Record<ComponentKey, number>
+  /** share of the pool (0-100) this player beats on each piece of evidence */
+  beats?: Record<ComponentKey, number>
   /** bootstrap rank stability, computed for the default pool only */
   boot: { p_top10: number; rank_med: number; rank_lo: number; rank_hi: number } | null
   press: TradStats
@@ -111,6 +123,9 @@ export interface RoleData {
     min_pressure_matches: number
     recent_from: number; min_recent_balls: number
     fresh_from: number; n_fresh: number
+    indian_bar: number; indian_places: number; scout_min_balls: number; n_indian_top10: number; max_bangladesh: number
+    /** the Indian bar: [pressure balls, matches, 2025-26 pressure balls] */
+    indian_min: [number, number, number]
     n_eligible: number
     /** qualified players RR can sign: the submitted ranking */
     n_ranked: number
@@ -156,7 +171,8 @@ export interface Summary {
   n_reduced_included: number
   n_short_excluded: number
   forward: Record<Role, { n: number; rating: number; normal: number; lift: number; wpa100: number }>
-  forward_previous: Record<Role, number>
+  /** Indian players first seen in `from` or later with 60+ balls: how many were kept and how many reached the auction */
+  new_indians: { total: number; kept: number; available: number; from: number }
   wp_model: Record<'1' | '2', WpMetrics> & {
     /** final over of a chase: the smooth model against the exact calculation, checked against results */
     endgame: { balls: number; brier_old: number; brier_new: number; rows: { situation: string; n: number; actual: number; old: number; new: number }[] }
@@ -184,6 +200,13 @@ const COMP_FIELD: Record<ComponentKey, 'p_rv100' | 'n_rv100' | 'delta100' | 'wpa
 /** A player can be recommended if RR can sign him and he is not worse under pressure than usual. */
 export const recommendable = (p: Pick<Player, 'excluded' | 'delta100'>) => !p.excluded && p.delta100 >= 0
 
+/** Indian players need this share of the evidence bar (rounded up): the data pack has no domestic cricket. */
+export const INDIAN_BAR = 1 / 3
+/** The pipeline's priority rule: up to this many above-average Indians are guaranteed a top-10 place. */
+export const INDIAN_PLACES = 5
+/** Board release (NOC) risk: at most this many Bangladeshi players in a top 10. */
+export const MAX_BANGLADESH = 1
+
 /**
  * Rank a pool by the rating. Each piece of evidence is also put on a common scale within the pool
  * (z, shown as "better than X%"), but only the rating decides the order. Players who cannot be
@@ -199,13 +222,37 @@ export function rescore(players: Player[]) {
       return [k, { mean, sd }]
     }),
   ) as Record<ComponentKey, { mean: number; sd: number }>
+  // "beats X%": the real share of the pool below the player, not a bell-curve guess from the z-score
+  const sorted = Object.fromEntries(
+    keys.map((k) => [k, players.map((p) => p[COMP_FIELD[k]]).filter((x): x is number => x != null).toSorted((a, b) => a - b)]),
+  ) as Record<ComponentKey, number[]>
+  const share = (k: ComponentKey, v: number | null) => {
+    const xs = sorted[k]
+    if (v == null || !xs.length) return 50
+    let below = 0
+    while (below < xs.length && xs[below] < v) below++
+    return Math.round((100 * below) / xs.length)
+  }
   const scored = players.map((p) => {
     const z = Object.fromEntries(keys.map((k) => [k, ((p[COMP_FIELD[k]] ?? stats[k].mean) - stats[k].mean) / stats[k].sd])) as Record<ComponentKey, number>
-    return { ...p, z, liveScore: p.p_rv100 }
+    const beats = Object.fromEntries(keys.map((k) => [k, share(k, p[COMP_FIELD[k]])])) as Record<ComponentKey, number>
+    return { ...p, z, beats, liveScore: p.p_rv100 }
   })
   scored.sort((a, b) => b.liveScore - a.liveScore)
-  let n = 0
-  return scored.map((p) => ({ ...p, liveRank: recommendable(p) ? ++n : null }))
+  // same rule as the pipeline: each above-average Indian gets a top-10 place (up to 5), the rest on merit
+  const cand = scored.filter(recommendable)
+  const top = cand.filter((p) => p.indian && p.liveScore > 0).slice(0, INDIAN_PLACES)
+  let bd = 0
+  for (const p of cand) {
+    if (top.length >= 10) break
+    if (top.includes(p)) continue
+    if (p.country === 'Bangladesh' && bd++ >= MAX_BANGLADESH) continue
+    top.push(p)
+  }
+  top.sort((a, b) => b.liveScore - a.liveScore)
+  const order = [...top, ...cand.filter((p) => !top.includes(p))]
+  const rankOf = new Map(order.map((p, i) => [p.id, i + 1]))
+  return scored.map((p) => ({ ...p, liveRank: rankOf.get(p.id) ?? null }))
 }
 
 export type ScoredPlayer = ReturnType<typeof rescore>[number]
@@ -235,6 +282,8 @@ export interface PhaseStats {
 export interface RRPhase {
   phase: string; overs: string; rr: PhaseStats; league: PhaseStats; top4: PhaseStats
   bat_rank: number; bowl_rank: number; teams: { team: string; bat: number; bowl: number }[]
+  /** the best side in this phase, batting and bowling */
+  best: Record<'bat' | 'bowl', { team: string; v: number }>
 }
 export interface RRMatch {
   id: number; date: string; opp: string; stage: string; result: string; won: boolean; rr_batted_first: boolean
@@ -256,6 +305,14 @@ export interface Gap {
   key: string; discipline: 'bat' | 'bowl'; phase: string; rr_rv_pm: number; top4_rv_pm: number
   gap_vs_avg: number; gap_vs_top4: number; rank: number
 }
+/** One of RR's six signings: a top-10 player matched to the gap where he is strongest under pressure. */
+export interface Signing {
+  id: number; name: string; role: Role; indian: boolean; rank: number; rating: number
+  /** e.g. bowl_death; null when no phase has 30+ pressure balls */
+  gap: string | null; gap_rank: number | null
+  phase_rv100: number | null; phase_balls: number
+  why: 'covers a gap' | 'adds depth' | 'indian'
+}
 /** a role RR need to fix for 2027 */
 export interface Recommendation {
   gap: Gap; role: string; role_desc: string
@@ -266,6 +323,8 @@ export interface RRData {
     playoff_result: string | null; matches: number; wins_all: number }
   table: { pos: number; team: string; played: number; won: number; lost: number; nr: number; points: number; nrr: number }[]
   top4: string[]
+  /** the other playoff sides: RR's benchmark (`top4` stats in each phase are their average) */
+  bench: string[]
   phases: RRPhase[]
   matchups: { bat_vs_pace: number; bat_vs_spin: number; bowl_pace: number; bowl_spin: number
     teams: { team: string; bat_vs_pace: number; bat_vs_spin: number; bowl_pace: number; bowl_spin: number }[] }
@@ -280,6 +339,10 @@ export interface RRData {
   recommendations: Recommendation[]
   /** known: every franchise has announced; announced: the franchises whose retentions are in */
   pool: { known: boolean; updated: string | null; announced: string[] }
+  /** IPL squad rules (25 players, 8 overseas) against RR's retentions */
+  slots: { squad_max: number; overseas_max: number; retained: number; retained_overseas: number; open: number; open_overseas: number } | null
+  /** RR's buy list for the open places, drawn from the two top 10s and matched to RR's gaps */
+  signings: Signing[]
   provenance: Provenance
 }
 

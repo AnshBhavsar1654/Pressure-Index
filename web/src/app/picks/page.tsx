@@ -1,13 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Flag } from '@/components/Flag'
-import { Note, PageHead, PlayerAvatar, SectionHead, Tag, ordinal, signed } from '@/components/kit'
+import { Note, OverseasMark, PageHead, PlayerAvatar, SectionHead, Tag, ordinal, signed } from '@/components/kit'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Term } from '@/components/Term'
-import { getRole, getRR } from '@/lib/data'
+import { getRole, getRR, getSummary } from '@/lib/data'
 import { momentLine } from '@/views/Moments'
 import { fmt, iplCode } from '@/lib/format'
-import { betterThan, winPts } from '@/lib/terms'
+import { winPts } from '@/lib/terms'
 import { rescore, type ComponentKey, type Gap, type Player, type Role } from '@/lib/types'
 
 export const metadata: Metadata = { title: 'My picks' }
@@ -23,7 +23,7 @@ const SLOT: Record<string, string> = {
 }
 const MIN_PHASE_BALLS = 30 // fewer pressure balls than this in a phase is too thin to call a strength
 
-type Pick = { p: Player; z: Record<ComponentKey, number> }
+type Pick = { p: Player; z: Record<ComponentKey, number>; beats: Record<ComponentKey, number> }
 
 /** The recommended players, best first, with each piece of evidence against the whole qualified pool. */
 function picks(role: Role): Pick[] {
@@ -31,55 +31,40 @@ function picks(role: Role): Pick[] {
   return rescore(pool)
     .filter((p) => p.rank != null && p.rank <= 10)
     .toSorted((a, b) => a.rank! - b.rank!)
-    .map((p) => ({ p, z: p.z }))
+    .map((p) => ({ p, z: p.z, beats: p.beats }))
 }
 
-/** Plain sentences: the rating, the rise above his usual level, the stronger of win impact and consistency, then the evidence. */
-function why({ p, z }: Pick, role: Role): string[] {
-  const noun = role === 'bat' ? 'batter' : 'bowler'
-  const runs = role === 'bat' ? 'added' : 'saved'
-  const extra =
-    z.impact >= z.consistency || p.cons == null
-      ? `Moves matches: adds ${Math.round(p.wpa100 * 100)} percentage points to his team’s chance of winning every 100 pressure balls, better than ${betterThan(z.impact)}% of qualified ${noun}s.`
-      : `Reliable: beat the average in ${Math.round(p.cons * 10)} of every 10 pressure ${role === 'bat' ? 'innings' : 'spells'} (${p.c_n} in all), better than ${betterThan(z.consistency)}% of qualified ${noun}s.`
-  return [
+/** One line of evidence: how much there is, and the raw rate against what an average player would do on the same balls. */
+function evidence(p: Player, role: Role) {
+  const rate =
     role === 'bat'
-      ? `Scores ${fmt.dec(p.p_rv100, 1)} more runs per 100 pressure balls than an average batter would in the same situations, better than ${betterThan(z.pressure)}% of qualified batters.`
-      : `Concedes ${fmt.dec(p.p_rv100, 1)} fewer runs per 100 pressure balls than an average bowler would in the same situations, better than ${betterThan(z.pressure)}% of qualified bowlers.`,
-    `Rises when it matters: ${signed(p.delta100)} runs ${runs} per 100 balls above his usual level (${signed(p.n_rv100)}).`,
-    extra,
-    `Backed by ${fmt.int(p.p_balls)} pressure balls in ${p.p_matches} matches (${p.r_balls} in 2025–26), and top 10 in ${fmt.pct(p.boot?.p_top10)} of 400 re-runs.`,
-    ...(p.moments[0]
-      ? [`Biggest moment: ${momentLine(p.moments[0], role)} v ${p.moments[0].opp} (${fmt.date(p.moments[0].date)}), taking the team’s chance of winning from ${fmt.chance(p.moments[0].wp_from)} to ${fmt.chance(p.moments[0].wp_to)}${p.moments[0].won ? '' : ', though they lost'}.`]
-      : []),
-  ]
+      ? `strike rate ${fmt.dec(p.press.sr, 0)} vs ${fmt.dec(p.press.par_sr, 0)} for an average batter`
+      : `economy ${fmt.dec(p.press.econ, 2)} vs ${fmt.dec(p.press.par_econ, 2)} for an average bowler`
+  return `${fmt.int(p.p_balls)} pressure balls in ${p.p_matches} matches · ${rate}`
 }
 
-/** Where the player is strongest under pressure, and whether that is a phase where RR lost runs in 2026. */
+/** The biggest pressure moment, in one short line. */
+function moment(p: Player, role: Role) {
+  const m = p.moments[0]
+  if (!m) return null
+  return `${momentLine(m, role)} v ${m.opp}, ${fmt.date(m.date)} (${fmt.chance(m.wp_from)} → ${fmt.chance(m.wp_to)}${m.won ? '' : ', lost'})`
+}
+
+/** Where the player is strongest under pressure, and whether that fixes a phase where RR lost runs in 2026: one short line. */
 function fit(p: Player, role: Role, gaps: Gap[], targets: Set<string>) {
   const phases = p.phases.filter((ph) => ph.balls >= MIN_PHASE_BALLS && ph.rv100 != null).toSorted((a, b) => b.rv100! - a.rv100!)
-  if (!phases.length) return { fills: false, text: 'Not enough pressure balls in any one phase to name a best role yet.' }
-  const best = phases[0]
-  const key = `${role}_${best.phase.toLowerCase()}`
+  if (!phases.length) return { fills: false, text: 'Too few pressure balls in any one phase to name a role yet' }
+  const key = `${role}_${phases[0].phase.toLowerCase()}`
   const g = gaps.find((x) => x.key === key)!
-  const lead = `At their best under pressure in the ${PHASE_WORD[best.phase]} (${best.balls} of their pressure balls came there).`
-  if (targets.has(key)) {
-    const how = g.gap_vs_avg < 0 ? `RR lost ${Math.abs(g.gap_vs_avg).toFixed(1)} runs a match there in 2026, ${ordinal(g.rank)} of 10` : `RR were ${Math.abs(g.gap_vs_top4).toFixed(1)} runs a match behind the top four there in 2026`
-    return { fills: true, text: `${lead} ${how}, so they fill the ${SLOT[key]} role RR most need.` }
-  }
-  // strongest in a phase RR already handle well: look for a second strength in a phase RR need
+  const cap = (x: string) => x[0].toUpperCase() + x.slice(1)
+  if (targets.has(key)) return { fills: true, text: `${cap(SLOT[key])}: RR were ${ordinal(g.rank)} of 10 there in 2026` }
+  // strongest where RR are already fine: a second strength in a phase RR need still fills a gap
   const other = phases.slice(1).find((ph) => targets.has(`${role}_${ph.phase.toLowerCase()}`) && ph.rv100! > 0)
   if (other) {
     const k2 = `${role}_${other.phase.toLowerCase()}`
-    return { fills: true, text: `${lead} Also above average in the ${PHASE_WORD[other.phase]}, a phase RR need to fix, so they can cover the ${SLOT[k2]} role.` }
+    return { fills: true, text: `Can cover ${SLOT[k2]} (best in the ${PHASE_WORD[phases[0].phase]})` }
   }
-  return { fills: false, text: `${lead} RR were already above average there in 2026 (${ordinal(g.rank)} of 10), so they would add depth rather than fix a gap.` }
-}
-
-function availability(p: Player, poolKnown: boolean) {
-  if (!p.ipl_team) return 'No IPL squad since 2022: a fresh signing through the auction.'
-  if (p.ipl_season !== 2026) return `Last IPL squad: ${p.ipl_team}, ${p.ipl_season}. In the auction.`
-  return poolKnown ? `Released by ${p.ipl_team} after 2026, so in the auction.` : `In the ${p.ipl_team} squad in 2026.`
+  return { fills: false, text: `${cap(SLOT[key])}: RR were already ${ordinal(g.rank)} of 10 there` }
 }
 
 export default function PicksPage() {
@@ -109,15 +94,25 @@ export default function PicksPage() {
         }
       >
         <div className="max-w-sm">
-          <Note title="Who is left out">
-            RR’s own players are already in the squad, retired players are not available, and Pakistani players cannot enter the
-            IPL auction, so none is listed here. Nor is anyone who is worse under pressure than usual, however good his usual
-            level.{' '}
-            {rr.pool.known
-              ? 'Players retained by their teams are out too, so every name here can be bought at the auction.'
-              : rr.pool.announced.length
-                ? `Players retained by ${rr.pool.announced.map(iplCode).join(', ')} are out too and the next best moved up; the other teams follow as they announce.`
-                : 'Once teams announce their retentions, retained players come out too and the next best move up.'}
+          <Note title="Who makes the list">
+            <ul className="mt-1 flex flex-col gap-1.5 pl-4 marker:text-pink" style={{ listStyle: 'disc' }}>
+              <li>
+                <b>Not in the auction:</b> RR’s own squad,{' '}
+                {rr.pool.known || rr.pool.announced.length ? 'players retained by other teams, ' : ''}retired or banned players
+                (Harry Brook can’t play in 2027) and Pakistani players.
+              </li>
+              <li>
+                <b>Not recommended:</b> anyone worse under pressure than usual.
+              </li>
+              <li>
+                <b>Indian players:</b> each one above average under pressure gets a place
+                {rr.slots ? `, because RR have only ${rr.slots.open_overseas} overseas places left` : ''}.
+              </li>
+              <li>
+                <b>Bangladeshi players:</b> at most one per list, because their board often limits IPL release.
+              </li>
+            </ul>
+            {rr.pool.known && <p className="mt-1.5">Every name here can be bought at the auction.</p>}
           </Note>
         </div>
       </PageHead>
@@ -134,12 +129,15 @@ export default function PicksPage() {
                     {p.name}
                   </a>
                   <Flag country={p.country} size={18} />
+                  {p.indian ? <Tag tone="pink">Indian</Tag> : <OverseasMark country={p.country} size={13} />}
                 </li>
               ))}
             </ol>
           </div>
         ))}
       </section>
+
+      <SixSignings />
 
       {(['bat', 'bowl'] as const).map((role) => {
         // auction priority: players who fix a 2026 weak spot first, then those who add depth; each group keeps ranking order
@@ -151,8 +149,8 @@ export default function PicksPage() {
         return (
         <div key={role}>
           <SectionHead title={role === 'bat' ? 'The ten batters' : 'The ten bowlers'}>
-            Players who fix one of RR’s weak spots come first, then those who add depth. The big number is their pressure ranking.
-            Hover any underlined term for what it means.
+            Players who fix one of RR’s weak spots come first, then those who add depth. The big number is the rank; hover any
+            underlined term for what it means.
           </SectionHead>
           {groups.map((g) => (
           <div key={g.key} className="mb-6">
@@ -184,7 +182,7 @@ export default function PicksPage() {
                   <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {[
                       [<Term key="u" k="underPressure" role={role} />, signed(p.p_rv100)],
-                      [<Term key="c" k="consistency" role={role} />, fmt.pct(p.cons)],
+                      [<Term key="l" k="lift" />, signed(p.delta100)],
                       [<Term key="w" k="winImpact" />, winPts(p.wpa100)],
                       [<Term key="t" k="confidence" />, fmt.pct(p.boot?.p_top10)],
                     ].map(([k, v], i) => (
@@ -194,27 +192,21 @@ export default function PicksPage() {
                       </div>
                     ))}
                   </dl>
-                  <p className="text-[13px] text-ink-3">
-                    {role === 'bat'
-                      ? `Strike rate ${fmt.dec(p.press.sr, 0)} under pressure, ${fmt.dec(p.norm.sr, 0)} normally.`
-                      : `Economy ${fmt.dec(p.press.econ, 2)} under pressure, ${fmt.dec(p.norm.econ, 2)} normally.`}
-                  </p>
-
-                  <div>
-                    <h3 className="mb-1.5 text-[13.5px] font-semibold">Why I back them</h3>
-                    <ul className="flex flex-col gap-1.5 pl-4 text-[13.5px] leading-relaxed text-ink-2 marker:text-pink" style={{ listStyle: 'disc' }}>
-                      {why(pk, role).map((s) => (
-                        <li key={s}>{s}</li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div className={f.fills ? 'rounded-lg border border-pink/30 bg-pink-soft/50 p-3' : 'rounded-lg border border-line bg-panel-2/60 p-3'}>
-                    <h3 className="mb-1 flex items-center gap-2 text-[13.5px] font-semibold">
-                      How they help RR <Tag tone={f.fills ? 'pink' : 'neutral'}>{f.fills ? 'Fills a gap' : 'Adds depth'}</Tag>
-                    </h3>
-                    <p className="text-[13.5px] leading-relaxed text-ink-2">{f.text}</p>
-                  </div>
-                  <p className="text-[12.5px] text-ink-3">{availability(p, rr.pool.known)}</p>
+                  <dl className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13.5px] leading-snug">
+                    <dt className="text-ink-3">Evidence</dt>
+                    <dd className="text-ink-2">{evidence(p, role)}</dd>
+                    {moment(p, role) && (
+                      <>
+                        <dt className="text-ink-3">Best moment</dt>
+                        <dd className="text-ink-2">{moment(p, role)}</dd>
+                      </>
+                    )}
+                    <dt className="text-ink-3">For RR</dt>
+                    <dd className="flex flex-wrap items-center gap-2 text-ink-2">
+                      <Tag tone={f.fills ? 'pink' : 'neutral'}>{f.fills ? 'Fills a gap' : 'Adds depth'}</Tag>
+                      <span>{f.text}</span>
+                    </dd>
+                  </dl>
                 </article>
               )
             })}
@@ -224,6 +216,8 @@ export default function PicksPage() {
         </div>
         )
       })}
+
+      <IndianSection />
 
       <SectionHead id="fresh" title="Fresh picks: new at the top level">
         Players whose first IPL or T20I match in the data is {elig.fresh_from} or later, the kind of find an auction can be won on. The
@@ -260,6 +254,143 @@ export default function PicksPage() {
         ))}
       </div>
 
+    </>
+  )
+}
+
+/** RR's buy list for the places left open: three overseas, three Indian, each tied to the gap he fills. */
+function SixSignings() {
+  const rr = getRR()
+  const sl = rr.slots
+  if (!sl || !rr.signings.length) return null
+  const PH: Record<string, string> = { powerplay: 'in the powerplay', middle: 'in the middle overs', death: 'at the death' }
+  const groups = [
+    { title: `${sl.open_overseas} overseas places`, items: rr.signings.filter((s) => !s.indian) },
+    { title: `${sl.open - sl.open_overseas} Indian places`, items: rr.signings.filter((s) => s.indian) },
+  ]
+  return (
+    <>
+      <SectionHead id="signings" title={`RR’s ${sl.open} signings`}>
+        RR kept {sl.retained} players, so {sl.open} places are open and no more than {sl.open_overseas} can go to overseas players.
+        This is how the two top 10s fill them: each player matched to the gap where he is strongest under pressure, gaps RR are
+        furthest behind on first.
+      </SectionHead>
+      <div className="grid gap-5 lg:grid-cols-2">
+        {groups.map((g) => (
+          <section key={g.title} className="flex flex-col gap-3">
+            <h3 className="text-[15px] font-semibold">{g.title}</h3>
+            {g.items.map((s) => {
+              const ph = s.gap ? s.gap.split('_')[1] : null
+              const role = s.gap ? SLOT[s.gap][0].toUpperCase() + SLOT[s.gap].slice(1) : `${s.role === 'bat' ? 'Batting' : 'Bowling'} depth`
+              return (
+                <article key={s.id} className="panel flex items-start gap-4 p-4">
+                  <PlayerAvatar name={s.name} size={42} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[12px] font-semibold uppercase tracking-wide text-pink-ink">
+                      {role}
+                      {s.why === 'adds depth' && <span className="ml-2 font-normal normal-case tracking-normal text-ink-3">second option</span>}
+                    </div>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                      <a href={`#${s.role}-${s.id}`} className="display text-[1.35rem] hover:underline">
+                        {s.name}
+                      </a>
+                      {s.indian ? <Tag tone="pink">Indian</Tag> : <OverseasMark size={13} />}
+                      <span className="text-[12.5px] text-ink-3">
+                        #{s.rank} {s.role === 'bat' ? 'batter' : 'bowler'}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[13.5px] leading-snug text-ink-2">
+                      {s.gap && ph && s.phase_rv100 != null
+                        ? `${signed(s.phase_rv100, 0)} runs ${s.role === 'bat' ? 'added' : 'saved'} per 100 pressure balls ${PH[ph]} (${s.phase_balls} balls). RR were ${ordinal(s.gap_rank!)} of 10 there in 2026.`
+                        : `Pressure rating ${signed(s.rating)}; too few pressure balls in any one phase to name a role yet.`}
+                    </p>
+                  </div>
+                </article>
+              )
+            })}
+          </section>
+        ))}
+      </div>
+    </>
+  )
+}
+
+/** The player's biggest pressure game of 2025-26, if it added 15+ points of win chance. */
+function bigGame(p: Player, role: Role) {
+  const m = p.matches.filter((x) => x.date >= '2025').toSorted((a, b) => b.wpa - a.wpa)[0]
+  return m && Math.round(m.wpa * 100) >= 15 ? `${winPts(m.wpa)} v ${m.opp}, ${fmt.date(m.date)} (${role === 'bat' ? `${m.r} off ${m.balls} pressure balls` : `${m.out}/${m.r} in ${m.balls} pressure balls`})` : null
+}
+
+/** RR's squad maths, the Indian rule, and the Indian options beyond the top 10. */
+function IndianSection() {
+  const rr = getRR()
+  const ni = getSummary().new_indians
+  const sl = rr.slots
+  const lists = (['bat', 'bowl'] as const).map((role) => {
+    const ps = getRole(role).players
+    return {
+      role,
+      inTop: ps.filter((p) => p.rank != null && p.rank <= 10 && p.indian).toSorted((a, b) => a.rank! - b.rank!),
+      options: ps.filter((p) => p.india_rank != null).toSorted((a, b) => a.india_rank! - b.india_rank!).slice(0, 8),
+      overseas: ps.filter((p) => p.rank != null && p.rank <= 10 && !p.indian).length,
+    }
+  })
+  return (
+    <>
+      <SectionHead id="indian" title="Indian players, and RR’s overseas places">
+        {sl
+          ? `RR have kept ${sl.retained} players, ${sl.retained_overseas} of them from overseas. With at most ${sl.squad_max} in a squad and ${sl.overseas_max} from overseas, that leaves ${sl.open} places, no more than ${sl.open_overseas} of them for overseas players. `
+          : ''}
+        So every Indian player who is above average under pressure and does not dip is guaranteed a place in the top 10s (up to five
+        per list), with a third of the evidence bar, because the data pack has no domestic cricket: an Indian player’s only top-level cricket
+        here is the IPL. No below-average player is promoted.
+      </SectionHead>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {lists.map(({ role, inTop, options, overseas }) => (
+          <section key={role} className="panel flex flex-col gap-3 p-5">
+            <h3 className="text-[15px] font-semibold">{role === 'bat' ? 'Batters' : 'Bowlers'}</h3>
+            <p className="text-[13.5px] leading-relaxed text-ink-2">
+              In the top 10:{' '}
+              {inTop.length
+                ? inTop.map((p) => `${p.name} (#${p.rank}, ${signed(p.p_rv100)})`).join(', ')
+                : 'no Indian player clears the bar'}
+              . The other {overseas} are overseas: RR would pick the best {sl ? sl.open_overseas : 3} of them for the overseas places left.
+            </p>
+            <div>
+              <h4 className="mb-1.5 text-[13px] font-semibold">Indian options beyond the top 10</h4>
+              {options.length ? (
+                <ol className="divide-y divide-line rounded-lg border border-line">
+                  {options.map((p) => (
+                    <li key={p.id} className="flex items-center gap-3 px-3 py-2 text-[13px]">
+                      <Link href={`/players/${role}/${p.id}/`} className="min-w-0 flex-1 font-medium hover:underline">
+                        {p.name}
+                        <span className="block text-[12px] font-normal text-ink-3">
+                          {p.p_balls} pressure balls, {p.r_balls} in 2025–26{p.ipl_team ? ` · last IPL squad ${iplCode(p.ipl_team)}` : ''}
+                        </span>
+                        {bigGame(p, role) && <span className="block text-[12px] font-normal text-pink-ink">Big game: {bigGame(p, role)}</span>}
+                      </Link>
+                      <span className="num text-right font-semibold">{signed(p.p_rv100)}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-[13px] text-ink-3">None: no other signable Indian in a 2026 squad is above average without dipping.</p>
+              )}
+              <p className="mt-1.5 text-[12px] leading-relaxed text-ink-3">
+                In a 2026 IPL squad, and either above average under pressure without dipping, or a match-winner under pressure in 2025–26
+                (+15 points of win chance in one game). The number is the overall rating: one big game can sit beside a below-average
+                record, so these are options to weigh, not proven picks.
+              </p>
+            </div>
+          </section>
+        ))}
+      </div>
+      <p className="panel mt-4 p-4 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink">
+        <b>Why so few young Indian players?</b> Of the {ni.total} Indian players first seen in {ni.from} or later with 60+ balls in the data,
+        franchises retained <b>{ni.kept}</b>; only <b>{ni.available}</b> reached the auction. The young Indian talent that has shown
+        something is already taken. The data pack has no ages and no domestic cricket, so it cannot find the next one: for those
+        places RR should scout domestic T20 cricket, and use the proven Indian players above.
+      </p>
     </>
   )
 }

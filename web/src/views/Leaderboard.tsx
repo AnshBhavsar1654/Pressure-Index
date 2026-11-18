@@ -17,7 +17,7 @@ import { TeamBadge } from '@/components/TeamBadge'
 import { fmt } from '@/lib/format'
 import { Term } from '@/components/Term'
 import { excludedNote, winPts } from '@/lib/terms'
-import { rescore, type Player, type Role, type ScoredPlayer } from '@/lib/types'
+import { INDIAN_BAR, rescore, type Player, type Role, type ScoredPlayer } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type SortKey = 'liveRank' | 'p_rv100' | 'n_rv100' | 'delta100' | 'wpa100' | 'cons' | 'p_balls' | 'p_top10' | 'trad'
@@ -42,7 +42,12 @@ export function Leaderboard({
   const dMatches = useDeferredValue(minMatches)
   // who qualifies: everyone at or above the chosen bar is rated against each other
   const raw = useMemo(
-    () => all.filter((p) => p.p_balls >= dBalls && p.p_matches >= dMatches && p.r_balls >= bar.recentBalls),
+    // Indian players need a third of the evidence: the data pack has no domestic cricket, only their IPL games
+    () => all.filter((p) => {
+      const f = p.indian ? INDIAN_BAR : 1
+      const need = (x: number) => Math.ceil(x * f - 1e-9)
+      return p.p_balls >= need(dBalls) && p.p_matches >= need(dMatches) && p.r_balls >= need(bar.recentBalls)
+    }),
     [all, dBalls, dMatches, bar.recentBalls],
   )
   const barChanged = minBalls !== bar.balls || minMatches !== bar.matches
@@ -90,7 +95,8 @@ export function Leaderboard({
         <CardHeader>
           <CardTitle>Who qualifies</CardTitle>
           <CardDescription>
-            My ranking needs {bar.balls}+ pressure balls across {bar.matches}+ matches, {bar.recentBalls}+ of them in 2025–26.
+            My ranking needs {bar.balls}+ pressure balls across {bar.matches}+ matches, {bar.recentBalls}+ of them in 2025–26 (a third of
+            that for Indian players, whose only top-level cricket in the data is the IPL).
             Lower the bar to see more players, or raise it to keep only long records. The rating leans on each player’s usual
             level until his pressure record is long, so short records cannot run away with the top spots.
           </CardDescription>

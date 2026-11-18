@@ -82,8 +82,8 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
         sum={
           <>
             {b.runs} runs scored − {b.expected.toFixed(2)} an average batter gets from here
-            {b.out ? ` − ${b.wkt_cost.toFixed(2)} for the wicket` : ''} {b.centre >= 0 ? '+' : '−'} {Math.abs(b.centre).toFixed(2)} season
-            adjustment = <b>{sg(b.rv, 2)} runs added</b>
+            {b.out ? ` − ${b.wkt_cost.toFixed(2)} for the wicket` : ''} {b.centre >= 0 ? '+' : '−'} {Math.abs(b.centre).toFixed(2)} for the
+            conditions = <b>{sg(b.rv, 2)} runs added</b>
             <br />
             Chance of winning: {fmt.pct(b.wp)} → <b>{fmt.pct(b.wp_after)}</b>
           </>
@@ -92,7 +92,8 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
         {who} hit {shot}
         {b.out ? ' and was out' : ''}. An average batter makes {b.expected.toFixed(2)} runs from that exact spot (balls left, wickets
         down, competition, season), so that is what the ball is judged against. A wicket would have been charged at the runs it costs
-        from there. A tiny adjustment makes the average ball of each season worth exactly 0.
+        from there. A small adjustment makes the average ball worth exactly 0 in each season, and for a T20I also in that host
+        country and against that opponent, so a run on a slow pitch or against a weak attack is valued fairly.
       </Step>
       <Step
         n={3}

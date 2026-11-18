@@ -43,6 +43,9 @@ export const getGrid = () => read<ChaseGrid>('chase_grid.json')
 export const getRR = () => read<RRData>('rr2026.json')
 
 /** My ranking: qualified players RR can sign, best first. */
-export const getRanked = (role: 'bat' | 'bowl') => getRole(role).players.filter((p) => p.rank != null)
+export const getRanked = (role: 'bat' | 'bowl') =>
+  getRole(role)
+    .players.filter((p) => p.rank != null)
+    .toSorted((a, b) => a.rank! - b.rank!)
 /** Everyone who clears the bar, signable or not: the pool every rating is measured against. */
 export const getQualified = (role: 'bat' | 'bowl') => getRole(role).players.filter((p) => p.merit_rank != null)

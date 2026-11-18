@@ -5,9 +5,9 @@ import { PhaseGaps, SeasonExplorer, TeamDots } from '@/components/charts/RRChart
 import { Zoomable } from '@/components/charts/Zoom'
 import { TeamBadge } from '@/components/TeamBadge'
 import { OPPONENTS } from '@/lib/teams'
-import { Tag, PageHead, Note, SectionHead, Stat, signed } from '@/components/kit'
+import { Tag, PageHead, Note, SectionHead, Stat, ordinal, signed } from '@/components/kit'
 import { getRR } from '@/lib/data'
-import { fmt } from '@/lib/format'
+import { fmt, iplCode } from '@/lib/format'
 import type { Gap, SquadPlayer } from '@/lib/types'
 import { NewFaces } from '@/views/NewFaces'
 import { SquadTables } from '@/views/SquadTables'
@@ -25,6 +25,7 @@ export default function RajasthanPage() {
   const leaks = rr.gaps.filter((g) => g.gap_vs_avg < 0)
   const leakTotal = leaks.reduce((a, g) => a + g.gap_vs_avg, 0)
   const best = rr.gaps[rr.gaps.length - 1]
+  const death = rr.phases.find((p) => p.phase === 'Death')!
   const mu = rr.matchups
   const pv = rr.provenance
 
@@ -56,19 +57,21 @@ export default function RajasthanPage() {
 
       <SectionHead title="Where matches were won and lost">
         Every ball RR played is compared with what an average IPL 2026 side would have scored or conceded in exactly the same
-        situation. Adding it up by phase shows where RR gained and leaked runs. The black tick is the average of the top four.
+        situation. Adding it up by phase shows where RR gained and leaked runs. The black tick is the average of the other three
+        playoff sides ({rr.bench.map(iplCode).join(', ')}). That is not the same as the best sides in each phase: some teams that
+        missed the playoffs were strong in one phase, so RR can beat the playoff average and still rank lower. Hover a bar for both.
       </SectionHead>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <section className="panel p-5">
           <Zoomable label="runs won and lost by phase">
-            <PhaseGaps phases={rr.phases} />
+            <PhaseGaps phases={rr.phases} bench={rr.bench} />
           </Zoomable>
         </section>
         <div className="flex flex-col gap-4">
           <Note title="Reading it">
             <b>{signed(best.gap_vs_avg)}</b> next to {gapName(best)} means RR scored about {best.gap_vs_avg.toFixed(0)} more runs
-            a match in that phase than an average team would have from the same positions. The blue bars are the problem: RR were
-            8th of 10 in both batting and bowling at the death.
+            a match in that phase than an average team would have from the same positions. The blue bars are the problem: at the
+            death RR ranked {ordinal(death.bat_rank)} of 10 batting and {ordinal(death.bowl_rank)} bowling.
           </Note>
           <section className="panel overflow-hidden">
             <h3 className="border-b border-line px-4 py-3 text-[14px] font-semibold">The same story in familiar numbers</h3>
@@ -78,7 +81,7 @@ export default function RajasthanPage() {
                   <th className="px-4 py-2 text-left font-medium" />
                   <th className="px-2 py-2 text-right font-medium">RR</th>
                   <th className="px-2 py-2 text-right font-medium">League</th>
-                  <th className="px-4 py-2 text-right font-medium">Top 4</th>
+                  <th className="px-4 py-2 text-right font-medium" title={`The other playoff sides: ${rr.bench.join(', ')}`}>Other playoff sides</th>
                 </tr>
               </thead>
               <tbody>
@@ -164,7 +167,7 @@ export default function RajasthanPage() {
         <div className="max-w-[70ch]">
           <h2 className="display text-[1.7rem]">What to fix for 2027</h2>
           <p className="text-[14px] text-ink-2">
-            RR leaked runs against an average side, or trailed the top four, in {rr.recommendations.length} roles:{' '}
+            RR leaked runs against an average side, or trailed the other playoff sides, in {rr.recommendations.length} roles:{' '}
             {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. My picks puts the top-10 players who fill
             these gaps first.
           </p>
