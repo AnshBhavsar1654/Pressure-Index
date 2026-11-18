@@ -117,6 +117,8 @@ export default function PicksPage() {
         </div>
       </PageHead>
 
+      <RetainedSquad />
+
       <section className="panel grid gap-6 p-5 sm:p-6 md:grid-cols-2" aria-label="The twenty picks at a glance">
         {(['bat', 'bowl'] as const).map((role) => (
           <div key={role}>
@@ -136,8 +138,6 @@ export default function PicksPage() {
           </div>
         ))}
       </section>
-
-      <SixSignings />
 
       {(['bat', 'bowl'] as const).map((role) => {
         // auction priority: players who fix a 2026 weak spot first, then those who add depth; each group keeps ranking order
@@ -258,60 +258,86 @@ export default function PicksPage() {
   )
 }
 
-/** RR's buy list for the places left open: three overseas, three Indian, each tied to the gap he fills. */
-function SixSignings() {
+/** RR's retained players for 2027, by role: the squad the auction builds on. */
+function RetainedSquad() {
   const rr = getRR()
+  const squad = rr.retained_squad
+  if (!squad?.length) return null
   const sl = rr.slots
-  if (!sl || !rr.signings.length) return null
-  const PH: Record<string, string> = { powerplay: 'in the powerplay', middle: 'in the middle overs', death: 'at the death' }
+  const has = (role: Role, id: number) => getRole(role).players.some((p) => p.id === id)
   const groups = [
-    { title: `${sl.open_overseas} overseas places`, items: rr.signings.filter((s) => !s.indian) },
-    { title: `${sl.open - sl.open_overseas} Indian places`, items: rr.signings.filter((s) => s.indian) },
-  ]
+    { key: 'batter', title: 'Batters' },
+    { key: 'keeper', title: 'Wicket-keepers' },
+    { key: 'allrounder', title: 'All-rounders' },
+    { key: 'bowler', title: 'Bowlers' },
+  ] as const
+  const unseen = squad.filter((p) => p.role == null)
+  const deathBat = rr.phases.find((p) => p.phase === 'Death')?.bat_rank ?? 0
+  const ppBat = rr.phases.find((p) => p.phase === 'Powerplay')?.bat_rank ?? 0
+  const need = rr.squad_need
   return (
-    <>
-      <SectionHead id="signings" title={`RR’s ${sl.open} signings`}>
-        RR kept {sl.retained} players, so {sl.open} places are open and no more than {sl.open_overseas} can go to overseas players.
-        This is how the two top 10s fill them: each player matched to the gap where he is strongest under pressure, gaps RR are
-        furthest behind on first.
-      </SectionHead>
-      <div className="grid gap-5 lg:grid-cols-2">
-        {groups.map((g) => (
-          <section key={g.title} className="flex flex-col gap-3">
-            <h3 className="text-[15px] font-semibold">{g.title}</h3>
-            {g.items.map((s) => {
-              const ph = s.gap ? s.gap.split('_')[1] : null
-              const role = s.gap ? SLOT[s.gap][0].toUpperCase() + SLOT[s.gap].slice(1) : `${s.role === 'bat' ? 'Batting' : 'Bowling'} depth`
-              return (
-                <article key={s.id} className="panel flex items-start gap-4 p-4">
-                  <PlayerAvatar name={s.name} size={42} />
-                  <div className="min-w-0 flex-1">
-                    <div className="text-[12px] font-semibold uppercase tracking-wide text-pink-ink">
-                      {role}
-                      {s.why === 'adds depth' && <span className="ml-2 font-normal normal-case tracking-normal text-ink-3">second option</span>}
-                    </div>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                      <a href={`#${s.role}-${s.id}`} className="display text-[1.35rem] hover:underline">
-                        {s.name}
-                      </a>
-                      {s.indian ? <Tag tone="pink">Indian</Tag> : <OverseasMark size={13} />}
-                      <span className="text-[12.5px] text-ink-3">
-                        #{s.rank} {s.role === 'bat' ? 'batter' : 'bowler'}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-[13.5px] leading-snug text-ink-2">
-                      {s.gap && ph && s.phase_rv100 != null
-                        ? `${signed(s.phase_rv100, 0)} runs ${s.role === 'bat' ? 'added' : 'saved'} per 100 pressure balls ${PH[ph]} (${s.phase_balls} balls). RR were ${ordinal(s.gap_rank!)} of 10 there in 2026.`
-                        : `Pressure rating ${signed(s.rating)}; too few pressure balls in any one phase to name a role yet.`}
-                    </p>
-                  </div>
-                </article>
-              )
-            })}
-          </section>
-        ))}
+    <section className="panel mb-6 p-5 sm:p-6" aria-labelledby="retained-title">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id="retained-title" className="display text-[1.6rem]">
+          RR’s retained squad for 2027
+        </h2>
+        <span className="text-[13px] text-ink-3">
+          {squad.length} players, {squad.filter((p) => p.overseas).length} from overseas
+          {sl ? ` · ${sl.open} places open, up to ${sl.open_overseas} overseas` : ''}
+        </span>
       </div>
-    </>
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        {groups.map((g) => {
+          const items = squad.filter((p) => p.role === g.key)
+          return (
+            <div key={g.key}>
+              <h3 className="mb-2 text-[13px] font-semibold uppercase tracking-wide text-pink-ink">
+                {g.title} <span className="font-normal text-ink-3">{items.length}</span>
+              </h3>
+              <ul className="flex flex-col gap-2">
+                {items.map((p) => {
+                  const prof = has('bat', p.id) && (g.key !== 'bowler' || !has('bowl', p.id)) ? 'bat' : has('bowl', p.id) ? 'bowl' : has('bat', p.id) ? 'bat' : null
+                  // the stats that match his role: batting for batters and keepers, bowling for bowlers, both for all-rounders
+                  const bat = g.key !== 'bowler' && p.bat26 && `${p.bat26.runs} runs, SR ${p.bat26.sr.toFixed(0)}`
+                  const bowl = (g.key === 'bowler' || g.key === 'allrounder') && p.bowl26 && `${p.bowl26.wkts} wkt${p.bowl26.wkts === 1 ? '' : 's'}, econ ${p.bowl26.econ.toFixed(2)}`
+                  const stats = [bat, bowl].filter(Boolean)
+                  return (
+                    <li key={p.id} className="text-[14px]">
+                      <span className="flex items-center gap-1.5">
+                        {prof ? (
+                          <Link href={`/players/${prof}/${p.id}/`} className="font-medium hover:underline">
+                            {p.name}
+                          </Link>
+                        ) : (
+                          <span className="font-medium">{p.name}</span>
+                        )}
+                        {p.overseas && <OverseasMark size={12} />}
+                        {p.role_source === 'public record' && <span className="text-[11px] text-ink-3">(role from public record)</span>}
+                      </span>
+                      <span className="block text-[12px] text-ink-3">
+                        {stats.length ? `IPL 2026: ${stats.join(' · ')}` : `${p.matches} matches since 2024, little in 2026`}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )
+        })}
+      </div>
+      <p className="mt-4 rounded-lg bg-pink-soft/50 px-4 py-3 text-[14px] leading-relaxed text-ink">
+        <b>What RR need:</b> batting is the thin side. RR kept {need.batter + need.keeper} batters against {need.bowler} bowlers, and
+        were {ordinal(deathBat)} of 10 batting at the death in 2026 while the powerplay (Jaiswal and Sooryavanshi) was{' '}
+        {ordinal(ppBat)}. So the batters in the top 10 who are strong from number 3 down and at the death are the ones to look at
+        first.
+      </p>
+      <p className="mt-4 text-[12px] leading-relaxed text-ink-3">
+        Roles come from what each player did in his matches since 2024 (the data has no role field): wicket-keeper if he kept
+        wicket in at least a quarter of them, all-rounder if he bowled and batted regularly, otherwise batter or bowler. Lhuan-dre
+        Pretorius keeps wicket for South Africa but never did for RR (Jurel kept), so his role comes from the public record.
+        {unseen.length ? ` Not yet seen at this level: ${unseen.map((p) => p.name).join(', ')}.` : ''}
+      </p>
+    </section>
   )
 }
 

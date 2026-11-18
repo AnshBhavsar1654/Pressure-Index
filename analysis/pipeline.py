@@ -34,6 +34,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "Data Pack"
 OUT = ROOT / "web" / "data"
 POOL = ROOT / "analysis" / "auction_pool.json"
+PUBLIC = ROOT / "public_data" / "t20wc2026"   # 2026 T20 World Cup from Cricsheet (public data)
 IPL_2026 = 3298  # comp_id of IPL 2026, the squads the 2027 retentions are made from
 OUT.mkdir(parents=True, exist_ok=True)
 
@@ -46,13 +47,14 @@ PRESSURE_PCTL = 0.80          # 1. a pressure ball: top 20% of balls by stakes (
 K = 200                       # 2. a pressure record counts half at 200 balls; the rest is the usual level
 SEASON_WEIGHT = {2022: 0.2, 2023: 0.4, 2024: 0.6, 2025: 0.8, 2026: 1.0}  # 3. each year back counts 20% less
 MIN_PRESSURE_BALLS = 30       # 4. evidence to be ranked: 30 pressure balls in 3 matches, at least
-MIN_PRESSURE_MATCHES = 3      #    10 of them in 2025-26 (still doing it now). A short record is safe
-RECENT_FROM = 2025            #    because the rating leans on the usual level until the pressure record
-MIN_RECENT_BALLS = 10         #    grows; the bar only decides who is considered. (60/5/20 kept out
-                              #    current players such as Daryl Mitchell with few 2025-26 pressure balls.)
+MIN_PRESSURE_MATCHES = 3      #    20 of them in 2025-26 (still doing it now: a 2027 pick must have been
+RECENT_FROM = 2025            #    seen under pressure recently, not on a ball or two). A short record is
+MIN_RECENT_BALLS = 20         #    safe because the rating leans on the usual level until it grows.
+MATCH_MIN_BALLS = 6           # a match counts as a pressure appearance only with 6+ pressure balls (an over):
+                              # a one-ball cameo is not a pressure innings or spell
 # The brief asks who rises and who dips under pressure, so a player whose rating is below his usual
 # level (lift < 0) is never recommended, however good his usual level is.
-# Indian players need a third of the evidence (10 balls, 1 match, 4 in 2025-26). The data pack has no
+# Indian players need a third of the evidence (10 balls, 1 match, 7 in 2025-26). The data pack has no
 # domestic cricket, so an Indian player's only top-level cricket here is the IPL, while an international
 # adds T20Is: the same bar would hold Indians to a far longer wait for the same evidence. (A third rather
 # than a half lets a current IPL batter with one season of pressure balls, such as Himmat Singh, be
@@ -99,6 +101,14 @@ def load():
     m = pd.read_csv(DATA / "matches.csv")
     c = pd.read_csv(DATA / "competitions.csv")
     mp = pd.read_csv(DATA / "competition_team_player_mapping.csv")
+    # Public data added next to the data pack, in the same format: the 2026 T20 World Cup from Cricsheet
+    # (built by analysis/public_wc2026.py; players matched to data pack ids ball by ball).
+    if PUBLIC.exists():
+        b = pd.concat([b, pd.read_csv(PUBLIC / "ball_by_ball.csv", low_memory=False)], ignore_index=True)
+        m = pd.concat([m, pd.read_csv(PUBLIC / "matches.csv")], ignore_index=True)
+        c = pd.concat([c, pd.read_csv(PUBLIC / "competitions.csv")], ignore_index=True)
+        mp = pd.concat([mp, pd.read_csv(PUBLIC / "competition_team_player_mapping.csv")], ignore_index=True)
+        log(f"public data added: {PUBLIC.name}, {pd.read_csv(PUBLIC / 'matches.csv').shape[0]} matches")
     m = m.merge(c, on="comp_id", how="left")
     m["season_yr"] = m["season"].astype(str).str[:4].astype(int)
     m["is_ipl"] = m["comp_name"].str.startswith("IPL").astype(int)
@@ -581,9 +591,12 @@ def rate(pm: pd.DataFrame) -> pd.DataFrame:
     r = x[(x.P == 1) & (x.R == 1)].groupby("pid").agg(rn=("n", "sum"), rw=("w", "sum"), rwrv=("wrv", "sum"),
                                                       rmatches=("mult", "sum"))
     # consistency: pressure innings or spells of 6+ balls in which the player beat the average
-    inn = x[(x.P == 1) & (single_n >= 6)]
+    inn = x[(x.P == 1) & (single_n >= MATCH_MIN_BALLS)]
     c = inn.assign(pos=(inn.rv > 0) * inn["mult"]).groupby("pid").agg(c_n=("mult", "sum"), c_pos=("pos", "sum"))
     t = p.join(n, how="left").join(r, how="left").join(c, how="left").fillna(0)
+    # pressure matches = matches with 6+ pressure balls; a one-ball cameo does not count as an appearance
+    t["pmatches"] = inn.groupby("pid")["mult"].sum().reindex(t.index).fillna(0)
+    t["rmatches"] = inn[inn.R == 1].groupby("pid")["mult"].sum().reindex(t.index).fillna(0)
     t["normal"] = t.nwrv / (t.nw + K)          # usual level: the other balls, pulled towards average
     t["share"] = t.pw / (t.pw + K)             # how much of the rating is the player's own pressure record
     t["rating"] = (t.pwrv + K * t.normal) / (t.pw + K)  # the one number the ranking uses
@@ -770,9 +783,11 @@ def player_meta(mp: pd.DataFrame, m: pd.DataFrame, b: pd.DataFrame):
     a_side = mp[(mp.is_ipl == 0) & mp.team_name.str.endswith(" A")].sort_values("season_yr").groupby("player_id").last()
     a_side["team_name"] = a_side.team_name.str[:-2]
     intl = pd.concat([intl, a_side.loc[~a_side.index.isin(intl.index)]])
-    bat_hand = b.groupby("striker_id").batting_type.agg(lambda s: s.mode().iat[0])
-    bowl_type = b.groupby("bowler_id").bowling_type.agg(lambda s: s.mode().iat[0])
-    pace = b.groupby("bowler_id").pace_or_spin.agg(lambda s: s.mode().iat[0])
+    # most common value; players new in the public data may have none recorded
+    mode = lambda s: s.mode().iat[0] if s.notna().any() else None
+    bat_hand = b.groupby("striker_id").batting_type.agg(mode)
+    bowl_type = b.groupby("bowler_id").bowling_type.agg(mode)
+    pace = b.groupby("bowler_id").pace_or_spin.agg(mode)
     return ipl, intl, bat_hand, bowl_type, pace
 
 
@@ -1036,6 +1051,10 @@ def main():
         "n_t20i_matches": int(b[b.comp_tier.str.startswith("T20I")].match_id.nunique()),
         "seasons": sorted(int(x) for x in b.season_yr.unique()),
         "n_top_level_matches": int(b[b.top_level].match_id.nunique()),
+        # public data added next to the data pack (analysis/public_wc2026.py)
+        "public": ({"name": "ICC Men's T20 World Cup 2026", "source": "Cricsheet (cricsheet.org)",
+                    "matches": int(b[b.match_id >= 9_000_000].match_id.nunique()),
+                    "balls": int((b.match_id >= 9_000_000).sum())} if PUBLIC.exists() else None),
         "pressure_threshold": round(thr, 3), "pressure_pctl": PRESSURE_PCTL,
         "K": K, "season_weights": SEASON_WEIGHT, "top_level": list(TOP_LEVEL),
         "min_match_balls": MIN_MATCH_BALLS,
@@ -1049,9 +1068,16 @@ def main():
         "contrast": contrast, "by_phase": by_phase, "by_over": by_over,
         "li_hist": hist, "moments": moments,
     }
-    (OUT / "summary.json").write_text(json.dumps(summary, separators=(",", ":")))
-    (OUT / "batters.json").write_text(json.dumps(results["bat"], separators=(",", ":"), default=str))
-    (OUT / "bowlers.json").write_text(json.dumps(results["bowl"], separators=(",", ":"), default=str))
+    # missing values (e.g. no batting hand for a player new in the public data) are written as null, never NaN
+    def clean(o):
+        if isinstance(o, dict):
+            return {k: clean(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [clean(v) for v in o]
+        return None if isinstance(o, float) and np.isnan(o) else o
+    (OUT / "summary.json").write_text(json.dumps(clean(summary), separators=(",", ":"), allow_nan=False))
+    (OUT / "batters.json").write_text(json.dumps(clean(results["bat"]), separators=(",", ":"), default=str, allow_nan=False))
+    (OUT / "bowlers.json").write_text(json.dumps(clean(results["bowl"]), separators=(",", ":"), default=str, allow_nan=False))
     (OUT / "chase_grid.json").write_text(json.dumps(
         {"cols": ["wkts", "overs_left", "need", "wp", "li"], "rows": grid}, separators=(",", ":")))
     for role in ("bat", "bowl"):

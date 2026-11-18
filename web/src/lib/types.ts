@@ -162,6 +162,8 @@ export interface Summary {
   n_t20i_matches: number
   seasons: number[]
   n_top_level_matches: number
+  /** public data added next to the data pack: the 2026 T20 World Cup from Cricsheet */
+  public: { name: string; source: string; matches: number; balls: number } | null
   pressure_threshold: number
   pressure_pctl: number
   K: number
@@ -305,13 +307,15 @@ export interface Gap {
   key: string; discipline: 'bat' | 'bowl'; phase: string; rr_rv_pm: number; top4_rv_pm: number
   gap_vs_avg: number; gap_vs_top4: number; rank: number
 }
-/** One of RR's six signings: a top-10 player matched to the gap where he is strongest under pressure. */
-export interface Signing {
-  id: number; name: string; role: Role; indian: boolean; rank: number; rating: number
-  /** e.g. bowl_death; null when no phase has 30+ pressure balls */
-  gap: string | null; gap_rank: number | null
-  phase_rv100: number | null; phase_balls: number
-  why: 'covers a gap' | 'adds depth' | 'indian'
+/** A player RR kept for 2027. role: keeper if he kept wicket in a quarter of his matches since 2024, all-rounder
+ * if he bowled 6+ and faced 8+ balls a match, bowler if he bowled 6+ balls a match, batter otherwise; null = no matches yet. */
+export interface RetainedPlayer {
+  id: number; name: string; role: 'batter' | 'keeper' | 'allrounder' | 'bowler' | null; overseas: boolean
+  /** 'public record' when the data cannot show the role (analysis/role_overrides.json) */
+  role_source?: 'data' | 'public record'
+  matches: number; wk_matches: number
+  bat26: { runs: number; sr: number } | null
+  bowl26: { wkts: number; econ: number } | null
 }
 /** a role RR need to fix for 2027 */
 export interface Recommendation {
@@ -341,8 +345,10 @@ export interface RRData {
   pool: { known: boolean; updated: string | null; announced: string[] }
   /** IPL squad rules (25 players, 8 overseas) against RR's retentions */
   slots: { squad_max: number; overseas_max: number; retained: number; retained_overseas: number; open: number; open_overseas: number } | null
-  /** RR's buy list for the open places, drawn from the two top 10s and matched to RR's gaps */
-  signings: Signing[]
+  /** how many retained players fill each role */
+  squad_need: Record<'batter' | 'keeper' | 'allrounder' | 'bowler', number>
+  /** RR's retained players for 2027, with a role worked out from their matches since 2024 */
+  retained_squad: RetainedPlayer[]
   provenance: Provenance
 }
 

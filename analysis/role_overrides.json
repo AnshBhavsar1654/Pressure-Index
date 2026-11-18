@@ -1,0 +1,6 @@
+{
+  "note": "Playing roles from the public record, for retained players whose role the data pack cannot show (it has no role field, and roles are otherwise worked out from matches since 2024). Lhuan-dre Pretorius keeps wicket for South Africa and Paarl Royals; at RR, Dhruv Jurel kept in all his matches, so the data never saw him keep.",
+  "roles": {
+    "Lhuan Pretorius": "keeper"
+  }
+}

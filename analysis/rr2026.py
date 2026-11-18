@@ -124,57 +124,39 @@ def retained_ids(mp: pd.DataFrame, cfg: dict) -> tuple[dict, list, set]:
     return ids, missing, {t for t in raw if t}
 
 
-def six_signings(bat_json: dict, bowl_json: dict, recs: list, gaps: list, slots: dict | None) -> list:
-    """RR's buy list for the places its retentions leave open, drawn only from the two submitted top 10s.
-    Indian places (open places minus overseas places) go to the best-rated Indian players in the top 10s.
-    Each signing is matched to the RR gap where he is strongest under pressure: his runs added per 100
-    pressure balls in that phase, from 30+ pressure balls there. The overseas places first cover the gaps
-    the Indian buys leave open, in RR's priority order (most behind the other playoff sides first); a
-    spare place adds depth to the highest-priority gap. Nothing here changes the rankings."""
-    if not slots:
-        return []
-    top = {role: sorted((p for p in js["players"] if p["rank"] and p["rank"] <= 10), key=lambda p: p["rank"])
-           for role, js in (("bat", bat_json), ("bowl", bowl_json))}
-    order = [r["gap"]["key"] for r in recs]
-    rank_of = {g["key"]: g["rank"] for g in gaps}
-
-    def phase(p, key):
-        ph = key.split("_")[1]
-        return next((x for x in p["phases"] if x["phase"].lower() == ph), None)
-
-    def strength(p, key):
-        x = phase(p, key)
-        return x["rv100"] if x and x["balls"] >= 30 and x["rv100"] is not None and x["rv100"] > 0 else None
-
-    def entry(role, p, key, why):
-        x = phase(p, key) if key else None
-        return {"id": p["id"], "name": p["name"], "role": role, "indian": p["indian"], "rank": p["rank"],
-                "rating": p["p_rv100"], "gap": key, "gap_rank": rank_of.get(key) if key else None,
-                "phase_rv100": x["rv100"] if x else None, "phase_balls": x["balls"] if x else 0, "why": why}
-
-    n_indian = max(slots["open"] - slots["open_overseas"], 0)
-    indians = sorted(((r, p) for r in top for p in top[r] if p["indian"]), key=lambda rp: -rp[1]["p_rv100"])[:n_indian]
-    chosen, covered = [], set()
-    for role, p in indians:
-        fits = [(strength(p, k), k) for k in order if k.startswith(role) and strength(p, k) is not None]
-        key = max(fits)[1] if fits else None
-        chosen.append(entry(role, p, key, "indian"))
-        if key:
-            covered.add(key)
-    taken = {c["id"] for c in chosen}
-    overseas = []
-    for first_pass in (True, False):
-        for key in order:
-            if len(overseas) >= slots["open_overseas"] or (first_pass and key in covered):
-                continue
-            role = key.split("_")[0]
-            cands = [(strength(p, key), p) for p in top[role] if not p["indian"] and p["id"] not in taken and strength(p, key) is not None]
-            if cands:
-                _, p = max(cands, key=lambda c: c[0])
-                overseas.append(entry(role, p, key, "covers a gap" if first_pass else "adds depth"))
-                taken.add(p["id"])
-                covered.add(key)
-    return overseas + chosen
+def retained_squad(b: pd.DataFrame, mp: pd.DataFrame, kept: list, nat, squad: list) -> list:
+    """RR's retained players for 2027, each given a role from what he actually did in his matches since 2024
+    (the data pack has no role field): wicket-keeper if he kept wicket in at least a quarter of his matches
+    (playing_eleven is_wk), all-rounder if he bowled 6+ legal balls and faced 8+ balls a match, bowler if he
+    bowled 6+ balls a match, batter otherwise. A player with no matches in the data gets no role."""
+    pe = pd.read_csv(DATA / "playing_eleven.csv").merge(pd.read_csv(DATA / "matches.csv")[["match_id", "match_date"]], on="match_id")
+    pe = pe[(pe.match_date >= "2024-01-01") & (pe.is_played.astype(str).str.lower() == "true")]
+    bb = b[b.season_yr >= 2024]
+    names = mp.groupby("player_id").player_name.last()
+    rows26 = {r["id"]: r for r in squad}
+    ro = ROOT / "analysis" / "role_overrides.json"
+    overrides = json.loads(ro.read_text(encoding="utf-8")).get("roles", {}) if ro.exists() else {}
+    out = []
+    for pid in kept:
+        g = pe[pe.player_id == pid]
+        nm = int(g.match_id.nunique())
+        wk = int((g.is_wk.astype(str).str.lower() == "true").sum())
+        faced = int(len(bb[(bb.striker_id == pid) & ~bb.is_wide]))
+        bowled = int(bb[bb.bowler_id == pid].legal.sum())
+        fpm, bpm = faced / max(nm, 1), bowled / max(nm, 1)
+        role = (None if nm == 0 else "keeper" if wk >= 0.25 * nm else "allrounder" if bpm >= 6 and fpm >= 8
+                else "bowler" if bpm >= 6 else "batter")
+        source = "data"
+        if names.get(pid) in overrides:  # the public record, where the data cannot see the role
+            role, source = overrides[names.get(pid)], "public record"
+        r = rows26.get(int(pid), {})
+        bat, bowl = r.get("bat"), r.get("bowl")
+        out.append({"id": int(pid), "name": names.get(pid, str(pid)), "role": role, "role_source": source,
+                    "overseas": nat(pid) not in ("India", "India (uncapped)"),
+                    "matches": nm, "wk_matches": wk,
+                    "bat26": {"runs": bat["runs"], "sr": bat["sr"]} if bat and bat.get("balls", 0) >= 10 else None,
+                    "bowl26": {"wkts": bowl["wkts"], "econ": bowl["econ"]} if bowl and bowl.get("balls", 0) >= 12 else None})
+    return sorted(out, key=lambda x: (-(x["bat26"] or {}).get("runs", 0), -(x["bowl26"] or {}).get("wkts", 0), -x["matches"]))
 
 
 def main():
@@ -389,7 +371,9 @@ def main():
     # top-10 players fill these roles.
     targets = sorted([g for g in gaps if g["gap_vs_avg"] < 0 or g["gap_vs_top4"] < 0], key=lambda g: g["gap_vs_top4"])
     recs = [{"gap": gp, "role": ROLE[gp["key"]][0], "role_desc": ROLE[gp["key"]][1]} for gp in targets]
-    signings = six_signings(bat_json, bowl_json, recs, gaps, slots)
+    kept_squad = retained_squad(b, mp, [pid for pid, team in retained.items() if team == RR], nat, squad)
+    # what the retained squad holds, by role: the context for which players RR most need
+    squad_need = {r: sum(p["role"] == r for p in kept_squad) for r in ("batter", "keeper", "allrounder", "bowler")}
 
     rr_row = table[table.team == RR].iloc[0]
     out = {
@@ -412,7 +396,8 @@ def main():
         "recommendations": recs,
         "pool": {"known": pool_known, "updated": pool.get("updated"), "announced": sorted(announced)},
         "slots": slots,
-        "signings": signings,
+        "squad_need": squad_need,
+        "retained_squad": kept_squad,
     }
     # ------------------------------------------------------------ provenance + cross-checks
     # Reference figures from the public record (Wikipedia, "2026 Rajasthan Royals season",

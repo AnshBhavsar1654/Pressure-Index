@@ -346,9 +346,9 @@ export default function MethodPage() {
           place the board-release rule allows. The likely-rank charts below show exactly which ranks are safe.
         </li>
         <li>
-          <b>What the data cannot see:</b> fielding, pitch and venue, batter-against-bowler match-ups, injuries, and the ICC T20 World
-          Cups and domestic cricket, which the data pack does not include. First-innings pressure is harder to measure than chase
-          pressure, so pressure balls lean towards chases.
+          <b>What the data cannot see:</b> fielding, pitch and venue, batter-against-bowler match-ups, injuries, domestic cricket, and
+          the 2022 and 2024 T20 World Cups (the 2026 one is added from public data). First-innings pressure is harder to measure than
+          chase pressure, so pressure balls lean towards chases.
         </li>
       </ul>
 
@@ -436,10 +436,12 @@ export default function MethodPage() {
       </dl>
 
       <SectionHead title="Data sources" id="data">
-        The analysis uses only the official SupeRR Selector Season 2 data pack: ball-by-ball records, matches, competitions, playing XIs
-        and squad lists for IPL and T20Is from 2022 to 2026. Public information is used for two things only: the IPL 2027 retention
-        lists (which players can be bought) and a cross-check of RR’s 2026 figures, where {rr.provenance.checks_passed} of{' '}
-        {rr.provenance.checks.length} match exactly.{' '}
+        The analysis is built on the official SupeRR Selector Season 2 data pack: ball-by-ball records, matches, competitions, playing
+        XIs and squad lists for IPL and T20Is from 2022 to 2026.
+        {s.public &&
+          ` The pack has no World Cup cricket, so the ${s.public.name} (India and Sri Lanka, February–March 2026) is added from public data: ${s.public.matches} matches and ${fmt.int(s.public.balls)} balls from ${s.public.source}, converted into the data pack's own format. Two matches were washed out and the source lacks Afghanistan's four group games; the rest are all here. Players are matched to the data pack by lining up matches that appear in both sources ball by ball, so a name written with initials cannot be confused. Semi-finals and the final count as knockouts.`}{' '}
+        Public information is also used for the IPL 2027 retention lists (which players can be bought) and a cross-check of RR’s 2026
+        figures, where {rr.provenance.checks_passed} of {rr.provenance.checks.length} match exactly.{' '}
         <Link href="/rajasthan/#sources" className="font-semibold text-pink-ink hover:underline">
           See the checks
         </Link>

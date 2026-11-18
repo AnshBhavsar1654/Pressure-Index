@@ -127,6 +127,7 @@ async function main() {
     T(s, l, { x: 0.7 + i * 3.9, y: 5.75, w: 3.6, h: 0.4, fontSize: 14, color: C.accent6, objectName: `stat ${i + 1} label` });
   });
   T(s, "Ansh Bhavsar · November 2026", { x: 0.7, y: 6.75, w: 6, h: 0.35, fontSize: 12, color: C.accent4, objectName: "byline" });
+  if (S.public) T(s, `Data: official data pack + 2026 T20 World Cup (${S.public.matches} matches, Cricsheet)`, { x: 6.2, y: 6.75, w: 6.45, h: 0.35, fontSize: 12, color: C.accent4, align: "right", objectName: "data note" });
   s.addNotes("The question from the brief: who performs reliably under pressure, compared with their usual level. The answer: one rating per player, built from what was at stake on every ball, and 20 players RR can actually buy.");
 
   // ================================================================ 2. the picks
@@ -376,33 +377,6 @@ async function main() {
   T(s, "Picks above average under pressure in that phase (30+ balls), runs per 100.", { x: 7.55, y: 6.78, w: 5.1, h: 0.25, fontSize: 10, color: C.accent4, objectName: "gap caption" });
   s.addNotes("RR's top order carried 2026; the last five overs, with bat and ball, were 8th of 10. For each gap, the picks shown are those above average under pressure in that exact phase.");
 
-  // ================================================================ 11b. the six signings
-  s = pres.addSlide({ masterName: "Content", sectionTitle: "Evidence for the top 10" });
-  s.addText(`RR’s ${sl.open} signings: ${sl.open_overseas} overseas, ${sl.open - sl.open_overseas} Indian, each filling a gap`, { placeholder: "title" });
-  const PHW = { powerplay: "in the powerplay", middle: "in the middle overs", death: "at the death" };
-  const sgroups = [["Overseas places", RR.signings.filter((x) => !x.indian)], ["Indian places", RR.signings.filter((x) => x.indian)]];
-  sgroups.forEach(([label, items], ci) => {
-    const x0 = 0.6 + ci * 6.2;
-    T(s, label, { x: x0, y: 1.45, w: 5.9, h: 0.4, fontSize: 18, bold: true, fontFace: THEME.headFontFace, objectName: `${label} heading` });
-    items.forEach((g, i) => {
-      const y = 2.0 + i * 1.5;
-      card(s, x0, y, 5.9, 1.32, `${label} signing ${i + 1} card`);
-      const ph = g.gap ? g.gap.split("_")[1] : null;
-      const roleLabel = g.gap ? SLOT[g.gap] : `${g.role === "bat" ? "Batting" : "Bowling"} depth`;
-      T(s, [{ text: roleLabel.toUpperCase(), options: { bold: true, color: C.accent1, fontSize: 11 } },
-        ...(g.why === "adds depth" ? [{ text: "   second option", options: { color: C.accent4, fontSize: 11 } }] : [])],
-        { x: x0 + 0.3, y: y + 0.12, w: 5.3, h: 0.28, objectName: `${label} signing ${i + 1} role` });
-      T(s, [{ text: g.name, options: { bold: true, fontSize: 18, fontFace: THEME.headFontFace } },
-        { text: `   #${g.rank} ${g.role === "bat" ? "batter" : "bowler"}${g.indian ? " · IND" : ""}`, options: { fontSize: 12, color: C.accent4 } }],
-        { x: x0 + 0.3, y: y + 0.4, w: 5.3, h: 0.42, valign: "middle", objectName: `${label} signing ${i + 1} name` });
-      const ev = g.gap && g.phase_rv100 != null
-        ? `${sg(g.phase_rv100, 0)} runs ${g.role === "bat" ? "added" : "saved"} per 100 pressure balls ${PHW[ph]} (${g.phase_balls} balls); RR were ${g.gap_rank}th of 10 there`
-        : `Rating ${sg(g.rating)}; too few pressure balls in any one phase to name a role yet`;
-      T(s, ev, { x: x0 + 0.3, y: y + 0.84, w: 5.3, h: 0.36, fontSize: 12.5, color: C.text1, objectName: `${label} signing ${i + 1} evidence` });
-    });
-  });
-  s.addNotes("The top 10s answer the brief. This slide answers RR's squad question: six open places, at most three overseas. Indian places go to the best-rated Indian players in the top 10s; overseas places cover the gaps the Indian buys leave open, in RR's priority order.");
-
   // ================================================================ 12. reliability
   pres.addSection({ title: "Reliability and limitations" });
   s = pres.addSlide({ masterName: "Content", sectionTitle: "Reliability and limitations" });
@@ -439,7 +413,7 @@ async function main() {
   const lim = [
     [Pi.PiWarningBold, "Batting under pressure is hard to predict", `Next-season correlation is ${f2(F.bat.rating)} for batters (bowlers ${f2(F.bowl.rating)}). A batter’s usual level is the best guide, which is why the rating leans on it. Batting ranks 6–10 are close calls.`],
     [Pi.PiPulseBold, "“Clutch” is real but small", `Lift repeats only weakly between odd and even matches (${f2(BAT.split_half.lift)} batters, ${f2(BOWL.split_half.lift)} bowlers), so it is a filter (never a player who dips), not a score to maximise.`],
-    [Pi.PiEyeSlashBold, "What the data cannot see", "No ICC World Cups, no domestic cricket, no ages; no fielding, venue or batter-versus-bowler match-ups. Young Indian talent cannot be judged: teams kept " + `${S.new_indians.kept} of ${S.new_indians.total} newer Indian players.`],
+    [Pi.PiEyeSlashBold, "What the data cannot see", "No domestic cricket, no ages, no 2022 or 2024 World Cups (2026 is added from public data); no fielding, venue or batter-versus-bowler match-ups. Young Indian talent cannot be judged: teams kept " + `${S.new_indians.kept} of ${S.new_indians.total} newer Indian players.`],
     [Pi.PiIdentificationCardBold, "Availability checked by hand", "Retentions from the official lists; Harry Brook’s ban and retirements (e.g. Mohit Sharma) entered manually; Bangladesh board release is a risk, so one per list."],
   ];
   for (const [i, [icon, h, d]] of lim.entries()) {
@@ -457,13 +431,11 @@ async function main() {
   const nm = (k, n = 2) => (strong[k] || []).slice(0, n).map((x) => x.p.name).join(" and ");
   const ind = bat10.concat(bowl10).filter((p) => p.indian).map((p) => p.name);
   const indians = ind.length > 1 ? ind.slice(0, -1).join(", ") + " and " + ind[ind.length - 1] : ind.join("");
-  const short = { bowl_death: "death", bowl_middle: "middle overs", bowl_powerplay: "new ball", bat_death: "finisher", bat_middle: "middle order", bat_powerplay: "opener" };
-  const lab = (g) => `${g.name}${g.gap ? ` (${short[g.gap]})` : ""}`;
-  const joinAnd = (xs) => (xs.length > 1 ? xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1] : xs.join(""));
-  s.addText(`Overseas: ${joinAnd(RR.signings.filter((g) => !g.indian).map(lab))}. Indian: ${joinAnd(RR.signings.filter((g) => g.indian).map(lab))}. Six players for RR’s ${sl.open} open places, ${sl.open_overseas} of them overseas.`, { placeholder: "body" });
+  const need = RR.squad_need;
+  s.addText(`Death overs: ${nm("bowl_death")} with the ball, ${nm("bat_death")} with the bat. Indian picks: ${indians}. RR kept ${need.batter + need.keeper} batters and ${need.bowler} bowlers, so batting from number 3 down is the first need.`, { placeholder: "body" });
   T(s, [
     { text: "Reproduce everything from the official data pack:", options: { bold: true, breakLine: true, color: C.background1 } },
-    { text: "python -I analysis/pipeline.py  ·  python -I analysis/rr2026.py  ·  python analysis/worked_example.py", options: { fontFace: "Courier New", color: C.accent6, breakLine: true } },
+    { text: "python -I analysis/public_wc2026.py  ·  python -I analysis/pipeline.py  ·  python -I analysis/rr2026.py  ·  python analysis/worked_example.py", options: { fontFace: "Courier New", color: C.accent6, fontSize: 12, breakLine: true } },
     { text: "The interactive dashboard shows every player’s profile, match by match, and the full method with a worked example.", options: { color: C.accent6 } },
   ], { x: 0.7, y: 5.2, w: 11.9, h: 1.3, fontSize: 14, valign: "top", objectName: "reproduce text" });
   s.addNotes("Close with the recommendation and how to check it.");

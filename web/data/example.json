@@ -12,24 +12,24 @@
   "balls_left": 19,
   "knockout": false,
   "threshold": null,
-  "wp": 0.387,
-  "wp_after": 0.559,
-  "stakes": 4.7,
+  "wp": 0.388,
+  "wp_after": 0.564,
+  "stakes": 4.9,
   "runs": 6,
   "out": 0,
-  "expected": 1.58,
+  "expected": 1.57,
   "wkt_cost": 0.0,
   "centre": 0.29,
-  "rv": 4.71
+  "rv": 4.72
  },
  "seasons": [
   {
    "season": 2022,
    "weight": 0.2,
-   "p_balls": 208,
-   "p_runs": 68.3,
-   "n_balls": 163,
-   "n_runs": -17.4
+   "p_balls": 207,
+   "p_runs": 70.8,
+   "n_balls": 164,
+   "n_runs": -21.1
   },
   {
    "season": 2023,
@@ -37,104 +37,104 @@
    "p_balls": 3,
    "p_runs": -9.6,
    "n_balls": 87,
-   "n_runs": -30.9
+   "n_runs": -30.8
   },
   {
    "season": 2024,
    "weight": 0.6,
-   "p_balls": 105,
-   "p_runs": 30.6,
-   "n_balls": 318,
-   "n_runs": 76.7
+   "p_balls": 110,
+   "p_runs": 33.2,
+   "n_balls": 313,
+   "n_runs": 76.1
   },
   {
    "season": 2025,
    "weight": 0.8,
-   "p_balls": 125,
-   "p_runs": 28.9,
-   "n_balls": 238,
-   "n_runs": 78.8
+   "p_balls": 126,
+   "p_runs": 34.4,
+   "n_balls": 237,
+   "n_runs": 71.8
   },
   {
    "season": 2026,
    "weight": 1.0,
-   "p_balls": 82,
-   "p_runs": 6.7,
-   "n_balls": 258,
-   "n_runs": 10.5
+   "p_balls": 115,
+   "p_runs": 44.1,
+   "n_balls": 357,
+   "n_runs": -0.7
   }
  ],
  "steps": {
   "K": 200,
-  "p_balls": 523,
-  "p_matches": 36,
-  "p_weighted": 287.8,
-  "p_sum": 58.1,
-  "p_raw100": 20.2,
-  "n_balls": 1064,
-  "n_weighted": 706.6,
-  "n_sum": 103.8,
-  "n_raw100": 14.7,
-  "n_rv100": 11.5,
-  "n_keep": 0.779,
-  "share": 0.59,
-  "rating100": 16.6,
-  "lift100": 5.1,
-  "wpa_sum": 0.728,
-  "wpa100": 0.139,
-  "c_pos": 18,
-  "c_n": 27,
-  "recent_balls": 207,
-  "recent100": 7.8,
+  "p_balls": 561,
+  "p_matches": 28,
+  "p_weighted": 324.4,
+  "p_sum": 101.9,
+  "p_raw100": 31.4,
+  "n_balls": 1158,
+  "n_weighted": 802.0,
+  "n_sum": 85.9,
+  "n_raw100": 10.7,
+  "n_rv100": 8.6,
+  "n_keep": 0.8,
+  "share": 0.619,
+  "rating100": 22.7,
+  "lift100": 14.1,
+  "wpa_sum": 1.282,
+  "wpa100": 0.229,
+  "c_pos": 20,
+  "c_n": 28,
+  "recent_balls": 241,
+  "recent100": 17.2,
   "recent_from": 2025
  },
  "rank": 1,
- "merit_rank": 13,
- "n_qualified": 186,
- "n_ranked": 31,
+ "merit_rank": 10,
+ "n_qualified": 173,
+ "n_ranked": 27,
  "next": [
   {
    "rank": 2,
-   "name": "Daryl Mitchell",
-   "rating": 14.13
+   "name": "Kamindu Mendis",
+   "rating": 11.33
   },
   {
    "rank": 3,
-   "name": "Kamindu Mendis",
-   "rating": 12.88
+   "name": "Towhid Hridoy",
+   "rating": 11.21
   },
   {
    "rank": 4,
-   "name": "Kusal Mendis",
-   "rating": 12.62
+   "name": "Daryl Mitchell",
+   "rating": 10.87
   }
  ],
  "boot": {
-  "p_top10": 0.775,
-  "rank_med": 4,
+  "p_top10": 0.927,
+  "rank_med": 1,
   "rank_lo": 1,
-  "rank_hi": 19
+  "rank_hi": 13
  },
  "press": {
-  "balls": 523,
-  "runs": 730,
-  "outs": 21,
-  "dot_pct": 36.9,
-  "bnd_pct": 19.5,
-  "rv100": 23.9,
-  "sr": 139.6,
-  "par_sr": 129.3,
-  "avg": 34.8
+  "balls": 561,
+  "runs": 828,
+  "outs": 22,
+  "dot_pct": 36.4,
+  "bnd_pct": 21.2,
+  "rv100": 30.8,
+  "sr": 147.6,
+  "par_sr": 131.2,
+  "avg": 37.6
  },
  "norm": {
-  "balls": 1064,
-  "runs": 1411,
-  "outs": 48,
-  "dot_pct": 39.5,
-  "bnd_pct": 18.5,
-  "rv100": 11.1,
-  "sr": 132.6,
-  "par_sr": 136.0,
-  "avg": 29.4
+  "balls": 1158,
+  "runs": 1511,
+  "outs": 52,
+  "dot_pct": 38.9,
+  "bnd_pct": 17.9,
+  "rv100": 8.2,
+  "sr": 130.5,
+  "par_sr": 136.5,
+  "avg": 29.1
  }
 }
