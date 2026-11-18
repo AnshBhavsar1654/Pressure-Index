@@ -337,6 +337,12 @@ export default function PicksPage() {
                 </li>
               ))}
             </ol>
+            <Link
+              href={`/rankings/${role}/`}
+              className="mt-3 inline-block text-[13.5px] font-semibold text-pink-ink hover:underline"
+            >
+              See more: all qualified {role === 'bat' ? 'batters' : 'bowlers'} RR can sign →
+            </Link>
           </div>
         ))}
         {em.bat.length + em.bowl.length + ind.length > 0 && (
