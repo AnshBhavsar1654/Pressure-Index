@@ -312,7 +312,7 @@ async function main() {
   card(s, 9.05, 1.45, 3.6, 5.3, "rules card", C.text1);
   T(s, "Auction rules", { x: 9.3, y: 1.65, w: 3.1, h: 0.45, fontSize: 18, bold: true, color: C.background1, fontFace: THEME.headFontFace, objectName: "rules heading" });
   T(s, [
-    { text: "Out: RR’s squad, other teams’ retentions, retired or banned players (Harry Brook), Pakistani players", options: { bullet: true, breakLine: true } },
+    { text: "Out: RR’s squad, other teams’ retentions, retired or banned players (Harry Brook), Pakistani players, anyone with no top-level cricket in 2026", options: { bullet: true, breakLine: true } },
     { text: "Out: anyone worse under pressure than usual", options: { bullet: true, breakLine: true } },
     { text: `Each above-average Indian player gets a place: RR have ${sl.open} places left, only ${sl.open_overseas} overseas`, options: { bullet: true, breakLine: true } },
     { text: "At most one Bangladeshi player per list: board release (NOC) risk", options: { bullet: true } },

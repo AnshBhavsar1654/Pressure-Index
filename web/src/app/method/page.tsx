@@ -171,6 +171,7 @@ export default function MethodPage() {
         ['Indian players', `A third of the bar: ${e.indian_min[0]} balls, ${e.indian_min[1]} matches, ${e.indian_min[2]} in ${e.recent_from}–26`, 'The pack has no domestic cricket, so an Indian player’s only top-level cricket is the IPL'],
         ['Indian places', `Up to ${e.indian_places} guaranteed, only if rating > 0`, rr.slots ? `RR have only ${rr.slots.open_overseas} overseas places left; never a below-average player` : 'Overseas places are scarce'],
         ['Bangladesh', `At most ${e.max_bangladesh} per top 10`, 'The board often limits IPL release (NOC)'],
+        ['Active in 2026', 'Played top-level cricket in 2026 (IPL or full-member T20I)', 'An auction buys 2027 form; the 2025–26 evidence rule alone can be met in early 2025'],
         ['No dip', 'Lift must be 0 or more', 'The brief asks who rises; a player who dips is never picked'],
         ['Not buyable', 'RR’s squad, other teams’ retentions, retired, banned, Pakistani players', 'The list is for the 2027 auction'],
         ['Ordering', 'By pressure rating alone', 'Blending in win impact or consistency predicted worse'],
@@ -326,6 +327,7 @@ export default function MethodPage() {
           <Bullets
             items={[
               'Only players RR can buy at the 2027 auction',
+              'Only players active in 2026 (IPL or full-member T20I)',
               'Never a player who dips under pressure (negative lift)',
               `Each above-average Indian gets a place (up to ${e.indian_places})${rr.slots ? `: RR have ${rr.slots.open_overseas} overseas places left` : ''}`,
               `At most ${e.max_bangladesh} Bangladeshi player per list (board release)`,

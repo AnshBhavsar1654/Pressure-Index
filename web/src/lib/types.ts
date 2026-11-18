@@ -58,7 +58,7 @@ export interface Player {
   /** rank among every qualified player by rating, before any auction rule */
   merit_rank: number | null
   /** why a player is outside the submitted ranking: cannot be signed, or dips under pressure */
-  excluded: 'rr' | 'pakistan' | 'retained' | 'retired' | 'unavailable' | 'dips' | null
+  excluded: 'rr' | 'pakistan' | 'retained' | 'retired' | 'unavailable' | 'inactive' | 'dips' | null
   /** Indian player: a third of the evidence bar, and a priority top-10 place if above average */
   indian: boolean
   /** rank among Indian options beyond the top 10 (signable, in a 2026 squad, above average, not dipping) */

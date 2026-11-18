@@ -297,7 +297,7 @@ export default function PicksPage() {
               <li>
                 <b>Not in the auction:</b> RR’s own squad,{' '}
                 {rr.pool.known || rr.pool.announced.length ? 'players retained by other teams, ' : ''}retired or banned players
-                (Harry Brook can’t play in 2027) and Pakistani players.
+                (Harry Brook can’t play in 2027) and Pakistani players. Anyone with no top-level cricket in 2026 is left out too.
               </li>
               <li>
                 <b>Not recommended:</b> anyone worse under pressure than usual.
@@ -305,7 +305,7 @@ export default function PicksPage() {
               <li>
                 <b>Indian players:</b> each one above average under pressure gets a place
                 {rr.slots ? `, because RR have only ${rr.slots.open_overseas} overseas places left` : ''}. Retentions took most of
-                them, so {ind.length} more are listed as Indian options.
+                them, so {ind.length} more {ind.length === 1 ? 'is' : 'are'} listed as Indian options.
               </li>
               <li>
                 <b>Bangladeshi players:</b> at most one per list, because their board often limits IPL release.

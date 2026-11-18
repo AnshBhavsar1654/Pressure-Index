@@ -56,8 +56,11 @@ MIN_RECENT_BALLS = 20         #    safe because the rating leans on the usual le
 # the evidence bars, so a record cannot rest on one or two playoff first innings. (Batting forward test
 # 0.079 -> 0.084; bowling unchanged.)
 KO_FIRST_INNINGS = 0.5
-# Current players: the 2025-26 evidence bar (20 pressure balls in those two seasons) already means every
-# ranked player has played top-level cricket in the last two years, so no separate activity rule is needed.
+# Active in 2026: an auction buys 2027 form, so a recommended player must have played top-level cricket (IPL or a
+# full-member T20I, the 2026 World Cup included) in 2026. The 2025-26 evidence bar alone is not enough: it can be
+# met entirely in early 2025 (Mark Wood's last match was February 2025). Inactive players keep their rating and
+# profile but are not recommended.
+ACTIVE_SEASON = 2026
 MATCH_MIN_BALLS = 6           # a match counts as a pressure appearance only with 6+ pressure balls (an over):
                               # a one-ball cameo is not a pressure innings or spell
 # The brief asks who rises and who dips under pressure, so a player whose rating is below his usual
@@ -877,6 +880,8 @@ def main():
         log("WARNING names not found in the data:", unmatched + unmatched_r + unmatched_u)
     log(f"retentions: {len(retained)} players from {sorted(announced)}")
     rr_squad = set(mp[(mp.comp_id == IPL_2026) & (mp.team_name == "Rajasthan Royals")].player_id)
+    a26 = b[b.top_level & (b.season_yr == ACTIVE_SEASON)]
+    active = set(a26.striker_id) | set(a26.non_striker_id) | set(a26.bowler_id)
 
     def exclusion(pid, name):
         """Why a player is left out of the submitted top 10, if they are."""
@@ -890,6 +895,8 @@ def main():
             return "rr" if retained[pid] == "Rajasthan Royals" else "retained"
         if pid in rr_squad and "Rajasthan Royals" not in announced:
             return "rr"  # until RR announce, their whole 2026 squad is treated as kept
+        if pid not in active:
+            return "inactive"  # no top-level cricket in 2026 (injured, retired from internationals or unsigned)
         return None
 
     results = {}
@@ -996,7 +1003,7 @@ def main():
                                          "emerging_born_from": BIRTH["cutoff"], "indian_bar": round(INDIAN_BAR, 4),
                                          "indian_min": [int(np.ceil(x * INDIAN_BAR - 1e-9)) for x in (MIN_PRESSURE_BALLS, MIN_PRESSURE_MATCHES, MIN_RECENT_BALLS)],
                                          "indian_places": INDIAN_PLACES, "scout_min_balls": SCOUT_MIN_BALLS,
-                                         "max_bangladesh": MAX_BANGLADESH,
+                                         "max_bangladesh": MAX_BANGLADESH, "active_season": ACTIVE_SEASON,
                                          "n_indian_top10": int(indian.reindex(list(top10), fill_value=False).sum()),
                                          "n_eligible": int(len(eligible)),
                                          "n_ranked": int(s["rank"].notna().sum()),

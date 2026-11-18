@@ -55,7 +55,7 @@ export const TERMS = {
   },
   rank: {
     label: 'Rank',
-    def: 'Players RR can buy at the 2027 auction, by pressure rating. Out: RR’s squad, other teams’ retentions, retired, banned and Pakistani players, and anyone who dips under pressure. Each above-average Indian gets a top-10 place (up to 5; RR have 3 overseas places left). At most one Bangladeshi player per list.',
+    def: 'Players RR can buy at the 2027 auction, by pressure rating. Out: RR’s squad, other teams’ retentions, retired, banned and Pakistani players, anyone with no top-level cricket in 2026, and anyone who dips under pressure. Each above-average Indian gets a top-10 place (up to 5; RR have 3 overseas places left). At most one Bangladeshi player per list.',
   },
   qualified: {
     label: 'Qualified',
@@ -115,6 +115,7 @@ export const EXCLUDED_NOTE = {
   retained: 'Retained by their team',
   retired: 'Retired from the IPL',
   unavailable: 'Can’t play IPL 2027',
+  inactive: 'Not active in 2026',
   dips: 'Dips under pressure',
 } as const
 export const EXCLUDED_LONG = {
@@ -123,6 +124,7 @@ export const EXCLUDED_LONG = {
   retained: 'Retained by their IPL team for 2027, so not in the auction and left out of my ranking.',
   retired: 'Retired from the IPL, so not available and left out of my ranking.',
   unavailable: 'Cannot play IPL 2027 (banned from the IPL for withdrawing from a season), so left out of my ranking.',
+  inactive: 'No top-level cricket in 2026 (IPL or full-member T20I), so not a current pick for the 2027 auction and left out of my ranking.',
   dips: 'Worse under pressure than usual (negative lift), so not recommended as a pressure pick, however good the usual level is.',
 } as const
 

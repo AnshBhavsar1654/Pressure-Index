@@ -162,7 +162,7 @@ export default function SourcesPage() {
           {
             name: 'Retired or unavailable',
             what: `${inp.retired} players retired from the IPL; ${inp.unavailable.join(', ') || 'none'} banned for 2027`,
-            use: 'Never recommended',
+            use: 'Never recommended (nor is anyone with no top-level cricket in 2026, read from the pack)',
           },
           {
             name: 'Auction eligibility',
