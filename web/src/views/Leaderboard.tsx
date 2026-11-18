@@ -7,6 +7,7 @@ import { ChartFrame, Legend } from '@/components/charts/core'
 import { NAT_OPTIONS, natMatch, Pick, Segmented, type Nat } from '@/components/filters'
 import { PressureScatter } from '@/components/charts/Scatter'
 import { Meter, PlayerAvatar, RetainedMark } from '@/components/kit'
+import { EmergingTag } from '@/components/Term'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -236,6 +237,7 @@ export function Leaderboard({
                           {p.name}
                         </a>
                         {p.retained_by && <RetainedMark team={p.retained_by} size={17} />}
+                        {p.emerging && <EmergingTag />}
                       </span>
                       <span className="block text-[12px] text-ink-3">
                         {role === 'bowl' ? p.bowl_type : p.hand === 'LHB' ? 'Left-handed' : p.hand === 'RHB' ? 'Right-handed' : p.hand}

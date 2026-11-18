@@ -90,8 +90,8 @@
  },
  "rank": 1,
  "merit_rank": 9,
- "n_qualified": 161,
- "n_ranked": 21,
+ "n_qualified": 145,
+ "n_ranked": 23,
  "next": [
   {
    "rank": 2,
@@ -110,10 +110,10 @@
   }
  ],
  "boot": {
-  "p_top10": 0.945,
+  "p_top10": 0.94,
   "rank_med": 1,
   "rank_lo": 1,
-  "rank_hi": 11
+  "rank_hi": 12
  },
  "press": {
   "balls": 561,

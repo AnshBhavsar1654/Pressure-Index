@@ -46,8 +46,8 @@ RNG = np.random.default_rng(27)
 PRESSURE_PCTL = 0.80          # 1. a pressure ball: top 20% of balls by stakes (plus every knockout ball)
 K = 200                       # 2. a pressure record counts half at 200 balls; the rest is the usual level
 SEASON_WEIGHT = {2022: 0.2, 2023: 0.4, 2024: 0.6, 2025: 0.8, 2026: 1.0}  # 3. each year back counts 20% less
-MIN_PRESSURE_BALLS = 30       # 4. evidence to be ranked: 30 pressure balls in 3 matches, at least
-MIN_PRESSURE_MATCHES = 3      #    20 of them in 2025-26 (still doing it now: a 2027 pick must have been
+MIN_PRESSURE_BALLS = 50       # 4. evidence to be ranked: 50 pressure balls in 4 matches, at least
+MIN_PRESSURE_MATCHES = 4      #    20 of them in 2025-26 (still doing it now: a 2027 pick must have been
 RECENT_FROM = 2025            #    seen under pressure recently, not on a ball or two). A short record is
 MIN_RECENT_BALLS = 20         #    safe because the rating leans on the usual level until it grows.
 # A knockout first innings is high stakes, but less than a chase: the other side still has to bat. Its balls
@@ -55,12 +55,14 @@ MIN_RECENT_BALLS = 20         #    safe because the rating leans on the usual le
 # the evidence bars, so a record cannot rest on one or two playoff first innings. (Batting forward test
 # 0.079 -> 0.084; bowling unchanged.)
 KO_FIRST_INNINGS = 0.5
-ACTIVE_SEASON = 2026          # a ranked player must have played top-level cricket this season
+# Current players: the 2025-26 evidence bar (20 pressure balls in those two seasons) already means every
+# ranked player has played top-level cricket in the last two years, so no separate activity rule is needed.
 MATCH_MIN_BALLS = 6           # a match counts as a pressure appearance only with 6+ pressure balls (an over):
                               # a one-ball cameo is not a pressure innings or spell
 # The brief asks who rises and who dips under pressure, so a player whose rating is below his usual
 # level (lift < 0) is never recommended, however good his usual level is.
-# Indian players need a third of the evidence (10 balls, 1 match, 7 in 2025-26). The data pack has no
+# Indian players need a third of the evidence (17 balls, 2 matches, 7 in 2025-26). (30 balls in 3 matches let a
+# 36-ball, mostly-average record into a top 10, so the overseas bar is 50 in 4.) The data pack has no
 # domestic cricket, so an Indian player's only top-level cricket here is the IPL, while an international
 # adds T20Is: the same bar would hold Indians to a far longer wait for the same evidence. (A third rather
 # than a half lets a current IPL batter with one season of pressure balls, such as Himmat Singh, be
@@ -80,7 +82,6 @@ MAX_BANGLADESH = 1
 # no ages and no domestic cricket, and "first seen in the data" also catches returning veterans.)
 SCOUT_MIN_BALLS = 60
 BIG_GAME_WPA = 0.15
-NEW_FROM = 2024   # for the retention finding: Indian players first seen in 2024 or later
 # Ratings use top-level cricket only: the IPL and T20Is between two full-member nations. Associate
 # T20Is and A-team tournaments are left out rather than down-weighted (one rule, no fractions).
 FULL_MEMBERS = {
@@ -91,9 +92,12 @@ TOP_LEVEL = ("IPL", "T20I Full")
 # Rain: matches cut below 10 overs a side are left out of pressure (a 5-over game is a different sport).
 # Longer reduced games, like the 2023 IPL final (171 off 15 overs), are judged on their revised target.
 MIN_MATCH_BALLS = 60
-# Fresh picks: the ranked players who are newcomers (first top-level match 2024 or later).
-FRESH_FROM = 2024
-PROFILE_MIN_BALLS = 1     # every player with any top-level pressure ball gets a profile page
+NEW_INDIAN_FROM = 2024   # for the retention finding: Indian players first seen in 2024 or later
+# Emerging: under 26 at the start of IPL 2027 (born on or after 1 April 2001, the IPL Emerging Player age test),
+# from public birth dates in birth_dates.json. A label, not a quota: the ranking never uses age, and emerging
+# players clear the same bar and are rated on the same scale as everyone else.
+BIRTH = json.loads((ROOT / "analysis" / "birth_dates.json").read_text(encoding="utf-8"))
+PROFILE_MIN_BALLS = 0     # every top-level player gets a profile page, even with no pressure ball
 N_BOOT = int(__import__('os').environ.get('N_BOOT', 400))
 
 
@@ -605,7 +609,8 @@ def rate(pm: pd.DataFrame) -> pd.DataFrame:
     # consistency: pressure innings or spells of 6+ balls in which the player beat the average
     inn = x[(x.P == 1) & (single_n >= MATCH_MIN_BALLS)]
     c = inn.assign(pos=(inn.rv > 0) * inn["mult"]).groupby("pid").agg(c_n=("mult", "sum"), c_pos=("pos", "sum"))
-    t = p.join(n, how="left").join(r, how="left").join(c, how="left").fillna(0)
+    # outer: players with no pressure ball stay in (rating = usual level), so every player has a profile
+    t = p.join(n, how="outer").join(r, how="left").join(c, how="left").fillna(0)
     # pressure matches = matches with 6+ pressure balls; a one-ball cameo does not count as an appearance
     t["pmatches"] = inn.groupby("pid")["mult"].sum().reindex(t.index).fillna(0)
     t["rmatches"] = inn[inn.R == 1].groupby("pid")["mult"].sum().reindex(t.index).fillna(0)
@@ -897,10 +902,7 @@ def main():
         nat = pd.Series({pid: overrides.get(names.get(pid)) or (intl_meta.team_name.get(pid) if pid in intl_meta.index else None)
                          or ("India" if pid in ipl_meta.index else None) for pid in t.index})
         indian = nat.eq("India")
-        # still playing: top-level cricket (batting or bowling) in the current season
-        b_now = b[b.top_level & (b.season_yr == ACTIVE_SEASON)]
-        active = set(b_now.striker_id) | set(b_now.bowler_id)
-        eligible = t[eligible_mask(t, indian) & t.index.isin(list(active))].index
+        eligible = t[eligible_mask(t, indian)].index
         why = {pid: r for pid in t.index if (r := exclusion(pid, names.get(pid)))}
         # qualified, could be signed, but worse under pressure than usual: not a pressure pick
         why.update({pid: "dips" for pid in eligible if pid not in why and t.at[pid, "lift"] < 0})
@@ -916,12 +918,8 @@ def main():
         scout = t[indian & in_2026 & (steady | (big_game.round(2) >= BIG_GAME_WPA))
                   & ~t.index.isin([pid for pid, r in why.items() if r != "dips"]) & ~t.index.isin(top10)]
         india_rank = {pid: i + 1 for i, pid in enumerate(scout.sort_values("rating", ascending=False).index)}
-        # fresh picks: the qualified newcomers, ranked among themselves (signable non-dippers only)
         debut = d.groupby("pid").season_yr.min()
-        fresh_pool = eligible[(debut.reindex(eligible) >= FRESH_FROM).to_numpy()]
-        fs = score(t, fresh_pool, excluded=excluded)
-        fresh_rank = fs["rank"].dropna().astype(int).to_dict()
-        log(f"{role}: eligible={len(eligible)}, signable={int(s['rank'].notna().sum())}, fresh={len(fresh_pool)}")
+        log(f"{role}: eligible={len(eligible)}, signable={int(s['rank'].notna().sum())}")
         boot = bootstrap(pm, eligible, excluded, nat)
         sh = split_half(pm, eligible)
         forward[role] = forward_check(b, role)
@@ -978,24 +976,24 @@ def main():
                 "delta100": round(100 * row.lift, 2), "wpa100": round(float(row.wpa100), 3),
                 "cons": r2(row.cons, 3), "c_n": int(row.c_n),
                 "recent100": round(100 * row.recent, 2), "r_balls": int(row.rn), "r_matches": int(row.rmatches),
-                "debut": int(debut[pid]), "fresh_rank": fresh_rank.get(pid),
+                "debut": int(debut[pid]), "born": BIRTH["born"].get(names[pid]),
+                "emerging": BIRTH["born"].get(names[pid], "0") >= BIRTH["cutoff"],
                 "boot": boot.get(pid), "press": press, "norm": norm,
                 "seasons": seasons, "phases": phases, "matches": matches,
                 "moments": big_moments(dp, role),
             })
         # young Indian talent: of the Indians first seen 2024+ with 60+ balls, how many reached the auction?
-        new_ind = [pid for pid in t.index if indian.get(pid, False) and debut.get(pid, 0) >= NEW_FROM and t.at[pid, "pn"] + t.at[pid, "nn"] >= 60]
+        new_ind = [pid for pid in t.index if indian.get(pid, False) and debut.get(pid, 0) >= NEW_INDIAN_FROM and t.at[pid, "pn"] + t.at[pid, "nn"] >= 60]
         new_indians[role] = {pid: why.get(pid) for pid in new_ind}
         results[role] = {"players": players, "k": {"K": K}, "split_half": sh, "forward": forward[role],
                          "eligibility": {"min_pressure_balls": MIN_PRESSURE_BALLS,
                                          "min_pressure_matches": MIN_PRESSURE_MATCHES,
                                          "recent_from": RECENT_FROM, "min_recent_balls": MIN_RECENT_BALLS,
-                                         "fresh_from": FRESH_FROM, "indian_bar": round(INDIAN_BAR, 4),
+                                         "emerging_born_from": BIRTH["cutoff"], "indian_bar": round(INDIAN_BAR, 4),
                                          "indian_min": [int(np.ceil(x * INDIAN_BAR - 1e-9)) for x in (MIN_PRESSURE_BALLS, MIN_PRESSURE_MATCHES, MIN_RECENT_BALLS)],
                                          "indian_places": INDIAN_PLACES, "scout_min_balls": SCOUT_MIN_BALLS,
                                          "max_bangladesh": MAX_BANGLADESH,
                                          "n_indian_top10": int(indian.reindex(list(top10), fill_value=False).sum()),
-                                         "n_fresh": int(len(fresh_pool)),
                                          "n_eligible": int(len(eligible)),
                                          "n_ranked": int(s["rank"].notna().sum()),
                                          "export_min_balls": 10, "export_min_matches": 1,
@@ -1078,7 +1076,7 @@ def main():
         "n_short_excluded": int(b[b.short_match].match_id.nunique()),
         "forward": forward,
         "new_indians": (lambda allp: {"total": len(allp), "kept": sum(r in ("retained", "rr") for r in allp.values()),
-                                      "available": sum(r in (None, "dips") for r in allp.values()), "from": NEW_FROM})(
+                                      "available": sum(r in (None, "dips") for r in allp.values()), "from": NEW_INDIAN_FROM})(
             {**new_indians["bowl"], **new_indians["bat"]}),
         "wp_model": wp_metrics,
         "contrast": contrast, "by_phase": by_phase, "by_over": by_over,
@@ -1105,8 +1103,13 @@ def main():
                 f"balls={p['p_balls']} top10={p['boot']['p_top10']}")
         merit = sorted((p for p in results[role]["players"] if p["merit_rank"]), key=lambda p: p["merit_rank"])[:15]
         log("all qualified, before auction rules: " + ", ".join(f"{p['name']} ({p['excluded'] or '-'})" for p in merit))
-        fresh = sorted((p for p in results[role]["players"] if p["fresh_rank"]), key=lambda p: p["fresh_rank"])[:8]
-        log("fresh picks: " + ", ".join(f"{p['name']} {p['p_rv100']:+.1f}" for p in fresh))
+        # every player the top 10 or the watch list can draw from needs a birth date, or the label could miss someone
+        missing = [p["name"] for p in results[role]["players"] if p["rank"] and p["p_rv100"] > 0 and not p["born"]]
+        if missing:
+            log("WARNING: no birth date (add to birth_dates.json): " + ", ".join(missing))
+        em = sorted((p for p in results[role]["players"] if p["emerging"] and p["rank"]), key=lambda p: p["rank"])
+        log(f"emerging in top 10: {sum(p['rank'] <= 10 for p in em)}; to track: "
+            + ", ".join(f"{p['name']} {p['p_rv100']:+.1f}" for p in em if p["rank"] > 10))
     log("done")
 
 

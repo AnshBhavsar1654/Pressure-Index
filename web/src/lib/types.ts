@@ -95,8 +95,10 @@ export interface Player {
   r_matches: number
   /** first season the player appears in the data */
   debut: number
-  /** rank among fresh picks (qualified newcomers, first top-level match 2024 or later), signable players only */
-  fresh_rank: number | null
+  /** public birth date (YYYY-MM-DD, or YYYY where clearly older than the cutoff); only for the label's candidate pool */
+  born: string | null
+  /** under 26 at the start of IPL 2027 (born on or after eligibility.emerging_born_from): a label, not a quota */
+  emerging: boolean
   z?: Record<ComponentKey, number>
   /** share of the pool (0-100) this player beats on each piece of evidence */
   beats?: Record<ComponentKey, number>
@@ -122,7 +124,7 @@ export interface RoleData {
     min_pressure_balls: number
     min_pressure_matches: number
     recent_from: number; min_recent_balls: number
-    fresh_from: number; n_fresh: number
+    emerging_born_from: string
     indian_bar: number; indian_places: number; scout_min_balls: number; n_indian_top10: number; max_bangladesh: number
     /** the Indian bar: [pressure balls, matches, 2025-26 pressure balls] */
     indian_min: [number, number, number]

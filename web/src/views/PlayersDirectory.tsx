@@ -41,7 +41,7 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
   const [team, setTeam] = useState('all')
   const [country, setCountry] = useState('all')
   const [ranked, setRanked] = useState<Ranked>('all')
-  const [minBalls, setMinBalls] = useState(1)
+  const [minBalls, setMinBalls] = useState(0)
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'balls', dir: -1 })
   const [shown, setShown] = useState(PAGE)
   const dq = useDeferredValue(q)
@@ -86,7 +86,7 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
       })
   }, [all, dq, kind, nat, team, country, ranked, dMin, sort])
 
-  const filtered = q || kind !== 'all' || nat !== 'all' || team !== 'all' || country !== 'all' || ranked !== 'all' || minBalls !== 1
+  const filtered = q || kind !== 'all' || nat !== 'all' || team !== 'all' || country !== 'all' || ranked !== 'all' || minBalls !== 0
   const clear = () => {
     setQ('')
     setKind('all')
@@ -94,7 +94,7 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
     setTeam('all')
     setCountry('all')
     setRanked('all')
-    setMinBalls(1)
+    setMinBalls(0)
   }
 
   const head = (key: SortKey, label: string, title?: string, left = false) => (
@@ -153,7 +153,7 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
               <span id="dir-min" className="shrink-0 text-[12.5px] text-ink-2">
                 Min pressure balls
               </span>
-              <Slider className="min-w-32 flex-1" aria-labelledby="dir-min" min={1} max={300} step={1} value={[minBalls]} onValueChange={([v]) => (setMinBalls(v), setShown(PAGE))} />
+              <Slider className="min-w-32 flex-1" aria-labelledby="dir-min" min={0} max={300} step={1} value={[minBalls]} onValueChange={([v]) => (setMinBalls(v), setShown(PAGE))} />
               <span className="display num w-9 text-right text-[1.3rem] text-pink">{minBalls}</span>
             </div>
             {filtered && (

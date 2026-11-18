@@ -59,7 +59,11 @@ export const TERMS = {
   },
   qualified: {
     label: 'Qualified',
-    def: 'At least 30 pressure balls across 3 or more matches (a match counts with 6 or more pressure balls, so a one-ball cameo does not), with at least 20 of them in 2025–26, and top-level cricket played in 2026, so every pick is current. A knockout first-innings ball counts half towards these numbers. Indian players need a third of that (10 balls, 1 match, 7 in 2025–26), because the data pack has no domestic cricket: their only top-level cricket here is the IPL. A short record is safe because the rating leans on the player’s usual level until his pressure record grows.',
+    def: 'At least 50 pressure balls across 4 or more matches (a match counts with 6 or more pressure balls, so a one-ball cameo does not), with at least 20 of them in 2025–26, so every pick has played top-level cricket in the last two years. A knockout first-innings ball counts half towards these numbers. Indian players need a third of that (17 balls, 2 matches, 7 in 2025–26), because the data pack has no domestic cricket: their only top-level cricket here is the IPL. A short record is safe because the rating leans on the player’s usual level until his pressure record grows.',
+  },
+  emerging: {
+    label: 'Emerging',
+    def: 'Under 26 at the start of IPL 2027 (born on or after 1 April 2001, the age test of the IPL Emerging Player award), from public birth dates. A label, not a quota: the ranking never uses age, and emerging players clear the same bar and are rated on the same scale as everyone else.',
   },
   rate: {
     label: 'Strike rate',

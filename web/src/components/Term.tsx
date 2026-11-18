@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { Tag } from '@/components/kit'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { term, type TermKey } from '@/lib/terms'
 import type { Role } from '@/lib/types'
@@ -18,5 +19,14 @@ export function Term({ k, role = 'bat', children, className }: { k: TermKey; rol
       </TooltipTrigger>
       <TooltipContent className="max-w-72 text-[12.5px] leading-snug">{t.def}</TooltipContent>
     </Tooltip>
+  )
+}
+
+/** Badge for a player new to top-level cricket, explained on hover. */
+export function EmergingTag() {
+  return (
+    <Tag tone="gold">
+      <Term k="emerging" className="no-underline" />
+    </Tag>
   )
 }

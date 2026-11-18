@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Flag } from '@/components/Flag'
 import { Note, OverseasMark, PageHead, PlayerAvatar, SectionHead, Tag, ordinal, signed } from '@/components/kit'
 import { TeamBadge } from '@/components/TeamBadge'
-import { Term } from '@/components/Term'
+import { EmergingTag, Term } from '@/components/Term'
 import { getRole, getRR, getSummary } from '@/lib/data'
 import { momentLine } from '@/views/Moments'
 import { fmt, iplCode } from '@/lib/format'
@@ -72,11 +72,14 @@ export default function PicksPage() {
   const targets = new Set(rr.recommendations.map((r) => r.gap.key))
   const lists = { bat: picks('bat'), bowl: picks('bowl') }
   const elig = getRole('bat').eligibility
-  const fresh = (role: Role) =>
+  // emerging players already in the top 10, and the best of the rest to track (same bar, same scale: no quota)
+  const emergingIn = (role: Role) => lists[role].filter(({ p }) => p.emerging).map(({ p }) => p)
+  const toTrack = (role: Role) =>
     getRole(role)
-      .players.filter((p) => p.fresh_rank != null)
-      .toSorted((a, b) => a.fresh_rank! - b.fresh_rank!)
-      .slice(0, 8)
+      .players.filter((p) => p.emerging && p.rank != null && p.rank > 10 && p.p_rv100 > 0)
+      .toSorted((a, b) => a.rank! - b.rank!)
+      .slice(0, 5)
+  const names = (ps: Player[]) => ps.map((p) => p.name).join(', ')
 
   return (
     <>
@@ -86,10 +89,10 @@ export default function PicksPage() {
           <>
             The ten batters and ten bowlers RR could sign who deliver most reliably when the match is on the line, why I back each
             one and the gap they would fill, then the{' '}
-            <a href="#fresh" className="font-semibold text-pink-ink hover:underline">
-              fresh picks
-            </a>{' '}
-            among them who are new at the top level.
+            <a href="#emerging" className="font-semibold text-pink-ink hover:underline">
+              emerging players to track
+            </a>
+            .
           </>
         }
       >
@@ -110,6 +113,10 @@ export default function PicksPage() {
               </li>
               <li>
                 <b>Bangladeshi players:</b> at most one per list, because their board often limits IPL release.
+              </li>
+              <li>
+                <b>Proven and emerging:</b> {emergingIn('bat').length} of the 10 batters and {emergingIn('bowl').length} of the 10
+                bowlers are under 26 for the 2027 season, on merit, with no quota.
               </li>
             </ul>
             {rr.pool.known && <p className="mt-1.5">Every name here can be bought at the auction.</p>}
@@ -132,6 +139,7 @@ export default function PicksPage() {
                   </a>
                   <Flag country={p.country} size={18} />
                   {p.indian ? <Tag tone="pink">Indian</Tag> : <OverseasMark country={p.country} size={13} />}
+                  {p.emerging && <EmergingTag />}
                 </li>
               ))}
             </ol>
@@ -175,6 +183,7 @@ export default function PicksPage() {
                         <span>{p.country}</span>
                         {p.ipl_team && <TeamBadge team={p.ipl_team} size={20} />}
                         <span>{role === 'bat' ? (p.hand === 'LHB' ? 'Left-handed' : 'Right-handed') : p.bowl_type}</span>
+                        {p.emerging && <EmergingTag />}
                       </div>
                     </div>
                   </header>
@@ -219,33 +228,39 @@ export default function PicksPage() {
 
       <IndianSection />
 
-      <SectionHead id="fresh" title="Fresh picks: new at the top level">
-        Players whose first IPL or T20I match in the data is {elig.fresh_from} or later, the kind of find an auction can be won on. The
-        data starts in 2022 and holds no ages, so a few are new to this level rather than young. They clear the same bar and are ranked
-        on exactly the same scale as the top 10; this list just pulls the newcomers out. Shorter records, so their ratings lean more
-        on their usual level: treat them as scouting leads rather than sure things.
+      <SectionHead id="emerging" title="Emerging players to track">
+        Players under 26 at the start of IPL 2027 (born on or after {fmt.date(elig.emerging_born_from)}, the age test of the IPL
+        Emerging Player award) who clear the same bar as the top 10 and are above average under pressure, but just miss it. Already in
+        the top 10 on merit: {names(emergingIn('bat')) || 'none'} (batting) and {names(emergingIn('bowl')) || 'none'} (bowling). Age
+        is only a label here; the ranking never uses it.
       </SectionHead>
       <div className="mb-10 grid gap-4 xl:grid-cols-2">
         {(['bat', 'bowl'] as const).map((role) => (
           <section key={role} className="panel overflow-hidden">
             <h3 className="border-b border-line px-5 py-3 text-[15px] font-semibold">{role === 'bat' ? 'Batters' : 'Bowlers'}</h3>
+            {toTrack(role).length === 0 && (
+              <p className="px-5 py-3 text-[13.5px] text-ink-3">
+                No other {role === 'bat' ? 'batter' : 'bowler'} under 26 clears the bar with an above-average rating yet.
+              </p>
+            )}
             <ol className="divide-y divide-line">
-              {fresh(role).map((p) => (
+              {toTrack(role).map((p) => (
                 <li key={p.id} className="flex items-center gap-3 px-5 py-2.5 text-[13.5px]">
-                  <span className="display num w-5 text-right text-[1.2rem] text-pink">{p.fresh_rank}</span>
+                  <span className="display num w-6 text-right text-[1.2rem] text-pink">{p.rank}</span>
                   <PlayerAvatar name={p.name} size={30} />
                   <span className="min-w-0 flex-1">
                     <Link href={`/players/${role}/${p.id}/`} className="font-medium hover:underline">
                       {p.name}
                     </Link>
                     <span className="block text-[12px] text-ink-3">
-                      {p.country ?? 'Uncapped'} · first seen {p.debut} · {p.p_balls} pressure balls
+                      {p.country ?? 'Uncapped'} · born {p.born?.slice(0, 4)} · {signed(p.delta100)} better under pressure than usual over{' '}
+                      {p.p_balls} pressure balls in {p.p_matches} matches
                       {p.ipl_team ? ` · last IPL squad ${iplCode(p.ipl_team)}` : ''}
                     </span>
                   </span>
                   <span className="text-right">
                     <span className="num block font-semibold">{signed(p.p_rv100)}</span>
-                    <span className="block text-[11.5px] text-ink-3">recent {signed(p.recent100)}</span>
+                    <span className="block text-[11.5px] text-ink-3">rating</span>
                   </span>
                 </li>
               ))}

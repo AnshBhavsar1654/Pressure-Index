@@ -278,7 +278,7 @@ async function main() {
     [Pi.PiHourglassMediumBold, "Short records can’t run away", owen ? `${owen.name}: ${sg(owen.p_raw100, 0)} per 100 on his first ${owen.p_balls} pressure balls, but a rating of ${sg(owen.p_rv100)}: ${owen.p_balls} balls cannot outweigh his usual level.` : "A short record leans on the usual level."],
     [Pi.PiMapPinBold, "Pitches and opponents", "T20Is in Bangladesh go at 7.8 an over, elsewhere 8.7. Each T20I ball is judged against the same country and opponent."],
     [Pi.PiTrophyBold, "Top-level cricket only", `IPL plus T20Is between full-member nations (${inr(S.n_top_level_matches)} matches). No associate or A-team games.`],
-    [Pi.PiCalendarCheckBold, "Built for 2027", `Each year back counts 20% less. Every pick played in 2026 and has ${BAT.eligibility.min_recent_balls}+ pressure balls in 2025–26.`],
+    [Pi.PiCalendarCheckBold, "Built for 2027", `Each year back counts 20% less. Every pick has ${BAT.eligibility.min_recent_balls}+ pressure balls in 2025–26: active in the last two years.`],
     [Pi.PiFlagBold, "Fair to Indian players", `A third of the evidence bar (${BAT.eligibility.indian_min[0]} pressure balls): the data has no domestic cricket, so their only top-level cricket here is the IPL.`],
   ];
   for (const [i, [icon, h, d]] of fair.entries()) {
@@ -330,7 +330,7 @@ async function main() {
       const f = { fontSize: 13, color: HEX.ink, fill: { color: i % 2 ? HEX.white : HEX.panel } };
       return [
         { text: String(p.rank), options: { ...f, bold: true, color: HEX.pink, align: "center" } },
-        { text: p.name + (p.indian ? "  (IND)" : ""), options: { ...f, bold: true } },
+        { text: p.name + (p.indian ? "  (IND)" : "") + (p.emerging ? "  (U26)" : ""), options: { ...f, bold: true } },
         { text: nat(p), options: { ...f, color: HEX.grey } },
         { text: sg(p.p_rv100), options: { ...f, bold: true, align: "right" } },
         { text: sg(p.n_rv100), options: { ...f, align: "right" } },
@@ -344,7 +344,7 @@ async function main() {
       x: 0.6, y: 1.4, w: 12.1, colW: [0.55, 3.1, 1.75, 1.0, 1.0, 0.9, 1.3, 1.25, 1.25], rowH: 0.42, border: { type: "solid", pt: 0.5, color: HEX.line }, valign: "middle", margin: [0.03, 0.1, 0.03, 0.1], objectName: `${role} evidence table`,
     });
     T(s, [
-      { text: "Rating and usual level: runs " + (role === "bat" ? "added" : "saved") + " per 100 balls against an average " + (role === "bat" ? "batter" : "bowler") + " in the same spot. Lift = rating − usual. Win impact: win chance added per 100 pressure balls (evidence, not ranked on). Stays top 10: share of 400 resamples of matches.", options: { breakLine: true } },
+      { text: "Rating and usual level: runs " + (role === "bat" ? "added" : "saved") + " per 100 balls against an average " + (role === "bat" ? "batter" : "bowler") + " in the same spot. Lift = rating − usual. Win impact: win chance added per 100 pressure balls (evidence, not ranked on). Stays top 10: share of 400 resamples of matches. (U26): under 26 at the start of IPL 2027.", options: { breakLine: true } },
       { text: `Before auction rules, the rating’s top five are ${meritTop(D)}: the method finds the players anyone would expect.`, options: { bold: true, color: C.text1 } },
     ], { x: 0.6, y: 6.15, w: 12.1, h: 0.8, fontSize: 11, color: C.accent4, valign: "top", objectName: `${role} evidence caption` });
     s.addNotes(role === "bat"
@@ -432,7 +432,9 @@ async function main() {
   const ind = bat10.concat(bowl10).filter((p) => p.indian).map((p) => p.name);
   const indians = ind.length > 1 ? ind.slice(0, -1).join(", ") + " and " + ind[ind.length - 1] : ind.join("");
   const need = RR.squad_need;
-  s.addText(`Death overs: ${nm("bowl_death")} with the ball, ${nm("bat_death")} with the bat. Indian picks: ${indians}. RR kept ${need.batter + need.keeper} batters and ${need.bowler} bowlers, so batting from number 3 down is the first need.`, { placeholder: "body" });
+  const emg = bat10.concat(bowl10).filter((p) => p.emerging).map((p) => p.name);
+  const emgText = emg.length ? ` Young core: ${emg.length > 1 ? emg.slice(0, -1).join(", ") + " and " + emg[emg.length - 1] : emg[0]} ${emg.length > 1 ? "are" : "is"} under 26, picked on merit.` : "";
+  s.addText(`Death overs: ${nm("bowl_death")} with the ball, ${nm("bat_death")} with the bat. Indian picks: ${indians}.${emgText} RR kept ${need.batter + need.keeper} batters and ${need.bowler} bowlers, so batting from number 3 down is the first need.`, { placeholder: "body" });
   T(s, [
     { text: "Reproduce everything from the official data pack:", options: { bold: true, breakLine: true, color: C.background1 } },
     { text: "python -I analysis/public_wc2026.py  ·  python -I analysis/pipeline.py  ·  python -I analysis/rr2026.py  ·  python analysis/worked_example.py", options: { fontFace: "Courier New", color: C.accent6, fontSize: 12, breakLine: true } },
