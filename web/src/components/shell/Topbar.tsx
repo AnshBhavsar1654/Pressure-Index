@@ -91,17 +91,12 @@ export function Topbar({ players }: { players: Entry[] }) {
             Ctrl K
           </kbd>
         </button>
-        <div className="ml-auto hidden items-center gap-2 lg:flex">
-          <span className="rounded-lg border border-line bg-panel px-3.5 py-2 text-[13px] text-ink-2">
-            Data to IPL 2026 final, 29 May
-          </span>
-        </div>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
               variant="outline"
               size="icon"
-              className="size-11 rounded-lg"
+              className="size-11 rounded-lg lg:ml-auto"
               onClick={toggleTheme}
               aria-label={dark ? "Use light theme" : "Use dark theme"}
             >
