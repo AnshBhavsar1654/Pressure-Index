@@ -101,6 +101,45 @@ function emergingPicks(role: Role, top: Set<number>): Player[] {
     .slice(0, EMERGING_PER_ROLE)
 }
 
+// Indian options: retentions took almost every above-average Indian, so the top 10 holds few. These are the
+// signable Indians in an IPL 2026 squad who clear the Indian evidence bar without its 2025-26 rule (17 pressure balls
+// in 2 matches), do not dip, and rate about average or better (within 1 run per 100 balls of average), listed in
+// the role they mainly play. Options to weigh, not top-10 picks: none is clearly above average yet.
+const INDIAN_OPTION_FLOOR = -1
+
+function indianOptions(top: Set<number>) {
+  const bat = new Map(getRole('bat').players.map((p) => [p.id, p]))
+  const bowl = new Map(getRole('bowl').players.map((p) => [p.id, p]))
+  const total = (p?: Player) => (p ? p.p_balls + p.n_balls : 0)
+  const [minBalls, minMatches] = getRole('bat').eligibility.indian_min
+  return (['bat', 'bowl'] as const)
+    .flatMap((role) =>
+      [...(role === 'bat' ? bat : bowl).values()]
+        .filter(
+          (p) =>
+            p.indian &&
+            p.excluded == null &&
+            !top.has(p.id) &&
+            p.ipl_season === 2026 &&
+            p.delta100 >= 0 &&
+            p.p_rv100 >= INDIAN_OPTION_FLOOR &&
+            p.p_eff >= minBalls &&
+            p.p_matches >= minMatches &&
+            total(p) >= total((role === 'bat' ? bowl : bat).get(p.id)),
+        )
+        .map((p) => ({ p, role })),
+    )
+    .toSorted((a, b) => b.p.p_rv100 - a.p.p_rv100)
+}
+
+/** How many qualified Indians who are above average and do not dip were already kept by a franchise. */
+function indianSupply() {
+  return (['bat', 'bowl'] as const).map((role) => {
+    const good = getRole(role).players.filter((p) => p.indian && p.merit_rank != null && p.p_rv100 > 0 && p.delta100 >= 0)
+    return { role, total: good.length, kept: good.filter((p) => p.excluded === 'retained' || p.excluded === 'rr').length }
+  })
+}
+
 /** Young names RR could buy, with enough pressure balls to judge, who get worse when it matters. */
 function tippedButDip(top: Set<number>) {
   const seen = new Set<number>()
@@ -116,7 +155,9 @@ function tippedButDip(top: Set<number>) {
 }
 
 /** Why RR should buy him, in one or two plain sentences built from the evidence. */
-function whyLine(p: Player, role: Role, emerging: boolean) {
+type Kind = 'top' | 'emerging' | 'indian'
+
+function whyLine(p: Player, role: Role, kind: Kind) {
   const runs = role === 'bat' ? 'runs' : 'runs saved'
   const age = age2027(p.born)
   const lift =
@@ -129,7 +170,13 @@ function whyLine(p: Player, role: Role, emerging: boolean) {
       : p.r_balls >= 20
         ? `; 2025–26 alone is ${signed(p.recent100)}, so watch his form`
         : ''
-  if (emerging) {
+  if (kind === 'indian') {
+    const level = p.p_rv100 > 0 ? `Above average under pressure (${signed(p.p_rv100)})` : `About average under pressure (${signed(p.p_rv100)})`
+    const seen = p.r_balls > 0 ? `${p.r_balls} pressure balls in 2025–26` : 'Not seen under pressure in 2025–26, so check current form'
+    const boot = p.boot && p.boot.p_top10 >= 0.3 ? ` Top 10 in ${fmt.pct(p.boot.p_top10)} of re-runs.` : ''
+    return `${level}, and ${lift}. ${seen}. An Indian option for a squad short of overseas places.${boot}`
+  }
+  if (kind === 'emerging') {
     const level =
       p.p_rv100 > 0
         ? `Already above average under pressure (${signed(p.p_rv100)}).`
@@ -146,13 +193,13 @@ function PickCard({
   role,
   badge,
   f,
-  emerging = false,
+  kind = 'top',
 }: {
   p: Player
   role: Role
   badge: string | number
   f: { fills: boolean; text: string }
-  emerging?: boolean
+  kind?: Kind
 }) {
   const age = age2027(p.born)
   const shortTerm = age != null && age >= SHORT_TERM_AGE
@@ -160,12 +207,12 @@ function PickCard({
     [<Term key="u" k="underPressure" role={role} />, signed(p.p_rv100)],
     [<Term key="l" k="lift" />, signed(p.delta100)],
     [<Term key="w" k="winImpact" />, winPts(p.wpa100)],
-    emerging ? [<Term key="r" k="recentForm" />, signed(p.recent100)] : [<Term key="t" k="confidence" />, fmt.pct(p.boot?.p_top10)],
+    kind === 'top' ? [<Term key="t" k="confidence" />, fmt.pct(p.boot?.p_top10)] : [<Term key="r" k="recentForm" />, p.r_balls ? signed(p.recent100) : '–'],
   ]
   return (
-    <article id={`${emerging ? 'em' : role}-${p.id}`} className="panel flex scroll-mt-24 flex-col gap-4 p-5">
+    <article id={`${kind === 'top' ? role : kind === 'emerging' ? 'em' : 'in'}-${p.id}`} className="panel flex scroll-mt-24 flex-col gap-4 p-5">
       <header className="flex items-start gap-4">
-        <span className="display num text-[2.6rem] leading-none text-pink">{badge}</span>
+        <span className={`display num text-[2.6rem] leading-none ${kind === 'top' ? 'text-pink' : kind === 'emerging' ? 'text-gold' : 'text-blue'}`}>{badge}</span>
         <PlayerAvatar name={p.name} size={46} />
         <div className="min-w-0 flex-1">
           <Link href={`/players/${role}/${p.id}/`} className="display text-[1.7rem] hover:underline">
@@ -193,7 +240,7 @@ function PickCard({
       </dl>
       <dl className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[13.5px] leading-snug">
         <dt className="text-ink-3">Why RR</dt>
-        <dd className="text-ink">{whyLine(p, role, emerging)}</dd>
+        <dd className="text-ink">{whyLine(p, role, kind)}</dd>
         <dt className="text-ink-3">Evidence</dt>
         <dd className="text-ink-2">{evidence(p, role)}</dd>
         {moment(p, role) && (
@@ -221,6 +268,8 @@ export default function PicksPage() {
   const emergingIn = (role: Role) => lists[role].filter(({ p }) => p.emerging).map(({ p }) => p)
   const em = { bat: emergingPicks('bat', top), bowl: emergingPicks('bowl', top) }
   const dips = tippedButDip(top)
+  const ind = indianOptions(top)
+  const supply = indianSupply()
   const names = (ps: Player[]) => new Intl.ListFormat('en-GB', { type: 'conjunction' }).format(ps.map((p) => p.name))
   const veterans = [...lists.bat, ...lists.bowl].filter(({ p }) => (age2027(p.born) ?? 0) >= SHORT_TERM_AGE).map(({ p }) => p)
 
@@ -233,6 +282,10 @@ export default function PicksPage() {
             The 10 batters and 10 bowlers RR can sign who deliver most reliably under pressure, plus{' '}
             <a href="#emerging" className="font-semibold text-pink-ink hover:underline">
               emerging players
+            </a>{' '}
+            and{' '}
+            <a href="#indian" className="font-semibold text-pink-ink hover:underline">
+              Indian options
             </a>{' '}
             to buy alongside them.
           </>
@@ -251,7 +304,8 @@ export default function PicksPage() {
               </li>
               <li>
                 <b>Indian players:</b> each one above average under pressure gets a place
-                {rr.slots ? `, because RR have only ${rr.slots.open_overseas} overseas places left` : ''}.
+                {rr.slots ? `, because RR have only ${rr.slots.open_overseas} overseas places left` : ''}. Retentions took most of
+                them, so {ind.length} more are listed as Indian options.
               </li>
               <li>
                 <b>Bangladeshi players:</b> at most one per list, because their board often limits IPL release.
@@ -266,7 +320,7 @@ export default function PicksPage() {
         </div>
       </PageHead>
 
-      <section className="panel grid gap-6 p-5 sm:p-6 md:grid-cols-2" aria-label="The twenty picks at a glance">
+      <section className="panel grid gap-6 p-5 sm:p-6 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr]" aria-label="The picks at a glance">
         {(['bat', 'bowl'] as const).map((role) => (
           <div key={role}>
             <h2 className="display mb-3 text-[1.6rem]">{role === 'bat' ? 'Batters' : 'Bowlers'} <span className="text-[13px] font-normal text-ink-3">in ranking order</span></h2>
@@ -283,21 +337,53 @@ export default function PicksPage() {
                 </li>
               ))}
             </ol>
-            {em[role].length > 0 && (
-              <p className="mt-3 border-t border-line pt-3 text-[13.5px] text-ink-2">
-                <span className="font-semibold text-gold">Emerging: </span>
-                {em[role].map((p, i) => (
-                  <span key={p.id}>
-                    {i > 0 && ', '}
-                    <a href={`#em-${p.id}`} className="hover:underline">
-                      {p.name}
-                    </a>
-                  </span>
-                ))}
-              </p>
-            )}
           </div>
         ))}
+        {em.bat.length + em.bowl.length + ind.length > 0 && (
+          <div className="border-t border-line pt-5 md:col-span-2 xl:col-span-1 xl:border-l xl:border-t-0 xl:pl-6 xl:pt-0">
+            <h2 className="display mb-3 text-[1.6rem]">
+              Also buy <span className="text-[13px] font-normal text-ink-3">beyond the top 10</span>
+            </h2>
+            <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-1">
+              {(['bat', 'bowl'] as const)
+                .filter((role) => em[role].length > 0)
+                .map((role) => (
+                  <div key={role}>
+                    <h3 className="mb-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-gold">Emerging {role === 'bat' ? 'batters' : 'bowlers'}</h3>
+                    <ol className="grid gap-1.5">
+                      {em[role].map((p, i) => (
+                        <li key={p.id} className="flex items-center gap-3 text-[14.5px]">
+                          <span className="display num w-6 text-right text-[1.1rem] text-gold">E{i + 1}</span>
+                          <a href={`#em-${p.id}`} className="font-medium hover:underline">
+                            {p.name}
+                          </a>
+                          <Flag country={p.country} size={18} />
+                          {p.indian ? <Tag tone="pink">Indian</Tag> : <OverseasMark country={p.country} size={13} />}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                ))}
+              {ind.length > 0 && (
+                <div>
+                  <h3 className="mb-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-blue">Indian options</h3>
+                  <ol className="grid gap-1.5">
+                    {ind.map(({ p, role }, i) => (
+                      <li key={p.id} className="flex items-center gap-3 text-[14.5px]">
+                        <span className="display num w-6 text-right text-[1.1rem] text-blue">I{i + 1}</span>
+                        <a href={`#in-${p.id}`} className="font-medium hover:underline">
+                          {p.name}
+                        </a>
+                        <Flag country={p.country} size={18} />
+                        <span className="text-[12px] text-ink-3">{role === 'bat' ? 'bat' : 'ball'}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </section>
 
       <NeedBox />
@@ -377,12 +463,46 @@ export default function PicksPage() {
           ) : (
             <div className="grid gap-4 xl:grid-cols-2">
               {em[role].map((p, i) => (
-                <PickCard key={p.id} p={p} role={role} badge={`E${i + 1}`} f={fit(p, role, rr.gaps, targets, MIN_PHASE_BALLS / 2)} emerging />
+                <PickCard key={p.id} p={p} role={role} badge={`E${i + 1}`} f={fit(p, role, rr.gaps, targets, MIN_PHASE_BALLS / 2)} kind="emerging" />
               ))}
             </div>
           )}
         </div>
       ))}
+      {ind.length > 0 && (
+        <>
+          <SectionHead id="indian" title="Indian options" />
+          <Bullets
+            className="-mt-2 mb-5"
+            items={[
+              <>
+                <b>Why so few Indians in the top 10:</b>{' '}
+                {supply
+                  .map((x) => `${x.kept} of the ${x.total} qualified Indian ${x.role === 'bat' ? 'batters' : 'bowlers'} who are above average under pressure were retained`)
+                  .join('; ')}
+              </>,
+              'Every above-average Indian left in the auction is already in the top 10',
+              <>
+                These are the next best: signable, in an IPL 2026 squad, {elig.indian_min[0]}+ pressure balls in {elig.indian_min[1]}+ matches, no dip,
+                and about average or better (rating {signed(INDIAN_OPTION_FLOOR, 0)} or higher)
+              </>,
+              'Options to weigh for a squad with few overseas places, not top-10 picks',
+              <>
+                Domestic T20 (SMAT) is not in the ratings: the public record is too patchy (
+                <Link href="/sources/#left-out" className="font-semibold text-pink-ink hover:underline">
+                  why
+                </Link>
+                )
+              </>,
+            ]}
+          />
+          <div className="mb-6 grid gap-4 xl:grid-cols-2">
+            {ind.map(({ p, role }, i) => (
+              <PickCard key={p.id} p={p} role={role} badge={`I${i + 1}`} f={fit(p, role, rr.gaps, targets, MIN_PHASE_BALLS / 2)} kind="indian" />
+            ))}
+          </div>
+        </>
+      )}
       {dips.length > 0 && (
         <div className="panel mb-6 p-4">
           <h3 className="mb-1 text-[15px] font-semibold">Young names the data does not back yet</h3>

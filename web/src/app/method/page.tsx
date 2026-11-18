@@ -191,6 +191,7 @@ export default function MethodPage() {
         ['Emerging', 'Born on or after 1 April 2001 (under 26 for IPL 2027)', 'The IPL Emerging Player age test'],
         ['Emerging bar', '25 pressure balls, 2 matches, 10 in 2025–26; 5 per role; no dip', 'Half the main bar: young players have had less time'],
         ['Tipped but dipping', '50+ pressure balls and negative lift', 'Enough evidence to say so'],
+        ['Indian options', 'Signable Indian in an IPL 2026 squad; 17+ pressure balls in 2+ matches; no dip; rating −1 or better; listed in his main role', 'Retentions took almost every above-average Indian; these are the next best, shown as options, not picks'],
         ['Short-term buy', '35 or older during IPL 2027', 'Flagged, not marked down'],
         ['Role at RR', 'Best phase with 30+ pressure balls (15 for emerging)', 'Fewer balls in a phase is too thin to call a strength'],
         ['RR gap', 'A phase where RR were below average, or behind the other playoff sides', 'The bar for winning the title'],
