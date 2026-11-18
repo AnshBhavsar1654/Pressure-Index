@@ -278,7 +278,7 @@ async function main() {
     [Pi.PiHourglassMediumBold, "Short records can’t run away", owen ? `${owen.name}: ${sg(owen.p_raw100, 0)} per 100 on his first ${owen.p_balls} pressure balls, but a rating of ${sg(owen.p_rv100)}: ${owen.p_balls} balls cannot outweigh his usual level.` : "A short record leans on the usual level."],
     [Pi.PiMapPinBold, "Pitches and opponents", "T20Is in Bangladesh go at 7.8 an over, elsewhere 8.7. Each T20I ball is judged against the same country and opponent."],
     [Pi.PiTrophyBold, "Top-level cricket only", `IPL plus T20Is between full-member nations (${inr(S.n_top_level_matches)} matches). No associate or A-team games.`],
-    [Pi.PiCalendarCheckBold, "Built for 2027", `Each year back counts 20% less. Every pick has ${BAT.eligibility.min_recent_balls}+ pressure balls in 2025–26.`],
+    [Pi.PiCalendarCheckBold, "Built for 2027", `Each year back counts 20% less. Every pick played in 2026 and has ${BAT.eligibility.min_recent_balls}+ pressure balls in 2025–26.`],
     [Pi.PiFlagBold, "Fair to Indian players", `A third of the evidence bar (${BAT.eligibility.indian_min[0]} pressure balls): the data has no domestic cricket, so their only top-level cricket here is the IPL.`],
   ];
   for (const [i, [icon, h, d]] of fair.entries()) {
@@ -413,7 +413,7 @@ async function main() {
   const lim = [
     [Pi.PiWarningBold, "Batting under pressure is hard to predict", `Next-season correlation is ${f2(F.bat.rating)} for batters (bowlers ${f2(F.bowl.rating)}). A batter’s usual level is the best guide, which is why the rating leans on it. Batting ranks 6–10 are close calls.`],
     [Pi.PiPulseBold, "“Clutch” is real but small", `Lift repeats only weakly between odd and even matches (${f2(BAT.split_half.lift)} batters, ${f2(BOWL.split_half.lift)} bowlers), so it is a filter (never a player who dips), not a score to maximise.`],
-    [Pi.PiEyeSlashBold, "What the data cannot see", "No domestic cricket, no ages, no 2022 or 2024 World Cups (2026 is added from public data); no fielding, venue or batter-versus-bowler match-ups. Young Indian talent cannot be judged: teams kept " + `${S.new_indians.kept} of ${S.new_indians.total} newer Indian players.`],
+    [Pi.PiEyeSlashBold, "What the data cannot see", "No domestic cricket, no ages, no 2022 or 2024 World Cups (2026 is added from public data, except Afghanistan's 4 games, not available in the public data we could access); no fielding, venue or batter-versus-bowler match-ups. Young Indian talent cannot be judged: teams kept " + `${S.new_indians.kept} of ${S.new_indians.total} newer Indian players.`],
     [Pi.PiIdentificationCardBold, "Availability checked by hand", "Retentions from the official lists; Harry Brook’s ban and retirements (e.g. Mohit Sharma) entered manually; Bangladesh board release is a risk, so one per list."],
   ];
   for (const [i, [icon, h, d]] of lim.entries()) {

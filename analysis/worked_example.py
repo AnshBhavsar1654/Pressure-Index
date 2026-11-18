@@ -54,7 +54,9 @@ def main():
     for yr, g in mine.groupby("season_yr"):
         gp, gn = g[g.P == 1], g[g.P == 0]
         seasons.append({"season": int(yr), "weight": P.SEASON_WEIGHT[int(yr)],
-                        "p_balls": int(len(gp)), "p_runs": round(float(gp.rv.sum()), 1),
+                        "p_balls": int(len(gp)),
+                        # runs added, with knockout first-innings balls at half (as in the rating)
+                        "p_runs": round(float((gp.w / P.SEASON_WEIGHT[int(yr)] * gp.rv).sum()), 1),
                         "n_balls": int(len(gn)), "n_runs": round(float(gn.rv.sum()), 1)})
 
     K = P.K

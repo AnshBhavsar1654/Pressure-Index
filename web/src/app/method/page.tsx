@@ -233,7 +233,8 @@ export default function MethodPage() {
         <li className="panel p-4">
           <b>Batting first, and knockouts.</b> A first-innings ball moves the result less than a chase ball, because the chase is still
           to come, so few first-innings balls clear the line. Every ball of a knockout counts instead, so a big total set in a
-          knockout is a pressure performance. Every other first-innings knock still counts through the player’s usual level, which
+          knockout is a pressure performance, but each such ball counts half, because the other side still has to bat (and so a record
+          cannot rest on one or two playoff first innings). Every other first-innings knock still counts through the player’s usual level, which
           makes up most of the rating until his pressure record is long. Two alternatives were tested and rejected: a separate line
           for the first innings flagged 83% of over-one balls, and judging each first-innings ball against its own over predicted
           no better while reshuffling the lists.
@@ -439,7 +440,7 @@ export default function MethodPage() {
         The analysis is built on the official SupeRR Selector Season 2 data pack: ball-by-ball records, matches, competitions, playing
         XIs and squad lists for IPL and T20Is from 2022 to 2026.
         {s.public &&
-          ` The pack has no World Cup cricket, so the ${s.public.name} (India and Sri Lanka, February–March 2026) is added from public data: ${s.public.matches} matches and ${fmt.int(s.public.balls)} balls from ${s.public.source}, converted into the data pack's own format. Two matches were washed out and the source lacks Afghanistan's four group games; the rest are all here. Players are matched to the data pack by lining up matches that appear in both sources ball by ball, so a name written with initials cannot be confused. Semi-finals and the final count as knockouts.`}{' '}
+          ` The pack has no World Cup cricket, so the ${s.public.name} (India and Sri Lanka, February–March 2026) is added from public data: ${s.public.matches} matches and ${fmt.int(s.public.balls)} balls from ${s.public.source}, converted into the data pack's own format. Two matches were washed out, and Afghanistan's four group games are not available in the public data we could access; the rest are all here. Players are matched to the data pack by lining up matches that appear in both sources ball by ball, so a name written with initials cannot be confused. Semi-finals and the final count as knockouts.`}{' '}
         Public information is also used for the IPL 2027 retention lists (which players can be bought) and a cross-check of RR’s 2026
         figures, where {rr.provenance.checks_passed} of {rr.provenance.checks.length} match exactly.{' '}
         <Link href="/rajasthan/#sources" className="font-semibold text-pink-ink hover:underline">

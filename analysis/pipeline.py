@@ -50,6 +50,12 @@ MIN_PRESSURE_BALLS = 30       # 4. evidence to be ranked: 30 pressure balls in 3
 MIN_PRESSURE_MATCHES = 3      #    20 of them in 2025-26 (still doing it now: a 2027 pick must have been
 RECENT_FROM = 2025            #    seen under pressure recently, not on a ball or two). A short record is
 MIN_RECENT_BALLS = 20         #    safe because the rating leans on the usual level until it grows.
+# A knockout first innings is high stakes, but less than a chase: the other side still has to bat. Its balls
+# are all pressure balls (so a big knockout total counts), but each counts half, in the rating and towards
+# the evidence bars, so a record cannot rest on one or two playoff first innings. (Batting forward test
+# 0.079 -> 0.084; bowling unchanged.)
+KO_FIRST_INNINGS = 0.5
+ACTIVE_SEASON = 2026          # a ranked player must have played top-level cricket this season
 MATCH_MIN_BALLS = 6           # a match counts as a pressure appearance only with 6+ pressure balls (an over):
                               # a one-ball cameo is not a pressure innings or spell
 # The brief asks who rises and who dips under pressure, so a player whose rating is below his usual
@@ -569,9 +575,13 @@ def player_match_table(b: pd.DataFrame, role: str):
     d["dotb"] = ((d.tot == 0) if role == "bowl" else (d.runs == 0)).astype(int)
     d["bnd"] = (d.is_four | d.is_six).astype(int)
     d["lg"] = d.legal.astype(int)
+    # knockout first-innings pressure balls count half (weight and evidence); everything else counts once
+    ko1 = ((d.is_knockout == 1) & (d.innings == 1) & (d.P == 1)).to_numpy()
+    d["w"] = d.w * np.where(ko1, KO_FIRST_INNINGS, 1.0)
+    d["cnt"] = np.where(ko1, KO_FIRST_INNINGS, 1.0)
     d["wrv"] = d.w * d.rv
     agg = d.groupby(["pid", "match_id", "P", "R"]).agg(
-        n=("rv", "size"), w=("w", "sum"), wrv=("wrv", "sum"), rv=("rv", "sum"), wpa=("wpa", "sum"),
+        n=("rv", "size"), ne=("cnt", "sum"), w=("w", "sum"), wrv=("wrv", "sum"), rv=("rv", "sum"), wpa=("wpa", "sum"),
         r=("r", "sum"), out=("out", "sum"), li=("li", "sum"),
     ).reset_index()
     return agg, d
@@ -583,12 +593,14 @@ def rate(pm: pd.DataFrame) -> pd.DataFrame:
     x = pm.assign(mult=pm["mult"] if "mult" in pm else 1)
     x = x[x["mult"] > 0].copy()
     single_n = x["n"].copy()
-    for col in ["n", "w", "wrv", "rv", "wpa"]:
+    if "ne" not in x:
+        x["ne"] = x["n"]
+    for col in ["n", "ne", "w", "wrv", "rv", "wpa"]:
         x[col] = x[col] * x["mult"]
-    p = x[x.P == 1].groupby("pid").agg(pn=("n", "sum"), pw=("w", "sum"), pwrv=("wrv", "sum"),
+    p = x[x.P == 1].groupby("pid").agg(pn=("n", "sum"), pne=("ne", "sum"), pw=("w", "sum"), pwrv=("wrv", "sum"),
                                        pwpa=("wpa", "sum"), pmatches=("mult", "sum"))
     n = x[x.P == 0].groupby("pid").agg(nn=("n", "sum"), nw=("w", "sum"), nwrv=("wrv", "sum"))
-    r = x[(x.P == 1) & (x.R == 1)].groupby("pid").agg(rn=("n", "sum"), rw=("w", "sum"), rwrv=("wrv", "sum"),
+    r = x[(x.P == 1) & (x.R == 1)].groupby("pid").agg(rn=("n", "sum"), rne=("ne", "sum"), rw=("w", "sum"), rwrv=("wrv", "sum"),
                                                       rmatches=("mult", "sum"))
     # consistency: pressure innings or spells of 6+ balls in which the player beat the average
     inn = x[(x.P == 1) & (single_n >= MATCH_MIN_BALLS)]
@@ -609,8 +621,9 @@ def rate(pm: pd.DataFrame) -> pd.DataFrame:
 
 def eligible_mask(t: pd.DataFrame, indian: pd.Series | None = None) -> pd.Series:
     f = np.where(indian.reindex(t.index, fill_value=False), INDIAN_BAR, 1.0) if indian is not None else 1.0
-    return ((t.pn >= np.ceil(MIN_PRESSURE_BALLS * f - 1e-9)) & (t.pmatches >= np.ceil(MIN_PRESSURE_MATCHES * f - 1e-9))
-            & (t.rn >= np.ceil(MIN_RECENT_BALLS * f - 1e-9)))
+    # evidence counted with knockout first-innings balls at half
+    return ((t.pne >= np.ceil(MIN_PRESSURE_BALLS * f - 1e-9)) & (t.pmatches >= np.ceil(MIN_PRESSURE_MATCHES * f - 1e-9))
+            & (t.rne >= np.ceil(MIN_RECENT_BALLS * f - 1e-9)))
 
 
 def score(t: pd.DataFrame, eligible: pd.Index, excluded=frozenset(), nat: pd.Series | None = None):
@@ -884,7 +897,10 @@ def main():
         nat = pd.Series({pid: overrides.get(names.get(pid)) or (intl_meta.team_name.get(pid) if pid in intl_meta.index else None)
                          or ("India" if pid in ipl_meta.index else None) for pid in t.index})
         indian = nat.eq("India")
-        eligible = t[eligible_mask(t, indian)].index
+        # still playing: top-level cricket (batting or bowling) in the current season
+        b_now = b[b.top_level & (b.season_yr == ACTIVE_SEASON)]
+        active = set(b_now.striker_id) | set(b_now.bowler_id)
+        eligible = t[eligible_mask(t, indian) & t.index.isin(list(active))].index
         why = {pid: r for pid in t.index if (r := exclusion(pid, names.get(pid)))}
         # qualified, could be signed, but worse under pressure than usual: not a pressure pick
         why.update({pid: "dips" for pid in eligible if pid not in why and t.at[pid, "lift"] < 0})

@@ -11,7 +11,7 @@ the data pack's own file format, and `analysis/pipeline.py` reads it next to the
   `jeyasuryaur/cricket-data-by-cricsheet` (folder `t20s_json`), because cricsheet.org blocks scripted downloads.
 - **Coverage:** 49 of the tournament's 55 matches, including both semi-finals and the final, which count as
   knockouts. Of the other six, two were washed out with no play (match 32, Ireland v Zimbabwe; match 41, Pakistan v
-  New Zealand), and the source has no file for Afghanistan's four group games (match 4 v New Zealand, 13 v South
+  New Zealand), and Afghanistan's four group games are not available in the public data we could access (match 4 v New Zealand, 13 v South
   Africa, 28 v UAE, 39 v Canada; Cricsheet ids 1512722, 1512731, 1512746, 1512757). To add them, download
   Cricsheet's T20I zip in a browser, put those four files in `cricsheet_raw/` and rerun the converter.
 - **Player identity:** Cricsheet writes names with initials ("BKG Mendis" is Kusal, "PHKD Mendis" is Kamindu).

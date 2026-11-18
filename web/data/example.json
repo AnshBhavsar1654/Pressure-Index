@@ -27,7 +27,7 @@
    "season": 2022,
    "weight": 0.2,
    "p_balls": 207,
-   "p_runs": 70.8,
+   "p_runs": 75.8,
    "n_balls": 164,
    "n_runs": -21.1
   },
@@ -51,7 +51,7 @@
    "season": 2025,
    "weight": 0.8,
    "p_balls": 126,
-   "p_runs": 34.4,
+   "p_runs": 35.3,
    "n_balls": 237,
    "n_runs": 71.8
   },
@@ -68,30 +68,30 @@
   "K": 200,
   "p_balls": 561,
   "p_matches": 28,
-  "p_weighted": 324.4,
-  "p_sum": 101.9,
-  "p_raw100": 31.4,
+  "p_weighted": 320.5,
+  "p_sum": 103.6,
+  "p_raw100": 32.3,
   "n_balls": 1158,
   "n_weighted": 802.0,
   "n_sum": 85.9,
   "n_raw100": 10.7,
   "n_rv100": 8.6,
   "n_keep": 0.8,
-  "share": 0.619,
-  "rating100": 22.7,
-  "lift100": 14.1,
+  "share": 0.616,
+  "rating100": 23.2,
+  "lift100": 14.6,
   "wpa_sum": 1.282,
   "wpa100": 0.229,
   "c_pos": 20,
   "c_n": 28,
   "recent_balls": 241,
-  "recent100": 17.2,
+  "recent100": 17.5,
   "recent_from": 2025
  },
  "rank": 1,
- "merit_rank": 10,
- "n_qualified": 173,
- "n_ranked": 27,
+ "merit_rank": 9,
+ "n_qualified": 161,
+ "n_ranked": 21,
  "next": [
   {
    "rank": 2,
@@ -110,10 +110,10 @@
   }
  ],
  "boot": {
-  "p_top10": 0.927,
+  "p_top10": 0.945,
   "rank_med": 1,
   "rank_lo": 1,
-  "rank_hi": 13
+  "rank_hi": 11
  },
  "press": {
   "balls": 561,
