@@ -291,6 +291,9 @@ svg {
 .deck-controls { display: flex; gap: 10px; align-items: center; font: 600 14px var(--font-body); color: #bbb; background: rgba(0,0,0,.55); padding: 8px 14px; border-radius: 999px; }
 .deck-controls button { background: none; border: 0; color: #fff; font-size: 18px; cursor: pointer; padding: 0 6px; }
 
+/* === EXPORT MODE (?export): no on-screen controls, used for PPTX/PDF capture === */
+body.export .deck-controls, body.export .progress, body.export .edit-toggle { display: none !important; }
+
 /* === INLINE EDITING === */
 .edit-hotzone { position: fixed; top: 0; left: 0; width: 80px; height: 80px; z-index: 10000; cursor: pointer; }
 .edit-toggle { position: fixed; top: 18px; left: 18px; z-index: 10001; opacity: 0; pointer-events: none; transition: opacity .3s; background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 8px 12px; font: 600 14px var(--font-body); cursor: pointer; }
@@ -648,6 +651,7 @@ class SlidePresentation {
     history.replaceState(null, '', '#' + (this.current + 1));
   }
 }
+if (location.search.includes('export')) document.body.classList.add('export');
 const deck = new SlidePresentation();
 
 /* ===========================================

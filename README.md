@@ -66,4 +66,5 @@ node build_deck.js
 # 4. HTML slide deck (Pressure_Index_RR_2027_slides.html, Swiss Modern style, built from web/data)
 cd ..
 node deck/build_slides.js
+node deck/export_slides_pptx.js     # same deck as Pressure_Index_RR_2027_slides.pptx (needs Microsoft Edge)
 ```
