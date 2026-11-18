@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpenTextIcon, CrownIcon, HouseIcon, ScalesIcon, TrophyIcon, UsersThreeIcon } from '@phosphor-icons/react'
+import { BookOpenTextIcon, CrownIcon, DatabaseIcon, HouseIcon, ScalesIcon, TrophyIcon, UsersThreeIcon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import type { ComponentType } from 'react'
@@ -15,6 +15,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: '/', label: 'Overview', icon: HouseIcon },
       { href: '/picks/', label: 'My picks', icon: TrophyIcon },
       { href: '/method/', label: 'How it works', icon: BookOpenTextIcon },
+      { href: '/sources/', label: 'Data used', icon: DatabaseIcon },
     ],
   },
   {

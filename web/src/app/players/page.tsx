@@ -39,8 +39,8 @@ export default function PlayersPage() {
         title="All players"
         summary={
           <>
-            Every one of the {rows.length} players who faced or bowled a high-pressure ball since 2022, with a profile page for
-            each. {ranked} of them make my rankings of players RR could sign; the rest are here so you can check anyone.
+            All {rows.length} players who batted or bowled in top-level cricket since 2022, each with a profile. {ranked} make my
+            rankings of players RR can sign.
           </>
         }
       />

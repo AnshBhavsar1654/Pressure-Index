@@ -47,7 +47,8 @@ export function Leaderboard({
     () => all.filter((p) => {
       const f = p.indian ? INDIAN_BAR : 1
       const need = (x: number) => Math.ceil(x * f - 1e-9)
-      return p.p_balls >= need(dBalls) && p.p_matches >= need(dMatches) && p.r_balls >= need(bar.recentBalls)
+      // counted as the pipeline counts them: a knockout first-innings ball is half a ball of evidence
+      return p.p_eff >= need(dBalls) && p.p_matches >= need(dMatches) && p.r_eff >= need(bar.recentBalls)
     }),
     [all, dBalls, dMatches, bar.recentBalls],
   )
@@ -96,10 +97,8 @@ export function Leaderboard({
         <CardHeader>
           <CardTitle>Who qualifies</CardTitle>
           <CardDescription>
-            My ranking needs {bar.balls}+ pressure balls across {bar.matches}+ matches, {bar.recentBalls}+ of them in 2025–26 (a third of
-            that for Indian players, whose only top-level cricket in the data is the IPL).
-            Lower the bar to see more players, or raise it to keep only long records. The rating leans on each player’s usual
-            level until his pressure record is long, so short records cannot run away with the top spots.
+            Default: {bar.balls}+ pressure balls in {bar.matches}+ matches, {bar.recentBalls}+ in 2025–26 (a third for Indian players).
+            Move the bar to see how the list changes.
           </CardDescription>
           <CardAction>
             <Button

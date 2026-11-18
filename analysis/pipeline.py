@@ -11,8 +11,9 @@ Reads the raw data pack, builds:
      the same opponent that season (pitch and opposition strength).
   5. One rating per player: runs added per 100 pressure balls, leaning on the player's usual level
      until his pressure record is long enough (K = 200 balls). Lift = rating - usual level.
-     Ranked if 60 pressure balls in 5 matches (20 in 2025-26), signable at the 2027 auction and not
-     worse under pressure than usual. Checked by a forward test, split halves and a bootstrap.
+     Ranked if 50 pressure balls in 4 matches (20 in 2025-26; a third of that for Indian players),
+     signable at the 2027 auction and not worse under pressure than usual. Checked by a forward test,
+     split halves and a bootstrap.
 
 Writes JSON consumed by the dashboard into web/data/.
 
@@ -971,6 +972,9 @@ def main():
                 "ipl_team": ipl_team, "ipl_season": ipl_season,
                 "hand": bat_hand.get(pid), "bowl_type": bowl_type.get(pid), "pace": pace.get(pid),
                 "p_balls": int(row.pn), "p_matches": int(row.pmatches), "n_balls": int(row.nn),
+                # evidence as the bar counts it (a knockout first-innings ball counts half), so the dashboard's
+                # adjustable bar picks exactly the players the pipeline does
+                "p_eff": round(float(row.pne), 1), "r_eff": round(float(row.rne), 1),
                 "p_rv100": round(100 * row.rating, 2), "n_rv100": round(100 * row.normal, 2),
                 "p_raw100": round(100 * row.pwrv / max(row.pw, 1e-9), 2),
                 "delta100": round(100 * row.lift, 2), "wpa100": round(float(row.wpa100), 3),

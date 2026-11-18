@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Flag } from '@/components/Flag'
-import { Note, OverseasMark, PageHead, PlayerAvatar, SectionHead, Tag, ordinal, signed } from '@/components/kit'
+import { Bullets, Note, OverseasMark, PageHead, PlayerAvatar, SectionHead, Tag, ordinal, signed } from '@/components/kit'
 import { TeamBadge } from '@/components/TeamBadge'
 import { EmergingTag, Term } from '@/components/Term'
 import { getRole, getRR } from '@/lib/data'
@@ -71,6 +71,7 @@ function fit(p: Player, role: Role, gaps: Gap[], targets: Set<string>, minBalls 
 // Emerging picks: a lighter evidence bar than the top 10, because a young player has had less time to build a
 // pressure record. Half the main bar's balls and recent balls, the same no-dip rule, and the same auction rules.
 const EMERGING_MIN_BALLS = 25
+const EMERGING_MIN_MATCHES = 2
 const EMERGING_MIN_RECENT = 10
 const EMERGING_PER_ROLE = 5
 const SHORT_TERM_AGE = 35 // 35 or older during the 2027 season: a one- or two-season buy
@@ -92,8 +93,9 @@ function emergingPicks(role: Role, top: Set<number>): Player[] {
         !top.has(p.id) &&
         (p.excluded == null || p.excluded === 'dips') &&
         p.delta100 >= 0 &&
-        p.p_balls >= EMERGING_MIN_BALLS &&
-        p.r_balls >= EMERGING_MIN_RECENT,
+        p.p_eff >= EMERGING_MIN_BALLS &&
+        p.p_matches >= EMERGING_MIN_MATCHES &&
+        p.r_eff >= EMERGING_MIN_RECENT,
     )
     .toSorted((a, b) => b.p_rv100 - a.p_rv100)
     .slice(0, EMERGING_PER_ROLE)
@@ -228,11 +230,11 @@ export default function PicksPage() {
         title="My picks"
         summary={
           <>
-            The ten batters and ten bowlers RR could sign who deliver most reliably when the match is on the line, the{' '}
+            The 10 batters and 10 bowlers RR can sign who deliver most reliably under pressure, plus{' '}
             <a href="#emerging" className="font-semibold text-pink-ink hover:underline">
               emerging players
             </a>{' '}
-            to buy alongside them, and why I back each one and the gap they would fill.
+            to buy alongside them.
           </>
         }
       >
@@ -263,8 +265,6 @@ export default function PicksPage() {
           </Note>
         </div>
       </PageHead>
-
-      <RetainedSquad />
 
       <section className="panel grid gap-6 p-5 sm:p-6 md:grid-cols-2" aria-label="The twenty picks at a glance">
         {(['bat', 'bowl'] as const).map((role) => (
@@ -300,13 +300,68 @@ export default function PicksPage() {
         ))}
       </section>
 
-      <SectionHead id="emerging" title="Emerging picks">
-        Players RR can buy who are under 26 at the start of IPL 2027 (born on or after {fmt.date(elig.emerging_born_from)}, the age
-        test of the IPL Emerging Player award), on top of {names([...emergingIn('bat'), ...emergingIn('bowl')]) || 'the young players'}{' '}
-        already in the top 10 on merit. A young player has had less time to build a record, so the bar is half the top 10’s (
-        {EMERGING_MIN_BALLS} pressure balls, {EMERGING_MIN_RECENT} of them in 2025–26). The rule that matters most stays: every one of
-        them gets <b>better</b> under pressure, not worse. Best rating first.
-      </SectionHead>
+      <NeedBox />
+
+      {(['bat', 'bowl'] as const).map((role) => {
+        // auction priority: players who fix a 2026 weak spot first, then those who add depth; each group keeps ranking order
+        const withFit = lists[role].map((pk) => ({ pk, f: fit(pk.p, role, rr.gaps, targets) }))
+        const groups = [
+          { key: 'fills', title: 'Fill a gap first', note: 'Strongest in a phase where RR lost runs in 2026.', items: withFit.filter((x) => x.f.fills) },
+          { key: 'depth', title: 'Then add depth', note: 'Best in a phase RR already handle well.', items: withFit.filter((x) => !x.f.fills) },
+        ].filter((g) => g.items.length)
+        return (
+          <div key={role}>
+            <SectionHead title={role === 'bat' ? 'The ten batters' : 'The ten bowlers'}>
+              Gap-fillers first, then depth. The big number is the rank.
+            </SectionHead>
+            {groups.map((g) => (
+              <div key={g.key} className="mb-6">
+                <h3 className="mb-3 flex flex-wrap items-baseline gap-x-3 text-[15px] font-semibold">
+                  <Tag tone={g.key === 'fills' ? 'pink' : 'neutral'}>{g.items.length}</Tag> {g.title}
+                  <span className="text-[13px] font-normal text-ink-3">{g.note}</span>
+                </h3>
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {g.items.map(({ pk, f }) => (
+                    <PickCard key={pk.p.id} p={pk.p} role={role} badge={pk.p.rank!} f={f} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      })}
+
+      {veterans.length > 0 && (
+        <div className="panel mb-6 p-4">
+          <h3 className="mb-2 text-[15px] font-semibold">Short-term buys</h3>
+          <Bullets
+            items={[
+              <>
+                <b>{names(veterans)}</b>: {SHORT_TERM_AGE} or older during IPL 2027
+              </>,
+              'In the top 10 on what they do under pressure now; age never lowers a rating',
+              'Treat them as one- or two-season buys, and the emerging picks as the players to build towards',
+            ]}
+          />
+        </div>
+      )}
+      <SectionHead id="emerging" title="Emerging picks" />
+      <Bullets
+        className="-mt-2 mb-5"
+        items={[
+          <>Under 26 at the start of IPL 2027 (born on or after {fmt.date(elig.emerging_born_from)}, the IPL Emerging Player age test)</>,
+          <>
+            Half the top 10’s bar: {EMERGING_MIN_BALLS} pressure balls in {EMERGING_MIN_MATCHES}+ matches, {EMERGING_MIN_RECENT} of them in 2025–26
+          </>,
+          <>
+            Same no-dip rule: every one gets <b>better</b> under pressure
+          </>,
+          emergingIn('bat').length + emergingIn('bowl').length > 0 && (
+            <>Already in the top 10 on merit: {names([...emergingIn('bat'), ...emergingIn('bowl')])}</>
+          ),
+          'Best rating first',
+        ]}
+      />
       {(['bat', 'bowl'] as const).map((role) => (
         <div key={role} className="mb-6">
           <h3 className="mb-3 flex flex-wrap items-baseline gap-x-3 text-[15px] font-semibold">
@@ -329,60 +384,25 @@ export default function PicksPage() {
         </div>
       ))}
       {dips.length > 0 && (
-        <p className="panel mb-10 p-4 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink">
-          <b>Young names often tipped, that the data does not back yet.</b> Each has 50+ pressure balls and is worse under pressure
-          than usual:{' '}
-          {dips.map(({ p, role }, i) => (
-            <span key={p.id}>
-              {i > 0 && ', '}
-              <Link href={`/players/${role}/${p.id}/`} className="hover:underline">
-                {p.name}
-              </Link>{' '}
-              ({signed(p.delta100)} {role === 'bat' ? 'batting' : 'bowling'})
-            </span>
-          ))}
-          . Their usual level can be high, so they may be worth buying for other reasons, but not as pressure players.
-        </p>
-      )}
-
-      {(['bat', 'bowl'] as const).map((role) => {
-        // auction priority: players who fix a 2026 weak spot first, then those who add depth; each group keeps ranking order
-        const withFit = lists[role].map((pk) => ({ pk, f: fit(pk.p, role, rr.gaps, targets) }))
-        const groups = [
-          { key: 'fills', title: 'Fill a gap first', note: 'Strongest in a phase where RR lost runs in 2026.', items: withFit.filter((x) => x.f.fills) },
-          { key: 'depth', title: 'Then add depth', note: 'Best in a phase RR already handle well.', items: withFit.filter((x) => !x.f.fills) },
-        ].filter((g) => g.items.length)
-        return (
-          <div key={role}>
-            <SectionHead title={role === 'bat' ? 'The ten batters' : 'The ten bowlers'}>
-              Players who fix one of RR’s weak spots come first, then those who add depth. The big number is the rank; hover any
-              underlined term for what it means.
-            </SectionHead>
-            {groups.map((g) => (
-              <div key={g.key} className="mb-6">
-                <h3 className="mb-3 flex flex-wrap items-baseline gap-x-3 text-[15px] font-semibold">
-                  <Tag tone={g.key === 'fills' ? 'pink' : 'neutral'}>{g.items.length}</Tag> {g.title}
-                  <span className="text-[13px] font-normal text-ink-3">{g.note}</span>
-                </h3>
-                <div className="grid gap-4 xl:grid-cols-2">
-                  {g.items.map(({ pk, f }) => (
-                    <PickCard key={pk.p.id} p={pk.p} role={role} badge={pk.p.rank!} f={f} />
-                  ))}
-                </div>
-              </div>
+        <div className="panel mb-6 p-4">
+          <h3 className="mb-1 text-[15px] font-semibold">Young names the data does not back yet</h3>
+          <p className="mb-2 text-[13px] text-ink-3">50+ pressure balls and worse under pressure than usual. Maybe worth buying, but not as pressure players.</p>
+          <ul className="grid gap-x-6 gap-y-1 text-[14px] sm:grid-cols-2">
+            {dips.map(({ p, role }) => (
+              <li key={p.id} className="flex justify-between gap-3 border-b border-line py-1">
+                <Link href={`/players/${role}/${p.id}/`} className="hover:underline">
+                  {p.name}
+                </Link>
+                <span className="num text-blue">
+                  {signed(p.delta100)} lift, {role === 'bat' ? 'batting' : 'bowling'}
+                </span>
+              </li>
             ))}
-          </div>
-        )
-      })}
-
-      {veterans.length > 0 && (
-        <p className="panel mb-10 p-4 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink">
-          <b>Short-term buys.</b> {names(veterans)} {veterans.length === 1 ? 'is' : 'are'} {SHORT_TERM_AGE} or older during the 2027
-          season. They are in the top 10 on what they do under pressure now, and the ranking does not mark anyone down for age: making
-          recent seasons count for more was tested, and it made the bowling forecast worse. The next mega auction is due before IPL 2028, so treat them as
-          one-season buys, and the emerging picks above as the players to build towards.
-        </p>
+          </ul>
+        </div>
       )}
+
+      <RetainedSquad />
     </>
   )
 }
@@ -401,9 +421,6 @@ function RetainedSquad() {
     { key: 'bowler', title: 'Bowlers' },
   ] as const
   const unseen = squad.filter((p) => p.role == null)
-  const deathBat = rr.phases.find((p) => p.phase === 'Death')?.bat_rank ?? 0
-  const ppBat = rr.phases.find((p) => p.phase === 'Powerplay')?.bat_rank ?? 0
-  const need = rr.squad_need
   return (
     <section className="panel mb-6 p-5 sm:p-6" aria-labelledby="retained-title">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
@@ -454,18 +471,56 @@ function RetainedSquad() {
           )
         })}
       </div>
-      <p className="mt-4 rounded-lg bg-pink-soft/50 px-4 py-3 text-[14px] leading-relaxed text-ink">
-        <b>What RR need:</b> batting is the thin side. RR kept {need.batter + need.keeper} batters against {need.bowler} bowlers, and
-        were {ordinal(deathBat)} of 10 batting at the death in 2026 while the powerplay (Jaiswal and Sooryavanshi) was{' '}
-        {ordinal(ppBat)}. So the batters in the top 10 who are strong from number 3 down and at the death are the ones to look at
-        first.
-      </p>
-      <p className="mt-4 text-[12px] leading-relaxed text-ink-3">
-        Roles come from what each player did in his matches since 2024 (the data has no role field): wicket-keeper if he kept
-        wicket in at least a quarter of them, all-rounder if he bowled and batted regularly, otherwise batter or bowler. Lhuan-dre
-        Pretorius keeps wicket for South Africa but never did for RR (Jurel kept), so his role comes from the public record.
-        {unseen.length ? ` Not yet seen at this level: ${unseen.map((p) => p.name).join(', ')}.` : ''}
-      </p>
+      <Bullets
+        className="mt-4 text-[12.5px] text-ink-3"
+        items={[
+          'Roles come from each player’s matches since 2024 (the data has no role field)',
+          'Keeper: kept wicket in a quarter of his matches; all-rounder: bowled 6+ and faced 8+ balls a match',
+          'Lhuan-dre Pretorius keeps for South Africa but never did for RR, so his role comes from the public record',
+          unseen.length > 0 && `Not yet seen at this level: ${unseen.map((p) => p.name).join(', ')}`,
+        ]}
+      />
+    </section>
+  )
+}
+
+/** What RR's retentions and 2026 season say they need: the context for "Fills a gap". */
+function NeedBox() {
+  const rr = getRR()
+  const need = rr.squad_need
+  const ph = (phase: string) => rr.phases.find((p) => p.phase === phase)
+  const sl = rr.slots
+  return (
+    <section className="mt-6 rounded-lg border border-pink/30 bg-pink-soft/40 p-5" aria-labelledby="need-title">
+      <h2 id="need-title" className="display mb-2 text-[1.5rem]">
+        What RR need
+      </h2>
+      <Bullets
+        className="text-ink"
+        items={[
+          sl && (
+            <>
+              <b>{sl.open} places open</b>, at most {sl.open_overseas} overseas, after {sl.retained} retentions
+            </>
+          ),
+          <>
+            <b>Batting is the thin side:</b> {need.batter + need.keeper} batters and keepers kept against {need.bowler} bowlers
+          </>,
+          <>
+            <b>The death overs:</b> {ordinal(ph('Death')?.bat_rank ?? 0)} of 10 batting and {ordinal(ph('Death')?.bowl_rank ?? 0)} of 10 bowling in 2026
+          </>,
+          <>
+            <b>Already strong:</b> powerplay batting, {ordinal(ph('Powerplay')?.bat_rank ?? 0)} of 10
+          </>,
+          <>
+            Roles to fill: {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')} (see the{' '}
+            <a href="#retained-title" className="font-semibold text-pink-ink hover:underline">
+              retained squad
+            </a>
+            )
+          </>,
+        ]}
+      />
     </section>
   )
 }

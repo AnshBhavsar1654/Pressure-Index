@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { WinWorm } from '@/components/charts/WinWorm'
 import { Zoomable } from '@/components/charts/Zoom'
-import { ordinal, signed } from '@/components/kit'
+import { Bullets, ordinal, signed } from '@/components/kit'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { getRanked, getRole, getRR, getSummary } from '@/lib/data'
@@ -49,10 +49,11 @@ export default function Overview() {
         <div className="flex max-w-[40rem] flex-col gap-4">
           <Badge className="w-fit rounded-lg bg-black/25 px-3 py-1 text-[12.5px] font-medium text-white">SupeRR Selector Season 2</Badge>
           <h1 className="display text-[3rem] text-white sm:text-[4.2rem]">Who delivers when the match is on the line?</h1>
-          <p className="max-w-[34rem] text-[16px] leading-relaxed text-white/85">
-            Every one of {fmt.int(s.n_balls)} IPL and T20I deliveries since 2022 is scored for how much it could swing the
-            result. Players are rated on what they did in the moments that mattered most, set against their own usual level.
-          </p>
+          <ul className="flex max-w-[34rem] flex-col gap-1 pl-5 text-[16px] leading-snug text-white/85 marker:text-white/60" style={{ listStyle: 'disc' }}>
+            <li>Every IPL and T20I ball since 2022, scored for how much it could swing the result</li>
+            <li>Players rated on the balls that mattered most, against their own usual level</li>
+            <li>Picks for Rajasthan Royals at the IPL 2027 auction</li>
+          </ul>
         </div>
         <div className="flex flex-wrap items-end justify-between gap-6">
           <dl className="flex gap-8">
@@ -112,11 +113,14 @@ export default function Overview() {
       <section className="panel grid gap-5 p-5 sm:p-6 xl:col-span-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:items-center">
         <div className="flex flex-col gap-2">
           <h2 className="display text-[1.6rem]">Rajasthan Royals in 2026</h2>
-          <p className="text-[14.5px] leading-relaxed text-ink-2">
-            {ordinal(rr.summary.pos)} in the league with {rr.summary.won} wins from {rr.summary.played}, then{' '}
-            {(rr.summary.playoff_result ?? '').replace(/^./, (c) => c.toLowerCase())}. The top order carried the side; the last five overs, with bat and ball,
-            are where the title slipped away.
-          </p>
+          <Bullets
+            items={[
+              `${ordinal(rr.summary.pos)} in the league, ${rr.summary.won} wins from ${rr.summary.played}`,
+              rr.summary.playoff_result,
+              'The top order carried the side',
+              'The last five overs, with bat and ball, are where the title slipped away',
+            ]}
+          />
           <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-[14px] font-semibold">
             <Link href="/rajasthan/" className="text-pink-ink hover:underline">
               Season review
@@ -130,7 +134,7 @@ export default function Overview() {
           <div className="px-4 py-3">
             <dt className="text-[12.5px] text-ink-3">Gained in {phaseName(best)}</dt>
             <dd className="display num text-[2.2rem] text-pink">{signed(best.gap_vs_avg)}</dd>
-            <dd className="text-[12px] text-ink-3">runs a match, best in the league</dd>
+            <dd className="text-[12px] text-ink-3">runs a match, {best.rank === 1 ? 'best in the league' : `${ordinal(best.rank)} of 10`}</dd>
           </div>
           <div className="px-4 py-3">
             <dt className="text-[12.5px] text-ink-3">Lost in {phaseName(worst)}</dt>

@@ -7,10 +7,11 @@ The submission is an interactive dashboard (Next.js, built with Bun, exported as
 | Page | What it answers |
 |---|---|
 | Overview | The top 10 batters and bowlers under pressure, told through a real RR match |
-| My picks | RR's retained squad, the 20 picks at a glance, then **emerging picks** (signable players under 26 for IPL 2027, from public birth dates in `analysis/birth_dates.json`, on half the evidence bar and never dipping under pressure, each with a card saying why RR should buy him), then the 20 picks in full: why each one is reliable and whether they fill an RR gap or add depth (gap-fillers first). Players 35+ in 2027 are flagged as short-term buys |
-| How it works | The method in four steps, proof the pressure label works, known clutch moments checked, a worked example with every sum, where each number comes from, the submitted top 10s, and the forward test behind every choice |
+| My picks | The 20 picks at a glance, what RR need, then the 20 picks in full (gap-fillers first), **emerging picks** (signable players under 26 for IPL 2027, from public birth dates in `analysis/birth_dates.json`, on half the evidence bar: 25 pressure balls in 2+ matches, 10 in 2025–26, never dipping), short-term buys (35+ in 2027) and RR's retained squad |
+| How it works | The method in four steps, then the brief's five report sections (pressure definition, measurement with a worked example, fair comparisons, evidence for the top 10, reliability and limits), a table of every number chosen and why, and a glossary |
+| Data used | Every dataset: the data pack files taken as is, the public data blended in (2026 T20 World Cup), the public facts behind the selection rules, the public-record cross-check, and what was checked and left out |
 | Batters / Bowlers | Full rankings with an adjustable evidence bar, and a profile page for every player |
-| All players | Every player with a top-level pressure ball since 2022, searchable and filterable, each with a profile page |
+| All players | Every player who batted or bowled in top-level cricket since 2022, searchable and filterable, each with a profile page |
 | IPL 2026 review | RR's season: all 16 matches ball by ball, where runs were won and lost, and the squad player by player |
 | Compare players | Up to three batters or bowlers side by side |
 

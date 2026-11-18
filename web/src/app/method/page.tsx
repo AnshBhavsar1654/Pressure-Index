@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Flag } from '@/components/Flag'
-import { PageHead, SectionHead, Stat, signed } from '@/components/kit'
+import { Bullets, PageHead, SectionHead, Stat, signed } from '@/components/kit'
 import { getExample, getGrid, getRanked, getRole, getRR, getSummary } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import { TERMS, winPts } from '@/lib/terms'
@@ -16,6 +16,17 @@ import { WorkedExample } from '@/views/WorkedExample'
 
 export const metadata: Metadata = { title: 'How it works' }
 
+const CONTENTS: [string, string][] = [
+  ['steps', 'The method in 4 steps'],
+  ['pressure', '1. What counts as pressure'],
+  ['measure', '2. Measuring performance'],
+  ['fair', '3. Fair comparisons'],
+  ['top10', '4. Evidence for the top 10'],
+  ['reliability', '5. Reliability and limits'],
+  ['settings', 'Every number chosen'],
+  ['glossary', 'Glossary'],
+]
+
 export default function MethodPage() {
   const s = getSummary()
   const bat = getRole('bat')
@@ -25,93 +36,199 @@ export default function MethodPage() {
   const c = s.contrast
   const mo = s.moments[0]
   const e = bat.eligibility
+  const weights = Object.entries(s.season_weights).map(([y, v]) => `${y}: ${v}`).join(' · ')
   // the small-sample example on this page is read from the data, never typed in
   const owen = bat.players.find((p) => p.name === 'Mitchell Owen')
 
-  const steps: { t: string; d: ReactNode; ex: ReactNode }[] = [
+  const steps: { t: string; d: ReactNode[]; ex: ReactNode }[] = [
     {
       t: 'Who is winning?',
-      d: `Before every ball, a model trained on all ${s.n_matches} matches works out each side’s chance of winning from the score, wickets, balls left and target. In the final over of a chase it is worked out exactly, ball by ball, from how often each outcome really happens there.`,
+      d: [
+        `A model trained on all ${s.n_matches} matches gives each side’s chance of winning before every ball`,
+        'It reads the score, wickets, balls left and the target',
+        'In the final over of a chase the chance is worked out exactly, ball by ball',
+      ],
       ex: (
         <>
-          {mo.match}, {fmt.date(mo.date)}: <b>{mo.state}</b>. The chasing side’s chance stood at <b>{fmt.pct(mo.wp)}</b>.
+          {mo.match}, {fmt.date(mo.date)}: <b>{mo.state}</b>. The chasing side’s chance: <b>{fmt.pct(mo.wp)}</b>.
         </>
       ),
     },
     {
       t: 'How much is at stake?',
-      d: `Imagine every possible next ball (dot, single, four, six, wicket, wide) and measure how far each would move that chance. The average move is the ball’s stakes; a typical ball is 1×. The top 20% of balls by stakes (${s.pressure_threshold.toFixed(2)}× or more) are pressure balls, and so is every ball of a knockout, where losing means going out.`,
+      d: [
+        'Picture every possible next ball: dot, single, four, six, wicket, wide',
+        'Stakes = how far that ball could move the chance of winning (a typical ball is 1×)',
+        <>
+          <b>Pressure ball</b> = the top 20% by stakes ({s.pressure_threshold.toFixed(2)}× or more), plus every ball of a knockout
+        </>,
+      ],
       ex: (
         <>
-          That last ball carried <b>{mo.li.toFixed(0)}×</b> the stakes of a typical ball. A dead rubber or a chase already won carries
-          almost none, however dramatic it looks.
+          That ball carried <b>{mo.li.toFixed(0)}×</b> the stakes of a typical ball. A chase already won carries almost none.
         </>
       ),
     },
     {
       t: 'How well did the player do?',
-      d: 'Each ball is judged against an average player in exactly the same spot (same balls left, wickets down, competition and season): runs scored minus the runs an average batter gets from there, with a wicket charged at the runs it costs from that point. Bowlers mirror it: runs saved. A T20I ball is also judged against T20Is in the same country and against the same opponent that season, so slow pitches and weak attacks flatter nobody.',
+      d: [
+        <>
+          <b>Runs added</b> = runs scored − what an average batter scores from the same spot
+        </>,
+        'A wicket is charged at the runs it costs from that spot',
+        'Bowlers mirror it: runs saved',
+        'T20Is are also compared within the same host country and opponent each season',
+      ],
       ex: (
         <>
-          At the death an average batter makes about 1.4 a ball, so a four is worth <b>+2.6</b> and a dot <b>−1.4</b>. Getting out early
-          costs about <b>10 runs</b>; in the last overs only about <b>2.6</b>, because there is less left to lose.
+          At the death an average batter makes about 1.5 a ball, so a four is worth <b>+2.5</b> and a dot <b>−1.5</b>. A wicket in the
+          powerplay costs about <b>10 runs</b>; at the death about <b>2.6</b>.
         </>
       ),
     },
     {
       t: 'One rating per player',
-      d: `Add up the runs added on pressure balls and divide by the balls: runs added per 100 pressure balls. Until a player has a long pressure record, lean on his usual level (the same sum on every other ball): half and half at ${s.K} pressure balls, his own record after that. Each year back counts 20% less.`,
+      d: [
+        <>
+          <b>Pressure rating</b> = runs added per 100 pressure balls
+        </>,
+        <>A short record leans on the player’s usual level; half and half at {s.K} pressure balls</>,
+        'Each year back counts 20% less',
+        <>
+          <b>Lift</b> = rating − usual level: does he rise or dip?
+        </>,
+      ],
       ex: (
         <>
-          {ex.name}: {signed(ex.steps.p_raw100)} per 100 on {ex.steps.p_balls} pressure balls, usual level {signed(ex.steps.n_rv100)}. His record
-          is {fmt.pct(ex.steps.share)} of the rating, which comes to <b>{signed(ex.steps.rating100)}</b>.
+          {ex.name}: {signed(ex.steps.p_raw100)} on his pressure balls, usual level {signed(ex.steps.n_rv100)}. His record is{' '}
+          {fmt.pct(ex.steps.share)} of the rating, which comes to <b>{signed(ex.steps.rating100)}</b>.
         </>
       ),
     },
   ]
 
-  // every number on the dashboard, where it comes from
+  // every measure on the dashboard, where it comes from
   const sources: [string, string, string][] = [
-    ['Chance of winning', 'Model on score, wickets, balls left, target (or par), competition, season; exact in the last over of a chase', 'ball_by_ball: runs, extras, wickets, over and ball; matches: revised overs and target, result'],
-    ['Stakes', 'Average move in the chance of winning over every possible next ball, ÷ the average for all balls', 'the chance of winning, and how often each outcome happens in each phase'],
-    ['Pressure ball', 'Top 20% of balls by stakes, or any ball of a knockout', 'stakes; matches: stage and knock_out'],
-    ['Runs added (one ball)', 'Runs − runs an average player gets from that spot − wicket cost; mirrored for bowlers; T20Is recentred by host country and by opponent each season', 'ball_by_ball: runs, extras, dismissals; matches: venue country; an expected-runs table by balls left and wickets lost'],
+    ['Chance of winning', 'Model on score, wickets, balls left, target (or par), competition and season; exact in the last over of a chase', 'ball_by_ball; matches (revised overs and target, result)'],
+    ['Stakes', 'Average move in the chance of winning over every possible next ball, ÷ the average for all balls', 'the chance of winning; how often each outcome happens in each phase'],
+    ['Pressure ball', 'Top 20% of balls by stakes, or any knockout ball', 'stakes; matches (stage, knock_out)'],
+    ['Runs added (one ball)', 'Runs − expected runs from that spot − wicket cost; mirrored for bowlers; T20Is recentred by host country and opponent each season', 'ball_by_ball; matches (venue country); expected-runs table'],
     ['Pressure rating', `(Σ recency × runs added on pressure balls + ${s.K} × usual level) ÷ (Σ recency + ${s.K}), per 100 balls`, 'runs added on pressure balls; season'],
     ['Usual level', `Σ recency × runs added on other balls ÷ (Σ recency + ${s.K}), per 100 balls`, 'runs added on all other balls'],
     ['Lift', 'Pressure rating − usual level', 'the two above'],
     ['Win impact', 'Change in the chance of winning across the player’s pressure balls, per 100 balls', 'chance of winning before and after each ball'],
-    ['Consistency', 'Share of pressure innings or spells (6+ balls) with positive runs added', 'runs added per match'],
+    ['Consistency', 'Share of pressure innings or spells (6+ pressure balls) with positive runs added', 'runs added per match'],
     ['Top-10 confidence', 'Share of 400 re-runs on resampled matches in which the player stays top 10', 'the whole ranking, re-run'],
+  ]
+
+  // every setting and assumption, with its value and the reason for it
+  const settings: { group: string; rows: [string, string, string][] }[] = [
+    {
+      group: 'The four model settings (each chosen with the forward test)',
+      rows: [
+        ['Pressure line', `Top 20% of balls by stakes (${s.pressure_threshold.toFixed(2)}×)`, 'Rare enough to be real pressure, common enough to give each player a usable sample'],
+        ['Lean on usual level (K)', `${s.K} balls`, 'A pressure record counts half at 200 recency-weighted balls, more after'],
+        ['Recency', weights, 'Each year back 20% less; steeper steps helped batting a little and hurt bowling more'],
+        ['Evidence to be ranked', `${e.min_pressure_balls} pressure balls, ${e.min_pressure_matches} matches, ${e.min_recent_balls} in ${e.recent_from}–26`, 'Enough to judge, and every pick has played top-level cricket recently'],
+      ],
+    },
+    {
+      group: 'What counts as pressure',
+      rows: [
+        ['Knockouts', 'Every ball is a pressure ball', 'Lose and you are out, whatever the scoreboard says'],
+        ['Knockout first innings', 'Each ball counts half (rating and evidence)', 'The other side still has to bat; batting forecast 0.079 → 0.084'],
+        ['Rain', `Matches under ${s.min_match_balls / 6} overs a side left out of pressure (${s.n_short_excluded} matches)`, 'A five-over slog is a different game; longer reduced games use the revised target'],
+        ['Super overs', 'Left out', 'A different contest from the 20 overs'],
+        ['Pressure appearance', `A match with ${6}+ pressure balls`, 'A one-ball cameo is not a pressure innings or spell'],
+        ['Phases', 'Powerplay 1–6, middle 7–15, death 16–20', 'The standard T20 split'],
+      ],
+    },
+    {
+      group: 'Chance of winning',
+      rows: [
+        ['Model', 'Logistic, on runs needed ÷ runs still expected; first innings on projected total ÷ par', 'Smooth in runs and balls, which stakes need'],
+        ['Validation', '5-fold, grouped by match', 'A match never trains and tests at once'],
+        ['Final over of a chase', 'Exact ball-by-ball calculation', 'The smooth model gave a last-ball boundary almost no chance'],
+        ['Final-over inputs', 'Outcome frequencies from the last 2 overs, by runs needed per ball (<1.5, 1.5–3, 3+) and wickets (1, 2–3, 4–5, 6+)', 'Small groups lean on the overall mix (weight 150 balls)'],
+        ['Ties', 'Scores level at the end = 50%', 'A super over is close to a coin flip'],
+        ['Next-ball outcomes', '0, 1, 2, 3, 4, 6, wicket, wide; 5s counted as 4s', 'How often each happens, by phase'],
+      ],
+    },
+    {
+      group: 'Runs added',
+      rows: [
+        ['Expected runs', 'Gradient-boosted model by balls left, wickets, IPL or T20I, season; smoothed over ±9 balls', 'More wickets lost can never mean more runs to come'],
+        ['Bowler charges', 'Bat runs, wides and no-balls; not byes or leg byes', 'A bowler cannot stop a bye'],
+        ['Bowler wickets', 'Run outs not credited', 'Not the bowler’s doing'],
+        ['Average = 0', 'Recentred per competition and season', 'The 2024–26 IPL scoring boom flatters nobody'],
+        ['T20I conditions', 'Recentred by host country × season, then opponent × season', 'Bangladesh T20Is go at 7.9 an over, other T20Is 8.7; weak attacks flatter everyone'],
+        ['Which cricket', `IPL and T20Is between the 12 full members (${fmt.int(s.n_top_level_matches)} matches)`, 'One clear rule instead of a made-up discount for associate cricket'],
+      ],
+    },
+    {
+      group: 'Who can be ranked and recommended',
+      rows: [
+        ['Indian players', `A third of the bar: ${e.indian_min[0]} balls, ${e.indian_min[1]} matches, ${e.indian_min[2]} in ${e.recent_from}–26`, 'The pack has no domestic cricket, so an Indian player’s only top-level cricket is the IPL'],
+        ['Indian places', `Up to ${e.indian_places} guaranteed, only if rating > 0`, rr.slots ? `RR have only ${rr.slots.open_overseas} overseas places left; never a below-average player` : 'Overseas places are scarce'],
+        ['Bangladesh', `At most ${e.max_bangladesh} per top 10`, 'The board often limits IPL release (NOC)'],
+        ['No dip', 'Lift must be 0 or more', 'The brief asks who rises; a player who dips is never picked'],
+        ['Not buyable', 'RR’s squad, other teams’ retentions, retired, banned, Pakistani players', 'The list is for the 2027 auction'],
+        ['Ordering', 'By pressure rating alone', 'Blending in win impact or consistency predicted worse'],
+      ],
+    },
+    {
+      group: 'Checks',
+      rows: [
+        ['Forward test', 'Rate on 2022–24 and 2022–25, score on 2025 and 2026; 25+ balls before, 24+ after', 'The only test that asks what we need: who delivers next'],
+        ['Re-runs', '400 resamples of whole matches (fixed seed)', 'Shows which ranks are safe'],
+        ['Safe pick', 'Top 10 in 50%+ of re-runs; under 50% is a close call', 'A plain reading of the re-runs'],
+        ['Split halves', 'Odd against even matches', 'Shows which measures repeat'],
+      ],
+    },
+    {
+      group: 'Picks page only (never the ranking)',
+      rows: [
+        ['Emerging', 'Born on or after 1 April 2001 (under 26 for IPL 2027)', 'The IPL Emerging Player age test'],
+        ['Emerging bar', '25 pressure balls, 2 matches, 10 in 2025–26; 5 per role; no dip', 'Half the main bar: young players have had less time'],
+        ['Tipped but dipping', '50+ pressure balls and negative lift', 'Enough evidence to say so'],
+        ['Short-term buy', '35 or older during IPL 2027', 'Flagged, not marked down'],
+        ['Role at RR', 'Best phase with 30+ pressure balls (15 for emerging)', 'Fewer balls in a phase is too thin to call a strength'],
+        ['RR gap', 'A phase where RR were below average, or behind the other playoff sides', 'The bar for winning the title'],
+        ['Retained roles', 'Keeper if he kept in a quarter of matches since 2024; all-rounder 6+ balls bowled and 8+ faced a match; bowler 6+ balls a match', 'The pack has no role field'],
+        ['Squad rules', '25 players, 8 overseas', 'IPL squad limits'],
+      ],
+    },
   ]
 
   const terms: [string, ReactNode][] = (
     ['pressureBall', 'stakes', 'underPressure', 'normal', 'lift', 'winImpact', 'consistency', 'recentForm', 'confidence', 'rankRange', 'rank', 'qualified', 'phase'] as const
   ).map((k) => [TERMS[k].label, TERMS[k].def])
 
-  const pct = (x: number) => `${(x * 100).toFixed(0)}%`
   const solid = (role: Role) => getRanked(role).slice(0, 4).filter((p) => (p.boot?.p_top10 ?? 0) > 0.5).length
 
   return (
     <>
       <PageHead
         title="How it works"
-        summary={
-          <>
-            Two questions, asked of every ball since 2022: <b>how much was at stake</b>, and <b>how did the player do compared with an
-            average player in the same spot</b>? The answers make one rating per player, set against his own usual level. Four settings
-            in all, each one checked against what happened next.
-          </>
-        }
+        summary="Two questions for every ball since 2022: how much was at stake, and how did the player do against an average player in the same spot?"
       />
 
+      <nav aria-label="On this page" className="mb-6 flex flex-wrap gap-2">
+        {CONTENTS.map(([id, label]) => (
+          <a key={id} href={`#${id}`} className="rounded-lg border border-line bg-panel px-3 py-1.5 text-[13px] font-medium text-ink-2 hover:border-pink hover:text-foreground">
+            {label}
+          </a>
+        ))}
+      </nav>
+
       {/* ------------------------------------------------------------ the method */}
-      <ol className="flex flex-col gap-px overflow-hidden rounded-[10px] border border-line bg-line">
+      <ol id="steps" className="flex scroll-mt-24 flex-col gap-px overflow-hidden rounded-[10px] border border-line bg-line">
         {steps.map((st, i) => (
           <li key={st.t} className="grid gap-4 bg-panel p-5 md:grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] md:gap-6">
             <span className="display num text-[3rem] leading-none text-pink">{i + 1}</span>
             <div>
-              <h2 className="text-[17px] font-semibold">{st.t}</h2>
-              <p className="mt-1.5 text-[14.5px] leading-relaxed text-ink-2">{st.d}</p>
+              <h2 className="mb-2 text-[17px] font-semibold">{st.t}</h2>
+              <Bullets items={st.d} />
             </div>
             <p className="rounded-lg bg-panel-2 px-4 py-3 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink">
               <span className="mb-1 block text-[12.5px] font-semibold text-blue">Example</span>
@@ -121,34 +238,12 @@ export default function MethodPage() {
         ))}
       </ol>
 
-      <div className="mt-4 grid gap-3 text-[14.5px] leading-relaxed text-ink-2 md:grid-cols-3 [&_b]:text-ink">
-        <p className="panel p-4">
-          <b>Who can be ranked.</b> At least {e.min_pressure_balls} pressure balls in {e.min_pressure_matches} matches, {e.min_recent_balls}+ of
-          them in {e.recent_from}–26 so every pick is current. Indian players need a third of that ({e.indian_min[0]} balls,{' '}
-          {e.indian_min[1]} matches, {e.indian_min[2]} in {e.recent_from}–26), because the data pack has no domestic
-          cricket: their only top-level cricket here is the IPL. {bat.eligibility.n_eligible} batters and {bowl.eligibility.n_eligible} bowlers qualify.
-        </p>
-        <p className="panel p-4">
-          <b>Who can be recommended.</b> Only players RR can buy at the 2027 auction: not RR’s own squad, not players retained by other
-          teams or retired, and not Pakistani players. Never a player who <b>dips</b> under pressure (negative lift), however good his
-          usual level. {rr.slots ? `RR have only ${rr.slots.open_overseas} overseas places left, so ` : 'So '}each Indian player who is
-          above average under pressure is guaranteed a top-10 place (up to {e.indian_places}); the rest go on merit, with at most{' '}
-          {e.max_bangladesh} Bangladeshi player per list, because the Bangladesh board often limits how long its players may play in the
-          IPL. Retired and banned players are out too (Harry Brook cannot play in 2027).
-        </p>
-        <p className="panel p-4">
-          <b>Which cricket.</b> The IPL and T20Is between two full-member nations ({fmt.int(s.n_top_level_matches)} matches). Associate
-          T20Is and A-team tournaments are left out, rather than counted at some made-up fraction.
-        </p>
-      </div>
-
       {/* ------------------------------------------------------------ 1. pressure definition */}
-      <SectionHead title="1. Does the pressure label work?" id="pressure">
-        The label was never shown to anything that judges players, yet cricket changes exactly as you would expect when the stakes
-        rise. That is how we know it picks out real pressure, not just the last few overs.
+      <SectionHead title="1. What counts as pressure" id="pressure">
+        The label never sees how players did, yet cricket changes just as you would expect when it is on.
       </SectionHead>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        <Stat label="Wickets per 100 balls" value={c.pressure.wkt_pct.toFixed(1)} tone="pink" note={`against ${c.normal.wkt_pct.toFixed(1)} in other balls`} />
+        <Stat label="Wickets per 100 balls" value={c.pressure.wkt_pct.toFixed(1)} tone="pink" note={`against ${c.normal.wkt_pct.toFixed(1)} on other balls`} />
         <Stat label="Wides and no-balls" value={`${c.pressure.extras_pct.toFixed(1)}%`} tone="pink" note={`against ${c.normal.extras_pct.toFixed(1)}%: bowlers feel it too`} />
         <Stat label="Dot balls" value={`${c.pressure.dot_pct.toFixed(0)}%`} tone="pink" note={`against ${c.normal.dot_pct.toFixed(0)}%`} />
         <Stat label="Pressure balls found" value={fmt.int(c.pressure.balls)} note={`out of ${fmt.int(s.n_balls)} deliveries`} />
@@ -158,34 +253,32 @@ export default function MethodPage() {
         <PressureShape s={s} />
       </div>
 
-      <SectionHead title="Does it find the right moments?" id="checks">
-        A pressure measure is only worth trusting if it agrees with what anyone who watched would say. Known clutch performances and
-        the model’s verdict on each, then the biggest match-winning performances it found on its own.
-      </SectionHead>
+      <h3 id="checks" className="mb-3 mt-8 scroll-mt-24 text-[17px] font-semibold">Does it find the moments anyone would name?</h3>
       <SanityChecks pools={{ bat: bat.players, bowl: bowl.players }} />
-
-      <SectionHead title="The tensest balls in five years" id="tensest">
-        The single highest-stakes ball of each match. Almost all are last-ball finishes, which is what a pressure measure should find.
-      </SectionHead>
-      <MomentsTable moments={s.moments} />
-
-      <SectionHead title="The last over, worked out exactly" id="last-over">
-        A smooth model is right for most of a match but too gloomy at the very end of a chase: it gave a side needing a boundary off the
-        last ball almost no chance. For the final over of a chase the chance is worked out directly, ball by ball, from how often each
-        outcome really happens there. That is what lets a last-over finish or defence count as the pressure it is.
-      </SectionHead>
-      <EndgameTable e={s.wp_model.endgame} />
+      <div className="mt-4 flex flex-col gap-3">
+        <Details title="The tensest balls in five years (almost all last-ball finishes)">
+          <MomentsTable moments={s.moments} />
+        </Details>
+        <Details title="The last over of a chase, worked out exactly">
+          <Bullets
+            className="mb-4"
+            items={[
+              'The smooth model is right for most of a match but too gloomy at the very end',
+              'It gave a side needing a boundary off the last ball almost no chance',
+              'So the final over is calculated ball by ball from how often each outcome really happens',
+            ]}
+          />
+          <EndgameTable e={s.wp_model.endgame} />
+        </Details>
+      </div>
 
       {/* ------------------------------------------------------------ 2. measurement */}
-      <SectionHead title={`2. Worked example: how ${ex.name} gets to number 1`} id="example">
-        Every step done by hand for the top-ranked batter, with the real numbers. Anyone can follow the sums with a calculator, and a
-        script checks them against the published rating.
+      <SectionHead title="2. Measuring performance" id="measure">
+        Every step for the top-ranked batter, {ex.name}, with the real numbers. A script checks the sums against the published rating.
       </SectionHead>
       <WorkedExample e={ex} threshold={s.pressure_threshold} />
 
-      <SectionHead title="Where every number comes from" id="sources">
-        Each measure on the dashboard, how it is worked out, and which columns of the data pack it starts from.
-      </SectionHead>
+      <h3 id="sources" className="mb-3 mt-8 scroll-mt-24 text-[17px] font-semibold">Where every number comes from</h3>
       <div className="panel overflow-x-auto">
         <table className="w-full min-w-[760px] text-[13.5px]">
           <thead className="text-[12.5px] text-ink-3">
@@ -206,72 +299,105 @@ export default function MethodPage() {
           </tbody>
         </table>
       </div>
+      <p className="mt-2 text-[13px] text-ink-3">
+        Full list of files, and what was blended in from public data:{' '}
+        <Link href="/sources/" className="font-semibold text-pink-ink hover:underline">
+          Data used
+        </Link>
+      </p>
 
       {/* ------------------------------------------------------------ 3. fair comparisons */}
-      <SectionHead title="3. Keeping it fair" id="fair">
-        The choices that stop the rankings rewarding the wrong things.
+      <SectionHead title="3. Fair comparisons" id="fair">
+        Who can be ranked, who can be picked, and the choices that stop the wrong things being rewarded.
       </SectionHead>
-      <ul className="grid gap-3 text-[14.5px] leading-relaxed text-ink-2 md:grid-cols-2 [&_b]:text-ink">
-        <li className="panel p-4">
-          <b>Small samples.</b> A rating leans on the player’s usual level until his pressure record is long ({s.K} balls for half and
-          half).
-          {owen &&
-            ` ${owen.name} made ${signed(owen.p_raw100)} runs per 100 on his first ${owen.p_balls} pressure balls; his rating is ${signed(owen.p_rv100)}, because ${owen.p_balls} balls prove little.`}
-        </li>
-        <li className="panel p-4">
-          <b>Same situation, same yardstick.</b> Every ball is compared with an average player with the same balls left and wickets in
-          hand, in the same competition and season. Thirty off 18 with the tail exposed earns more than forty with the top order intact,
-          and the 2024–26 IPL scoring boom flatters nobody.
-        </li>
-        <li className="panel p-4">
-          <b>Pitches and opponents.</b> T20Is are played in very different conditions: in Bangladesh they go at 7.8 runs an over,
-          elsewhere 8.7, and in the IPL 9.3. So each T20I ball is judged against T20Is in the same country that season, then against
-          the same opponent, because runs against a weak attack are worth less when everyone scores them. Without this, bowlers who play
-          most of their cricket on slow home pitches looked better than they are. It roughly doubled how well batting ratings predict
-          the next season, and cost bowling a little, both within the noise.
-        </li>
-        <li className="panel p-4">
-          <b>Batting first, and knockouts.</b> A first-innings ball moves the result less than a chase ball, because the chase is still
-          to come, so few first-innings balls clear the line. Every ball of a knockout counts instead, so a big total set in a
-          knockout is a pressure performance, but each such ball counts half, because the other side still has to bat (and so a record
-          cannot rest on one or two playoff first innings). Every other first-innings knock still counts through the player’s usual level, which
-          makes up most of the rating until his pressure record is long. Two alternatives were tested and rejected: a separate line
-          for the first innings flagged 83% of over-one balls, and judging each first-innings ball against its own over predicted
-          no better while reshuffling the lists.
-        </li>
-        <li className="panel p-4">
-          <b>Rain.</b> Reduced matches are judged on their revised overs and target: {s.n_reduced_included} of them count, including the
-          2023 IPL final. Only the {s.n_short_excluded} cut below {s.min_match_balls / 6} overs a side are left out of pressure, because a
-          five-over slog is a different game.
-        </li>
-        <li className="panel p-4">
-          <b>Economy and wickets both count.</b> A bowler earns every run kept below what an average bowler concedes from the same spot,
-          and each wicket at the runs it costs the batting side from there (about 10 in the powerplay, 2.6 at the death).
-        </li>
-        <li className="panel p-4">
-          <b>Indian and overseas players.</b> Indian players need a third of the evidence, since an international adds T20Is to his IPL games
-          and an Indian player in this data cannot. {rr.slots && `RR’s ${rr.slots.retained} retentions include ${rr.slots.retained_overseas} overseas players, leaving at most ${rr.slots.open_overseas} overseas places of ${rr.slots.open}, `}so an
-          above-average Indian is guaranteed a top-10 place. Below-average players are never promoted. Of the {s.new_indians.total}{' '}
-          Indian players first seen in {s.new_indians.from} or later with 60+ balls, franchises kept {s.new_indians.kept}; only{' '}
-          {s.new_indians.available} reached the auction, and the data has no ages or domestic cricket to find the next ones.
-        </li>
-        <li className="panel p-4">
-          <b>Built for 2027.</b> 2026 counts in full and each year back 20% less (2025 at 0.8, down to 2022 at 0.2), and every ranked
-          player needs {e.min_recent_balls}+ pressure balls in 2025–26. Counting recent seasons for more (30% less per year back, or half)
-          was tested too: it helped the batting forecast a little and hurt the bowling one more, so the 20% step stays, and veterans
-          are not marked down for age. The picks page flags anyone 35 or older in 2027 as a short-term buy instead.
-        </li>
-        <li className="panel p-4">
-          <b>Emerging picks.</b> Players under 26 for IPL 2027 get a separate list on the picks page, on half the top 10’s evidence bar
-          (25 pressure balls, 10 in 2025–26), because a young player has had less time to build a record. The no-dip rule stays: every
-          emerging pick gets better under pressure. Young names who dip are listed as not backed by the data. The submitted top 10s
-          never use age.
-        </li>
-      </ul>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <Card title="Who can be ranked">
+          <Bullets
+            items={[
+              `${e.min_pressure_balls}+ pressure balls in ${e.min_pressure_matches}+ matches`,
+              `${e.min_recent_balls}+ of them in ${e.recent_from}–26, so every pick is current`,
+              `Indian players: a third of that (${e.indian_min[0]} balls, ${e.indian_min[1]} matches, ${e.indian_min[2]} recent), as the pack has no domestic cricket`,
+              `${bat.eligibility.n_eligible} batters and ${bowl.eligibility.n_eligible} bowlers qualify`,
+            ]}
+          />
+        </Card>
+        <Card title="Who can be picked">
+          <Bullets
+            items={[
+              'Only players RR can buy at the 2027 auction',
+              'Never a player who dips under pressure (negative lift)',
+              `Each above-average Indian gets a place (up to ${e.indian_places})${rr.slots ? `: RR have ${rr.slots.open_overseas} overseas places left` : ''}`,
+              `At most ${e.max_bangladesh} Bangladeshi player per list (board release)`,
+            ]}
+          />
+        </Card>
+        <Card title="Small samples">
+          <Bullets
+            items={[
+              `The rating leans on the usual level until the pressure record is long (${s.K} balls for half and half)`,
+              owen && `${owen.name}: ${signed(owen.p_raw100)} on his first ${owen.p_balls} pressure balls, rated ${signed(owen.p_rv100)}`,
+            ]}
+          />
+        </Card>
+        <Card title="Same situation, same yardstick">
+          <Bullets
+            items={[
+              'Each ball is compared with an average player with the same balls left and wickets in hand',
+              'Within the same competition and season',
+              'Thirty off 18 with the tail exposed earns more than forty with the top order intact',
+            ]}
+          />
+        </Card>
+        <Card title="Pitches and opponents">
+          <Bullets
+            items={[
+              'T20Is: Bangladesh 7.9 runs an over, other T20Is 8.7, the IPL 9.3',
+              'Each T20I ball is compared within its host country, then its opponent, each season',
+              'Batting forecasts roughly doubled; bowling dipped slightly, within noise',
+            ]}
+          />
+        </Card>
+        <Card title="Batting first and knockouts">
+          <Bullets
+            items={[
+              'A first-innings ball moves the result less, because the chase is still to come',
+              'Every knockout ball counts as pressure, so a big knockout total earns credit',
+              'Each knockout first-innings ball counts half',
+              'Rejected: a separate line for the first innings (it flagged most over-one balls)',
+            ]}
+          />
+        </Card>
+        <Card title="Rain">
+          <Bullets
+            items={[
+              `Reduced matches use their revised overs and target: ${s.n_reduced_included} count, including the 2023 IPL final`,
+              `${s.n_short_excluded} matches cut below ${s.min_match_balls / 6} overs a side are left out of pressure`,
+            ]}
+          />
+        </Card>
+        <Card title="Economy and wickets both count">
+          <Bullets items={['Every run kept below an average bowler from the same spot', 'Each wicket at the runs it costs from there (about 10 early, 2.6 at the death)']} />
+        </Card>
+        <Card title="Built for 2027">
+          <Bullets
+            items={[
+              '2026 counts in full; each year back 20% less',
+              'Nobody is marked down for age; 35+ is flagged as a short-term buy instead',
+              <>
+                Under-26s get their own{' '}
+                <Link href="/picks/#emerging" className="font-semibold text-pink-ink hover:underline">
+                  emerging list
+                </Link>{' '}
+                on half the bar
+              </>,
+            ]}
+          />
+        </Card>
+      </div>
 
       {/* ------------------------------------------------------------ 4. evidence for the top 10 */}
       <SectionHead
-        title="4. The submitted top 10s"
+        title="4. Evidence for the top 10"
         id="top10"
         action={
           <Link href="/picks/" className="text-[14px] font-semibold text-pink-ink hover:underline">
@@ -279,26 +405,32 @@ export default function MethodPage() {
           </Link>
         }
       >
-        Ranked by the pressure rating, among players RR can buy who rise under pressure, with a guaranteed place for each above-average
-        Indian player and at most one Bangladeshi player per list (board release risk). Win impact and consistency are shown as
-        evidence, not used to rank.
+        Ordered by pressure rating. Win impact and top-10 confidence are evidence, not part of the order.
       </SectionHead>
       <div className="grid gap-4 xl:grid-cols-2">
         {(['bat', 'bowl'] as const).map((role) => (
           <TopTable key={role} role={role} players={getRanked(role).slice(0, 10)} />
         ))}
       </div>
-      <p className="mt-3 max-w-[80ch] text-[13px] leading-relaxed text-ink-3">
-        Two things that can look odd. <b className="text-ink-2">Win impact can be negative for a player who adds runs</b>: it depends
-        on the matches he walked into (a batter who scores well in chases that were already slipping still loses win chance), and it
-        repeats poorly between matches, so it is evidence, not the ranking. <b className="text-ink-2">Top-10 confidence can differ
-        from rank order</b>: a long record is steadier than a short one with a similar rating.
-      </p>
+      <Bullets
+        className="mt-3 text-[13.5px]"
+        items={[
+          <>
+            <b>Win impact can be negative for a player who adds runs:</b> it depends on the match he walked into, and repeats poorly
+          </>,
+          <>
+            <b>Confidence can differ from rank:</b> a long record is steadier than a short one with a similar rating
+          </>,
+          <>
+            <b>Rank 10 below a higher rating:</b> the guaranteed Indian place and the one-Bangladeshi rule can move a player in or out
+          </>,
+        ]}
+      />
 
       {/* ------------------------------------------------------------ 5. reliability */}
-      <SectionHead title="5. Why it is this simple, and how sure I am" id="reliability">
-        The test every choice was made on: build the ratings from earlier seasons only (2022–24, then 2022–25), and see how well they
-        predict who actually added runs under pressure the next season (2025, then 2026). 0 means no better than guessing.
+      <SectionHead title="5. Reliability and limits" id="reliability">
+        The forward test: rate players on earlier seasons only, then check who actually added runs under pressure the next season. 0 =
+        no better than guessing.
       </SectionHead>
       <div className="panel overflow-x-auto">
         <table className="w-full min-w-[560px] text-[13.5px]">
@@ -326,53 +458,53 @@ export default function MethodPage() {
             ))}
           </tbody>
         </table>
-        <p className="border-t border-line px-4 py-3 text-[13px] leading-relaxed text-ink-3">
-          Correlation between each ranking and the next season’s runs added per pressure ball, pooled over two seasons ({s.forward.bat.n}{' '}
-          batters, {s.forward.bowl.n} bowlers with 24+ pressure balls). Blending win impact, lift or consistency into the rating made
-          these predictions worse, so they are shown as evidence instead.
+        <p className="border-t border-line px-4 py-3 text-[13px] text-ink-3">
+          Correlation with the next season’s runs added per pressure ball, pooled over 2025 and 2026 ({s.forward.bat.n} batters,{' '}
+          {s.forward.bowl.n} bowlers).
         </p>
       </div>
 
-      <ul className="mt-5 mb-4 flex max-w-[80ch] flex-col gap-2.5 pl-5 text-[14.5px] leading-relaxed text-ink-2 marker:text-pink [&_b]:text-ink" style={{ listStyle: 'disc' }}>
-        <li>
-          <b>Bowlers: the rating is the best predictor.</b> It beats both the usual level and the pressure record alone, which is why it
-          blends the two.
-        </li>
-        <li>
-          <b>Batters: pressure batting is hard to predict at all.</b> A batter’s usual level is the best guide to how he will bat under
-          pressure next season; the pressure record adds little. That is why the rating leans on the usual level until a batter has a
-          long pressure record, and why batting ranks below the top few are close calls.
-        </li>
-        <li>
-          <b>“Clutch” is real but small.</b> Lift repeats only weakly between odd and even matches ({bat.split_half.lift.toFixed(2)} for
-          batters, {bowl.split_half.lift.toFixed(2)} for bowlers), so it is used as a filter (never recommend a player who dips), not as a
-          score to maximise. Win impact and consistency are even noisier, so they are shown as evidence, not blended in.
-        </li>
-        <li>
-          <b>The top of each list is solid; the lower ranks are close calls.</b> Of the top four, {solid('bat')} batters and{' '}
-          {solid('bowl')} bowlers stay in the top 10 in more than half of 400 re-runs; lower ranks swap with the next few names. A
-          Bangladeshi player’s confidence is lower than his rank suggests, because in some re-runs another Bangladeshi takes the one
-          place the board-release rule allows. The likely-rank charts below show exactly which ranks are safe.
-        </li>
-        <li>
-          <b>What the data cannot see:</b> fielding, pitch and venue, batter-against-bowler match-ups, injuries, domestic cricket (public SMAT data is too patchy to use; see Data sources), and
-          the 2022 and 2024 T20 World Cups (the 2026 one is added from public data). First-innings pressure is harder to measure than
-          chase pressure, so pressure balls lean towards chases.
-        </li>
-      </ul>
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <Card title="What the test shows">
+          <Bullets
+            items={[
+              <>
+                <b>Bowlers:</b> the rating is the best predictor, beating usual level and lift alone
+              </>,
+              <>
+                <b>Batters:</b> usual level predicts slightly better, so the rating leans on it until the record is long
+              </>,
+              <>
+                <b>“Clutch” is real but small:</b> lift repeats weakly between odd and even matches ({bat.split_half.lift.toFixed(2)} batting,{' '}
+                {bowl.split_half.lift.toFixed(2)} bowling), so it is a filter, not a score
+              </>,
+              'Blending in win impact, lift or consistency made forecasts worse',
+            ]}
+          />
+        </Card>
+        <Card title="Where it is less certain">
+          <Bullets
+            items={[
+              `Top of each list is solid: of the top four, ${solid('bat')} batters and ${solid('bowl')} bowlers stay top 10 in over half of re-runs`,
+              'Lower ranks are close calls that swap with the next few names',
+              'A Bangladeshi player’s confidence is lower, as another may take the one place',
+              'Not seen: fielding, pitches, match-ups, injuries, domestic cricket, the 2022 and 2024 World Cups',
+              'First-innings pressure is harder to measure, so pressure balls lean towards chases',
+            ]}
+          />
+        </Card>
+      </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="mt-4 flex flex-col gap-3">
         <Details title="Which ranks are safe and which are close calls?">
           <StabilityPair bat={getRanked('bat').slice(0, 15)} bowl={getRanked('bowl').slice(0, 15)} />
         </Details>
-        <Details title="Is the win-probability model accurate?">
+        <Details title="Is the win-chance model accurate?">
           <CalibrationPair s={s} />
         </Details>
         <Details title="Do the measures repeat from one set of matches to another?">
           <table className="w-full max-w-lg text-[13.5px]">
-            <caption className="mb-2 text-left text-[13px] text-ink-3">
-              Each measure worked out on odd-numbered and on even-numbered matches: how closely the two halves agree (1 = perfectly).
-            </caption>
+            <caption className="mb-2 text-left text-[13px] text-ink-3">Each measure on odd and on even matches: how closely the halves agree (1 = perfectly).</caption>
             <thead className="text-[12.5px] text-ink-3">
               <tr className="border-b border-line">
                 <th className="py-2 text-left font-medium">Measure</th>
@@ -399,42 +531,46 @@ export default function MethodPage() {
             </tbody>
           </table>
         </Details>
-        <Details title="Technical summary for analysts">
-          <ul className="flex flex-col gap-2 pl-5 text-[14px] leading-relaxed text-ink-2" style={{ listStyle: 'disc' }}>
-            <li>
-              Win probability: two logistic models on run-expectancy resources. Chase: log(runs needed ÷ runs still expected from balls and
-              wickets left), its interaction with time remaining, required rate and wickets in hand. First innings: log(projected total ÷
-              par), par scaled to reduced overs. Validated out-of-fold by match (5-fold grouped). Final over of a chase: exact backward
-              recursion over outcome frequencies by required rate and wickets in hand.
-            </li>
-            <li>
-              Stakes = Σ P(outcome | phase) × |ΔWP| over 0, 1, 2, 3, 4, 6, wicket and wide, ÷ its mean. Pressure = top{' '}
-              {pct(1 - s.pressure_pctl)} (≥ {s.pressure_threshold.toFixed(2)}) or any knockout ball; matches under {s.min_match_balls / 6}{' '}
-              overs a side excluded.
-            </li>
-            <li>
-              Run value: monotonic gradient-boosted run-expectancy model by competition and season, smoothed along balls left. Batter RV =
-              bat runs − expected runs − wicket cost; bowler RV mirrors it (byes excluded, run-outs not credited); centred per competition
-              and season, then for T20Is per host country × season and per opponent × season.
-            </li>
-            <li>
-              Rating: normal = Σw·RV(other) ÷ (Σw + {s.K}); rating = (Σw·RV(pressure) + {s.K}·normal) ÷ (Σw + {s.K}); w = season weight (
-              {Object.entries(s.season_weights).map(([y, v]) => `${y} ${v}`).join(', ')}); top-level matches only. Ranked if ≥{' '}
-              {e.min_pressure_balls} pressure balls in ≥ {e.min_pressure_matches} matches with ≥ {e.min_recent_balls} in {e.recent_from}–26;
-              recommended if signable and rating ≥ normal. Indian players: a third of the evidence bar; each with rating &gt; 0 guaranteed a
-              top-10 place (up to {e.indian_places}), the rest on merit with at most {e.max_bangladesh} Bangladeshi player (NOC risk), then
-              ordered by rating. 400 match-level bootstrap resamples.
-            </li>
-            <li>
-              Reproduce: <code className="rounded bg-panel-2 px-1">python -I analysis/pipeline.py</code>, then{' '}
-              <code className="rounded bg-panel-2 px-1">python -I analysis/rr2026.py</code> and{' '}
-              <code className="rounded bg-panel-2 px-1">python analysis/worked_example.py</code>.
-            </li>
-          </ul>
-        </Details>
       </div>
 
-      <SectionHead title="Words used on this dashboard" id="glossary" />
+      {/* ------------------------------------------------------------ every setting */}
+      <SectionHead title="Every number chosen" id="settings">
+        Each setting and assumption in the analysis, with its value and the reason for it.
+      </SectionHead>
+      <div className="panel overflow-x-auto">
+        <table className="w-full min-w-[760px] text-[13.5px]">
+          <thead className="text-[12.5px] text-ink-3">
+            <tr className="border-b border-line">
+              <th className="px-4 py-2.5 text-left font-medium">Setting</th>
+              <th className="px-4 py-2.5 text-left font-medium">Value</th>
+              <th className="px-4 py-2.5 text-left font-medium">Why</th>
+            </tr>
+          </thead>
+          {settings.map((g) => (
+            <tbody key={g.group}>
+              <tr className="border-b border-line bg-panel-2">
+                <th colSpan={3} className="px-4 py-2 text-left text-[12.5px] font-semibold uppercase tracking-wide text-pink-ink">
+                  {g.group}
+                </th>
+              </tr>
+              {g.rows.map(([k, v, why]) => (
+                <tr key={k} className="border-b border-line align-top">
+                  <td className="w-[20%] px-4 py-2.5 font-semibold">{k}</td>
+                  <td className="w-[38%] px-4 py-2.5 text-ink">{v}</td>
+                  <td className="px-4 py-2.5 text-ink-2">{why}</td>
+                </tr>
+              ))}
+            </tbody>
+          ))}
+        </table>
+      </div>
+      <p className="mt-2 text-[13px] text-ink-3">
+        Reproduce: <code className="rounded bg-panel-2 px-1">python -I analysis/pipeline.py</code>, then{' '}
+        <code className="rounded bg-panel-2 px-1">analysis/rr2026.py</code> and <code className="rounded bg-panel-2 px-1">analysis/worked_example.py</code>.
+        A rerun gives byte-identical results.
+      </p>
+
+      <SectionHead title="Glossary" id="glossary" />
       <dl className="grid gap-px overflow-hidden rounded-[10px] border border-line bg-line sm:grid-cols-2">
         {terms.map(([t, d]) => (
           <div key={t} className="bg-panel px-5 py-3.5">
@@ -443,22 +579,16 @@ export default function MethodPage() {
           </div>
         ))}
       </dl>
-
-      <SectionHead title="Data sources" id="data">
-        The analysis is built on the official SupeRR Selector Season 2 data pack: ball-by-ball records, matches, competitions, playing
-        XIs and squad lists for IPL and T20Is from 2022 to 2026.
-        {s.public &&
-          ` The pack has no World Cup cricket, so the ${s.public.name} (India and Sri Lanka, February–March 2026) is added from public data: ${s.public.matches} matches and ${fmt.int(s.public.balls)} balls from ${s.public.source}, converted into the data pack's own format. Two matches were washed out, and Afghanistan's four group games are not available in the public data we could access; the rest are all here. Players are matched to the data pack by lining up matches that appear in both sources ball by ball, so a name written with initials cannot be confused. Semi-finals and the final count as knockouts.`}{' '}
-        Public information is also used for the IPL 2027 retention lists (which players can be bought) and a cross-check of RR’s 2026
-        figures, where {rr.provenance.checks_passed} of {rr.provenance.checks.length} match exactly. Domestic T20 (the Syed Mushtaq Ali
-        Trophy) was checked and left out: the public ball-by-ball record (Cricsheet) has only 91 SMAT matches since 2022, about a third
-        of each season, mostly televised and knockout games, 8 from 2024–25 and none from 2025–26. Ratings from such a patchy, televised-only
-        sample would favour a few players by chance, so the gap is named as a limitation instead.{' '}
-        <Link href="/rajasthan/#sources" className="font-semibold text-pink-ink hover:underline">
-          See the checks
-        </Link>
-      </SectionHead>
     </>
+  )
+}
+
+function Card({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="panel p-4">
+      <h3 className="mb-2 text-[15px] font-semibold">{title}</h3>
+      {children}
+    </div>
   )
 }
 
@@ -511,7 +641,7 @@ function Details({ title, children }: { title: string; children: ReactNode }) {
     <details className="panel group">
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-[15px] font-semibold">
         {title}
-        <span className="text-[13px] font-medium text-pink-ink group-open:hidden">Show evidence</span>
+        <span className="text-[13px] font-medium text-pink-ink group-open:hidden">Show</span>
         <span className="hidden text-[13px] font-medium text-ink-3 group-open:inline">Hide</span>
       </summary>
       <div className="border-t border-line p-5">{children}</div>

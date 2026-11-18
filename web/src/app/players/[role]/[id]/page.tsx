@@ -46,15 +46,20 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   return { title: p ? `${p.name}, ${role === 'bat' ? 'batting' : 'bowling'} under pressure` : 'Player' }
 }
 
-/** One sentence that sums the player up, generated from the numbers. */
-function story(p: Player, role: Role) {
-  const last = p.name.split(' ').slice(-1)[0]
+/** The player in three short points, generated from the numbers. */
+function story(p: Player, role: Role): string[] {
   if (role === 'bat') {
-    const up = (p.press.sr ?? 0) >= (p.norm.sr ?? 0)
-    return `Under pressure ${last} strikes at ${fmt.dec(p.press.sr, 0)}, ${up ? 'up from' : 'down from'} ${fmt.dec(p.norm.sr, 0)} in normal moments, where an average batter facing the same balls would strike at ${fmt.dec(p.press.par_sr, 0)} and ${fmt.dec(p.norm.par_sr, 0)}. He averages ${fmt.dec(p.press.avg, 1)} runs per dismissal under pressure. Allowing for the situations and the wickets, his pressure rating is ${signed(p.p_rv100)} runs per 100 balls against an average batter, ${signed(p.delta100)} on his usual level.`
+    return [
+      `Strike rate under pressure ${fmt.dec(p.press.sr, 0)}; an average batter on the same balls: ${fmt.dec(p.press.par_sr, 0)}`,
+      `Normally ${fmt.dec(p.norm.sr, 0)}, against ${fmt.dec(p.norm.par_sr, 0)} for an average batter; ${fmt.dec(p.press.avg, 1)} runs per dismissal under pressure`,
+      `Allowing for situation and wickets: ${signed(p.p_rv100)} runs per 100 pressure balls, ${signed(p.delta100)} on his usual level`,
+    ]
   }
-  const up = (p.press.econ ?? 99) <= (p.norm.econ ?? 99)
-  return `Under pressure ${last} concedes ${fmt.dec(p.press.econ, 2)} an over (${up ? 'tighter than' : 'looser than'} ${fmt.dec(p.norm.econ, 2)} normally), where an average bowler on the same balls would concede ${fmt.dec(p.press.par_econ, 2)} (and ${fmt.dec(p.norm.par_econ, 2)} normally). He takes a wicket every ${fmt.dec(p.press.sr, 0)} balls under pressure. Allowing for the situations and the wickets, his pressure rating saves ${signed(p.p_rv100)} runs per 100 balls against an average bowler, ${signed(p.delta100)} on his usual level.`
+  return [
+    `Economy under pressure ${fmt.dec(p.press.econ, 2)}; an average bowler on the same balls: ${fmt.dec(p.press.par_econ, 2)}`,
+    `Normally ${fmt.dec(p.norm.econ, 2)}, against ${fmt.dec(p.norm.par_econ, 2)}; a wicket every ${fmt.dec(p.press.sr, 0)} pressure balls`,
+    `Allowing for situation and wickets: ${signed(p.p_rv100)} runs saved per 100 pressure balls, ${signed(p.delta100)} on his usual level`,
+  ]
 }
 
 function cmp(a: number | null | undefined, b: number | null | undefined, dir: 1 | -1): boolean | null {
@@ -158,7 +163,11 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
               </div>
             </div>
           </div>
-          <p className="max-w-[60ch] text-[15px] leading-relaxed text-white/85">{story(p, role)}</p>
+          <ul className="flex max-w-[62ch] flex-col gap-1 pl-5 text-[14.5px] leading-snug text-white/85 marker:text-white/60" style={{ listStyle: 'disc' }}>
+            {story(p, role).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
           <p className="text-[13px] text-white/65">
             {p.rank != null
               ? `Ranked ${p.rank} of the ${total} qualified ${isBat ? 'batters' : 'bowlers'} RR could sign.`

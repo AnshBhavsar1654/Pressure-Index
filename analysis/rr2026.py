@@ -9,9 +9,8 @@ Method in one breath:
     average side gets from the same match state, wickets priced in. Summing RR's RV by
     phase / matchup / pressure shows exactly where RR gained or lost runs per match
     against an average IPL 2026 side. The biggest leaks are the shortcomings.
-  * Each shortcoming maps to a role (e.g. "death-overs bowler"). Candidates outside the
-    RR squad are scored on that role's RV per 100 balls (2024-26, recency-weighted,
-    shrunk for sample size) plus their overall pressure rating.
+  * Each shortcoming maps to a role (e.g. "death bowler"). The picks page then marks which of
+    the submitted top-10 players are strongest under pressure in that phase (no separate score).
 
 Run:  python -I analysis/rr2026.py
 """

@@ -47,7 +47,7 @@ export const TERMS = {
   },
   confidence: {
     label: 'Top-10 confidence',
-    def: 'I re-ran the whole ranking 400 times with the matches reshuffled. This is how often the player stayed in the top 10. Above 50% is a safe pick; below 30% is a close call. It can differ from the rank order: a long record is steadier than a short one with a similar rating.',
+    def: 'I re-ran the whole ranking 400 times with the matches reshuffled. This is how often the player stayed in the top 10. 50% or more is a safe pick; under 50% is a close call. It can differ from the rank order: a long record is steadier than a short one with a similar rating.',
   },
   rankRange: {
     label: 'Likely rank range',
@@ -55,15 +55,15 @@ export const TERMS = {
   },
   rank: {
     label: 'Rank',
-    def: 'My ranking of players RR could buy at the 2027 auction, by pressure rating. It leaves out Rajasthan Royals’ own players, players retained by other teams, retired or banned players and Pakistani players, who cannot enter the IPL auction, and anyone who is worse under pressure than usual. Each Indian player who is above average under pressure is guaranteed a top-10 place (up to 5), because RR’s squad has only 3 overseas places left; the other places go on merit, with at most one Bangladeshi player, because the Bangladesh board often limits how long its players may stay in the IPL.',
+    def: 'Players RR can buy at the 2027 auction, by pressure rating. Out: RR’s squad, other teams’ retentions, retired, banned and Pakistani players, and anyone who dips under pressure. Each above-average Indian gets a top-10 place (up to 5; RR have 3 overseas places left). At most one Bangladeshi player per list.',
   },
   qualified: {
     label: 'Qualified',
-    def: 'At least 50 pressure balls across 4 or more matches (a match counts with 6 or more pressure balls, so a one-ball cameo does not), with at least 20 of them in 2025–26, so every pick has played top-level cricket in the last two years. A knockout first-innings ball counts half towards these numbers. Indian players need a third of that (17 balls, 2 matches, 7 in 2025–26), because the data pack has no domestic cricket: their only top-level cricket here is the IPL. A short record is safe because the rating leans on the player’s usual level until his pressure record grows.',
+    def: '50+ pressure balls in 4+ matches (a match counts with 6+ pressure balls), 20+ of them in 2025–26. A knockout first-innings ball counts half. Indian players need a third (17 balls, 2 matches, 7 recent), as the data pack has no domestic cricket.',
   },
   emerging: {
     label: 'Emerging',
-    def: 'Under 26 at the start of IPL 2027 (born on or after 1 April 2001, the age test of the IPL Emerging Player award), from public birth dates. In the top 10s it is a label, not a quota: the ranking never uses age. The emerging picks on the picks page are a separate list of signable under-26 players on half the evidence bar (25 pressure balls, 10 in 2025–26) who get better under pressure.',
+    def: 'Under 26 at the start of IPL 2027 (born on or after 1 April 2001), from public birth dates. A label only: the ranking never uses age.',
   },
   rate: {
     label: 'Strike rate',
@@ -73,10 +73,6 @@ export const TERMS = {
   stakes: {
     label: 'Stakes',
     def: 'How much one ball could move the chance of winning, compared with a typical ball (1×).',
-  },
-  roleFit: {
-    label: 'Role fit',
-    def: 'How well the player does this exact job (70%) plus how they handle pressure (30%). The longer the bar, the better the fit.',
   },
   seasonRuns: {
     label: 'Runs added',

@@ -75,6 +75,9 @@ export interface Player {
   p_balls: number
   p_matches: number
   n_balls: number
+  /** pressure balls as the evidence bar counts them (a knockout first-innings ball counts half), all and 2025-26 */
+  p_eff: number
+  r_eff: number
   /** THE rating: runs added per 100 pressure balls, leaning on the usual level until the record is long */
   p_rv100: number
   /** usual level: the same measure on the other balls */

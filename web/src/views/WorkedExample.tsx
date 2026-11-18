@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
+import { Bullets, ordinal } from '@/components/kit'
 import { Term } from '@/components/Term'
 import { fmt } from '@/lib/format'
 import { winPts } from '@/lib/terms'
@@ -40,7 +41,7 @@ function Step({ n, title, children, sum }: { n: number; title: string; children:
       <span className="display num text-[2.4rem] leading-none text-pink">{n}</span>
       <div>
         <h3 className="text-[16px] font-semibold">{title}</h3>
-        <div className="mt-1 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink">{children}</div>
+        <div className="mt-2">{children}</div>
       </div>
       <div className="num rounded-lg bg-panel-2 px-4 py-3 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink">
         <span className="mb-1 block text-[12.5px] font-semibold text-blue">The numbers</span>
@@ -71,10 +72,16 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
           </>
         }
       >
-        {b.match}, {fmt.date(b.date)}. Over {b.over}, {b.score}
-        {b.need != null ? `, ${b.need} needed off ${b.balls_left}` : ''}. The win-probability model reads the scoreboard. Then it
-        imagines every possible next ball (dot, single, two, four, six, wicket, wide) and measures how far each would move the chance
-        of winning. A big possible swing means big stakes.
+        <Bullets
+          items={[
+            <>
+              {b.match}, {fmt.date(b.date)}: over {b.over}, {b.score}
+              {b.need != null ? `, ${b.need} needed off ${b.balls_left}` : ''}
+            </>,
+            'The model reads the scoreboard and gives a chance of winning',
+            'It tries every possible next ball and measures how far each would move that chance',
+          ]}
+        />
       </Step>
       <Step
         n={2}
@@ -89,11 +96,17 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
           </>
         }
       >
-        {who} hit {shot}
-        {b.out ? ' and was out' : ''}. An average batter makes {b.expected.toFixed(2)} runs from that exact spot (balls left, wickets
-        down, competition, season), so that is what the ball is judged against. A wicket would have been charged at the runs it costs
-        from there. A small adjustment makes the average ball worth exactly 0 in each season, and for a T20I also in that host
-        country and against that opponent, so a run on a slow pitch or against a weak attack is valued fairly.
+        <Bullets
+          items={[
+            <>
+              {who} hit {shot}
+              {b.out ? ' and was out' : ''}
+            </>,
+            `An average batter makes ${b.expected.toFixed(2)} from that exact spot (balls left, wickets, competition, season)`,
+            'A wicket would be charged at the runs it costs from there',
+            'A small adjustment sets the average ball to 0 for the season, host country and opponent',
+          ]}
+        />
       </Step>
       <Step
         n={3}
@@ -116,9 +129,13 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
           </span>
         }
       >
-        The same sum for all {fmt.int(s.p_balls)} of {who}’s pressure balls in {s.p_matches} matches, in the IPL and in T20Is between
-        full-member nations. Each year back counts 20% less (2026 in full, 2025 at 0.8, down to 2022 at 0.2), because an auction buys
-        2027 form.
+        <Bullets
+          items={[
+            `All ${fmt.int(s.p_balls)} of ${who}’s pressure balls, in ${s.p_matches} matches`,
+            'IPL and T20Is between full-member nations only',
+            '2026 counts in full, 2025 at 0.8, down to 2022 at 0.2: an auction buys 2027 form',
+          ]}
+        />
       </Step>
       <Step
         n={4}
@@ -135,8 +152,14 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
           </>
         }
       >
-        The identical sum over every ball that was <i>not</i> a pressure ball tells us how good {who} normally is. This is the
-        baseline the brief asks for: performance under pressure is always set against the player’s usual level.
+        <Bullets
+          items={[
+            <>
+              The same sum over every ball that was <i>not</i> a pressure ball
+            </>,
+            `How good ${who} normally is: the baseline pressure is set against`,
+          ]}
+        />
       </Step>
       <Step
         n={5}
@@ -151,9 +174,14 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
           </>
         }
       >
-        Until a player has a long pressure record, assume he plays as he usually does. Every pressure ball then moves the estimate
-        towards what he actually did. At {s.K} pressure balls it is half and half, and the record takes over after that. This one
-        step is what stops a short hot streak from topping the list.
+        <Bullets
+          items={[
+            'Start by assuming he plays as he usually does',
+            'Every pressure ball moves the estimate towards what he actually did',
+            `Half and half at ${s.K} (recency-weighted) pressure balls; his record takes over after that`,
+            'This stops a short hot streak topping the list',
+          ]}
+        />
       </Step>
       <Step
         n={6}
@@ -166,8 +194,7 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
           </>
         }
       >
-        The brief asks who rises to the occasion and who dips. A player with a negative lift is never recommended, however good his
-        usual level is.
+        <Bullets items={['The brief asks who rises and who dips', 'A negative lift is never recommended, however good the usual level']} />
       </Step>
       <Step
         n={7}
@@ -189,9 +216,14 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
           </span>
         }
       >
-        Players are ranked by the rating alone. Among the {e.n_ranked} qualified batters RR could buy who rise under pressure, {who}{' '}
-        is first; among all {e.n_qualified} qualified batters, including those already retained, he would be {e.merit_rank}. Then the
-        whole ranking is re-run 400 times on resampled matches, to check the pick does not hang on a few lucky games.
+        <Bullets
+          items={[
+            'Ranked by the rating alone',
+            `1st of the ${e.n_ranked} qualified batters RR can buy who rise under pressure`,
+            `${ordinal(e.merit_rank)} of all ${e.n_qualified} qualified batters, including those already retained`,
+            'The whole ranking is re-run 400 times on resampled matches, so a pick cannot hang on a few lucky games',
+          ]}
+        />
       </Step>
       <li className="bg-panel px-5 py-4 text-[14px] leading-relaxed text-ink-2">
         <b className="text-ink">Shown beside the rating, not part of it:</b> <Term k="winImpact">win impact</Term> {winPts(s.wpa100)} per 100

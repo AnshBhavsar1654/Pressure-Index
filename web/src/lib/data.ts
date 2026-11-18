@@ -39,6 +39,42 @@ export const getRole = (role: 'bat' | 'bowl') => {
   if (!roles.has(role)) roles.set(role, withNationality(read<RoleData>(role === 'bat' ? 'batters.json' : 'bowlers.json')))
   return roles.get(role)!
 }
+/** The public inputs kept next to the analysis (counts for the data page). */
+export function getInputs() {
+  const a = (f: string) => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(process.cwd(), '..', 'analysis', f), 'utf8'))
+    } catch {
+      return {}
+    }
+  }
+  const pool = a('auction_pool.json')
+  const retained: Record<string, string[]> = pool.retained ?? {}
+  const csvRows = (f: string) => {
+    try {
+      return fs.readFileSync(path.join(process.cwd(), '..', 'public_data', 't20wc2026', f), 'utf8').trim().split('\n').slice(1)
+    } catch {
+      return []
+    }
+  }
+  const how = csvRows('player_map.csv').map((r) => r.split(',').at(-1)?.trim() ?? '')
+  return {
+    retainedPlayers: Object.values(retained).reduce((n, l) => n + l.length, 0),
+    retainedTeams: Object.keys(retained).length,
+    retentionDate: (pool.updated as string) ?? null,
+    retired: (pool.retired as string[] | undefined)?.length ?? 0,
+    unavailable: (pool.unavailable as string[] | undefined) ?? [],
+    birthDates: Object.keys(a('birth_dates.json').born ?? {}).length,
+    nationality: Object.keys(overrides).length,
+    roles: Object.keys(a('role_overrides.json').roles ?? {}),
+    mapped: {
+      ballByBall: how.filter((h) => h === 'matched ball by ball').length,
+      byName: how.filter((h) => h === 'matched by name in country').length,
+      added: how.filter((h) => h === 'new to the data').length,
+    },
+  }
+}
+
 export const getGrid = () => read<ChaseGrid>('chase_grid.json')
 export const getRR = () => read<RRData>('rr2026.json')
 

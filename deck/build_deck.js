@@ -276,7 +276,7 @@ async function main() {
   const fair = [
     [Pi.PiCrosshairBold, "Same situation, same yardstick", "Every ball against an average player with the same balls left, wickets in hand, competition and season."],
     [Pi.PiHourglassMediumBold, "Short records can’t run away", owen ? `${owen.name}: ${sg(owen.p_raw100, 0)} per 100 on his first ${owen.p_balls} pressure balls, but a rating of ${sg(owen.p_rv100)}: ${owen.p_balls} balls cannot outweigh his usual level.` : "A short record leans on the usual level."],
-    [Pi.PiMapPinBold, "Pitches and opponents", "T20Is in Bangladesh go at 7.8 an over, elsewhere 8.7. Each T20I ball is judged against the same country and opponent."],
+    [Pi.PiMapPinBold, "Pitches and opponents", "T20Is in Bangladesh go at 7.9 an over, elsewhere 8.7. Each T20I ball is judged against the same country and opponent."],
     [Pi.PiTrophyBold, "Top-level cricket only", `IPL plus T20Is between full-member nations (${inr(S.n_top_level_matches)} matches). No associate or A-team games.`],
     [Pi.PiCalendarCheckBold, "Built for 2027", `Each year back counts 20% less. Every pick has ${BAT.eligibility.min_recent_balls}+ pressure balls in 2025–26: active in the last two years.`],
     [Pi.PiFlagBold, "Fair to Indian players", `A third of the evidence bar (${BAT.eligibility.indian_min[0]} pressure balls): the data has no domestic cricket, so their only top-level cricket here is the IPL.`],

@@ -1,13 +1,12 @@
-import { CheckCircle, XCircle } from '@phosphor-icons/react/dist/ssr'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { PhaseGaps, SeasonExplorer, TeamDots } from '@/components/charts/RRCharts'
 import { Zoomable } from '@/components/charts/Zoom'
 import { TeamBadge } from '@/components/TeamBadge'
 import { OPPONENTS } from '@/lib/teams'
-import { Tag, PageHead, Note, SectionHead, Stat, ordinal, signed } from '@/components/kit'
+import { Bullets, PageHead, SectionHead, Stat, ordinal, signed } from '@/components/kit'
 import { getRR } from '@/lib/data'
-import { fmt, iplCode } from '@/lib/format'
+import { iplCode } from '@/lib/format'
 import type { Gap, SquadPlayer } from '@/lib/types'
 import { NewFaces } from '@/views/NewFaces'
 import { SquadTables } from '@/views/SquadTables'
@@ -33,13 +32,7 @@ export default function RajasthanPage() {
     <>
       <PageHead
         title="Rajasthan Royals in IPL 2026"
-        summary={
-          <>
-            Fourth in the league with {s.won} wins from {s.played}, then a win in the Eliminator and defeat in Qualifier 2. The{' '}
-            {gapName(best)} was the best in the league. The leaks were {leaks.map(gapName).join(', ')}: together about{' '}
-            <b className="text-ink">{Math.abs(leakTotal).toFixed(0)} runs a match</b> lost to an average side.
-          </>
-        }
+        summary={`${ordinal(s.pos)} in the league with ${s.won} wins from ${s.played}. ${s.playoff_result ?? ''}.`}
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">
@@ -50,16 +43,38 @@ export default function RajasthanPage() {
         <Stat label="Most wickets" value={wkts.bowl!.wkts} tone="pink" note={`${wkts.name}, economy ${wkts.bowl!.econ}`} />
       </div>
 
-      <SectionHead title="All 16 matches">
-        Pick a match to see how RR’s chance of winning moved ball by ball. Pink shading marks pressure moments.
+      <section className="panel mt-5 grid gap-5 border-gold/50 bg-gold-soft/30 p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+        <div>
+          <h2 className="display mb-2 text-[1.6rem]">The season in four points</h2>
+          <Bullets
+            items={[
+              <>
+                <b>Best in the league:</b> {gapName(best)}, {signed(best.gap_vs_avg)} runs a match against an average side ({ordinal(best.rank)} of 10)
+              </>,
+              <>
+                <b>Leaks:</b> {leaks.map(gapName).join(', ')}, about {Math.abs(leakTotal).toFixed(0)} runs a match in all
+              </>,
+              <>
+                <b>The death overs:</b> {ordinal(death.bat_rank)} of 10 batting, {ordinal(death.bowl_rank)} of 10 bowling
+              </>,
+              <>
+                <b>Roles to fill for 2027:</b> {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}
+              </>,
+            ]}
+          />
+        </div>
+        <Link href="/picks/" className="flex min-h-11 items-center justify-center rounded-lg bg-pink px-4 font-semibold text-white hover:bg-pink-ink">
+          See my picks
+        </Link>
+      </section>
+
+      <SectionHead title={`All ${rr.matches.length} matches`}>
+        Pick a match to see RR’s chance of winning, ball by ball. Pink shading marks pressure balls.
       </SectionHead>
       <SeasonExplorer matches={rr.matches} />
 
       <SectionHead title="Where matches were won and lost">
-        Every ball RR played is compared with what an average IPL 2026 side would have scored or conceded in exactly the same
-        situation. Adding it up by phase shows where RR gained and leaked runs. The black tick is the average of the other three
-        playoff sides ({rr.bench.map(iplCode).join(', ')}). That is not the same as the best sides in each phase: some teams that
-        missed the playoffs were strong in one phase, so RR can beat the playoff average and still rank lower. Hover a bar for both.
+        Each ball against an average IPL 2026 side in the same situation, added up by phase.
       </SectionHead>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
         <section className="panel p-5">
@@ -68,11 +83,20 @@ export default function RajasthanPage() {
           </Zoomable>
         </section>
         <div className="flex flex-col gap-4">
-          <Note title="Reading it">
-            <b>{signed(best.gap_vs_avg)}</b> next to {gapName(best)} means RR scored about {best.gap_vs_avg.toFixed(0)} more runs
-            a match in that phase than an average team would have from the same positions. The blue bars are the problem: at the
-            death RR ranked {ordinal(death.bat_rank)} of 10 batting and {ordinal(death.bowl_rank)} bowling.
-          </Note>
+          <section className="panel p-4">
+            <h3 className="mb-2 text-[14px] font-semibold">Reading it</h3>
+            <Bullets
+              className="text-[13.5px]"
+              items={[
+                <>
+                  <b>{signed(best.gap_vs_avg)}</b> = about {best.gap_vs_avg.toFixed(0)} more runs a match than an average side from the same positions
+                </>,
+                'Blue bars lost runs; pink bars gained them',
+                <>Black tick: the other playoff sides ({rr.bench.map(iplCode).join(', ')})</>,
+                'Hover a bar for the best side in that phase too',
+              ]}
+            />
+          </section>
           <section className="panel overflow-hidden">
             <h3 className="border-b border-line px-4 py-3 text-[14px] font-semibold">The same story in familiar numbers</h3>
             <table className="w-full text-[13px]">
@@ -106,7 +130,7 @@ export default function RajasthanPage() {
       </div>
 
       <SectionHead title="Pace, spin and pressure">
-        Where RR sit among the ten IPL sides. Every other team is a dot in its kit colour (hover for the name); zero is the league average.
+        RR against the other nine sides. Each dot is a team in its kit colour; zero is the league average.
       </SectionHead>
       <section className="panel grid gap-x-10 gap-y-5 p-5 md:grid-cols-2">
         <TeamDots title="Batting against pace" rows={mu.teams.map((t) => ({ team: t.team, v: t.bat_vs_pace }))} />
@@ -153,97 +177,22 @@ export default function RajasthanPage() {
       </section>
 
       <SectionHead title="New faces for 2026">
-        Players who joined Rajasthan Royals for this season, with where they came from and what they delivered.
+        Who joined for 2026, where from, and what they delivered.
       </SectionHead>
       <NewFaces joined={rr.joined} squad={rr.squad} />
 
       <SectionHead title="The squad, player by player">
-        Runs added compared with an average IPL 2026 player in the same situations, over the whole season. Sorted from most to
-        least valuable.
+        Runs added against an average IPL 2026 player in the same situations, most valuable first.
       </SectionHead>
       <SquadTables squad={rr.squad} />
 
-      <section className="panel mt-6 flex flex-wrap items-center justify-between gap-4 border-gold/50 bg-gold-soft/40 p-5">
-        <div className="max-w-[70ch]">
-          <h2 className="display text-[1.7rem]">What to fix for 2027</h2>
-          <p className="text-[14px] text-ink-2">
-            RR leaked runs against an average side, or trailed the other playoff sides, in {rr.recommendations.length} roles:{' '}
-            {rr.recommendations.map((r) => r.role.toLowerCase()).join(', ')}. My picks puts the top-10 players who fill
-            these gaps first.
-          </p>
-        </div>
-        <Link href="/picks/" className="flex min-h-11 items-center rounded-lg bg-pink px-4 font-semibold text-white hover:bg-pink-ink">
-          See my picks
+      <p className="mt-8 text-[13px] text-ink-3">
+        Every number here is computed from the official data pack; {pv.checks_passed} of {pv.checks.length} match the public record
+        exactly.{' '}
+        <Link href="/sources/#checks" className="font-semibold text-pink-ink hover:underline">
+          See the checks and every source
         </Link>
-      </section>
-
-      <SectionHead title="Where this data comes from" id="sources">
-        Every number on this page is computed from the official SupeRR Selector data pack, then checked against the public
-        record. Nothing is typed in by hand.
-      </SectionHead>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <section className="panel overflow-hidden">
-          <h3 className="border-b border-line px-5 py-3 text-[14.5px] font-semibold">Source files (SupeRR Selector Season 2 data pack)</h3>
-          <ul className="divide-y divide-line text-[13.5px]">
-            {pv.files.map((f) => (
-              <li key={f.file} className="flex flex-col gap-0.5 px-5 py-2.5">
-                <span className="font-mono text-[12.5px] font-semibold text-ink">{f.file}</span>
-                <span className="text-ink-2">
-                  {f.use}
-                  {f.rows != null && <span className="text-ink-3"> ({fmt.int(f.rows)} rows used)</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="border-t border-line px-5 py-3 text-[12.5px] leading-relaxed text-ink-3">
-            IPL 2026 is competition {pv.comp_id}: {pv.league_matches} matches and {fmt.int(pv.league_balls)} deliveries in total.
-            RR match ids: {pv.match_ids.join(', ')}.
-          </p>
-        </section>
-        <section className="panel overflow-hidden">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-line px-5 py-3">
-            <h3 className="text-[14.5px] font-semibold">Checked against the public record</h3>
-            <Tag tone={pv.checks_passed === pv.checks.length ? 'pink' : 'blue'}>
-              {pv.checks_passed} of {pv.checks.length} match exactly
-            </Tag>
-          </div>
-          <table className="w-full text-[13px]">
-            <thead className="text-[12px] text-ink-3">
-              <tr className="border-b border-line">
-                <th className="px-5 py-2 text-left font-medium">Figure</th>
-                <th className="px-2 py-2 text-right font-medium">Public record</th>
-                <th className="px-2 py-2 text-right font-medium">My figure</th>
-                <th className="px-5 py-2 text-right font-medium">
-                  <span className="sr-only">Match</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {pv.checks.map((c) => (
-                <tr key={c.item} className="border-b border-line last:border-0">
-                  <td className="px-5 py-1.5 text-ink-2">{c.item}</td>
-                  <td className="num px-2 py-1.5 text-right">{c.public}</td>
-                  <td className="num px-2 py-1.5 text-right font-semibold">{c.ours}</td>
-                  <td className="px-5 py-1.5 text-right">
-                    {c.match ? (
-                      <CheckCircle size={17} weight="fill" className="ml-auto text-pink" aria-label="matches" />
-                    ) : (
-                      <XCircle size={17} weight="fill" className="ml-auto text-blue" aria-label="differs" />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="border-t border-line px-5 py-3 text-[12.5px] text-ink-3">
-            Reference:{' '}
-            <a href={pv.reference.url} className="font-semibold text-pink-ink hover:underline" target="_blank" rel="noreferrer">
-              {pv.reference.name}
-            </a>
-            , accessed {fmt.date(pv.reference.accessed)}.
-          </p>
-        </section>
-      </div>
+      </p>
     </>
   )
 }

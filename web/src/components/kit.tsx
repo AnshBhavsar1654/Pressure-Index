@@ -29,6 +29,17 @@ export function SectionHead({ title, children, id, action }: { title: string; ch
   )
 }
 
+/** Short points instead of a paragraph: easier to scan. */
+export function Bullets({ items, className }: { items: ReactNode[]; className?: string }) {
+  return (
+    <ul className={cn('flex flex-col gap-1.5 pl-5 text-[14.5px] leading-snug text-ink-2 marker:text-pink [&_b]:text-ink', className)} style={{ listStyle: 'disc' }}>
+      {items.filter(Boolean).map((it, i) => (
+        <li key={i}>{it}</li>
+      ))}
+    </ul>
+  )
+}
+
 const TONE = { ink: 'text-foreground', pink: 'text-pink', blue: 'text-blue', gold: 'text-gold', white: 'text-white' }
 
 export function Stat({
