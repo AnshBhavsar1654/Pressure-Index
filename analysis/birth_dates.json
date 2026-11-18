@@ -1,5 +1,5 @@
 {
- "_about": "Birth dates for the 'Emerging' label only (the ranking never uses age). Covers every signable player ranked above average under pressure, the whole pool the top 10 and the watch list are drawn from. Full dates are given for players born near the cutoff (1 April 2001: under 26 at the start of IPL 2027, the IPL Emerging Player age test) and were checked against public profiles (Wikipedia, ICC, Wisden, ESPNcricinfo). A year alone is given where the player is clearly older than the cutoff.",
+ "_about": "Birth dates for the 'Emerging' label and the emerging picks only (the top-10 ranking never uses age). Covers every signable player ranked above average under pressure (the pool the top 10 is drawn from) and every signable player under 26 with 25+ pressure balls (the pool the emerging picks are drawn from, including the young names who dip under pressure). Full dates are given for players born near or after the cutoff (1 April 2001: under 26 at the start of IPL 2027, the IPL Emerging Player age test) and were checked against public profiles (Wikipedia, ICC, Wisden, ESPNcricinfo, cricket.com.au, Cricket Ireland). A year alone is given where the player is clearly older than the cutoff.",
  "cutoff": "2001-04-01",
  "born": {
   "Pathum Nissanka": "1998",
@@ -33,6 +33,25 @@
   "Brad Evans": "1997",
   "Sikandar Raza": "1986",
   "Harry Tector": "1999",
-  "FazalHaq Farooqi": "2000-09-22"
+  "FazalHaq Farooqi": "2000-09-22",
+  "Mitchell Owen": "2001-09-16",
+  "Ackeem Auguste": "2003-09-12",
+  "Dunith Wellalage": "2003-01-09",
+  "Mohammad Rishad Hossain": "2002-07-15",
+  "Jediah Blades": "2002-04-15",
+  "Liam Mccarthy": "2002-01-01",
+  "Matheesha Pathirana": "2002-12-18",
+  "Allah Ghazanfar": "2006-07-20",
+  "Jayden Seales": "2001-09-10",
+  "Matthew Forde": "2002-04-29",
+  "Zakary Foulkes": "2002-06-05",
+  "Kwena Maphaka": "2006-04-08",
+  "Tanzim Sakib": "2002-10-20",
+  "Brian Bennett": "2003-11-10",
+  "Ibrahim Zadran": "2001-12-12",
+  "Rahmanullah Gurbaz": "2001-11-28",
+  "Abishek Porel": "2002-10-17",
+  "Gerald Coetzee": "2000-10-02",
+  "Rachin Ravindra": "1999-11-18"
  }
 }

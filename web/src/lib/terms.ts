@@ -63,7 +63,7 @@ export const TERMS = {
   },
   emerging: {
     label: 'Emerging',
-    def: 'Under 26 at the start of IPL 2027 (born on or after 1 April 2001, the age test of the IPL Emerging Player award), from public birth dates. A label, not a quota: the ranking never uses age, and emerging players clear the same bar and are rated on the same scale as everyone else.',
+    def: 'Under 26 at the start of IPL 2027 (born on or after 1 April 2001, the age test of the IPL Emerging Player award), from public birth dates. In the top 10s it is a label, not a quota: the ranking never uses age. The emerging picks on the picks page are a separate list of signable under-26 players on half the evidence bar (25 pressure balls, 10 in 2025–26) who get better under pressure.',
   },
   rate: {
     label: 'Strike rate',

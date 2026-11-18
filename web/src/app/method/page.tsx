@@ -257,7 +257,15 @@ export default function MethodPage() {
         </li>
         <li className="panel p-4">
           <b>Built for 2027.</b> 2026 counts in full and each year back 20% less (2025 at 0.8, down to 2022 at 0.2), and every ranked
-          player needs {e.min_recent_balls}+ pressure balls in 2025–26.
+          player needs {e.min_recent_balls}+ pressure balls in 2025–26. Counting recent seasons for more (30% less per year back, or half)
+          was tested too: it helped the batting forecast a little and hurt the bowling one more, so the 20% step stays, and veterans
+          are not marked down for age. The picks page flags anyone 35 or older in 2027 as a short-term buy instead.
+        </li>
+        <li className="panel p-4">
+          <b>Emerging picks.</b> Players under 26 for IPL 2027 get a separate list on the picks page, on half the top 10’s evidence bar
+          (25 pressure balls, 10 in 2025–26), because a young player has had less time to build a record. The no-dip rule stays: every
+          emerging pick gets better under pressure. Young names who dip are listed as not backed by the data. The submitted top 10s
+          never use age.
         </li>
       </ul>
 
@@ -347,7 +355,7 @@ export default function MethodPage() {
           place the board-release rule allows. The likely-rank charts below show exactly which ranks are safe.
         </li>
         <li>
-          <b>What the data cannot see:</b> fielding, pitch and venue, batter-against-bowler match-ups, injuries, domestic cricket, and
+          <b>What the data cannot see:</b> fielding, pitch and venue, batter-against-bowler match-ups, injuries, domestic cricket (public SMAT data is too patchy to use; see Data sources), and
           the 2022 and 2024 T20 World Cups (the 2026 one is added from public data). First-innings pressure is harder to measure than
           chase pressure, so pressure balls lean towards chases.
         </li>
@@ -442,7 +450,10 @@ export default function MethodPage() {
         {s.public &&
           ` The pack has no World Cup cricket, so the ${s.public.name} (India and Sri Lanka, February–March 2026) is added from public data: ${s.public.matches} matches and ${fmt.int(s.public.balls)} balls from ${s.public.source}, converted into the data pack's own format. Two matches were washed out, and Afghanistan's four group games are not available in the public data we could access; the rest are all here. Players are matched to the data pack by lining up matches that appear in both sources ball by ball, so a name written with initials cannot be confused. Semi-finals and the final count as knockouts.`}{' '}
         Public information is also used for the IPL 2027 retention lists (which players can be bought) and a cross-check of RR’s 2026
-        figures, where {rr.provenance.checks_passed} of {rr.provenance.checks.length} match exactly.{' '}
+        figures, where {rr.provenance.checks_passed} of {rr.provenance.checks.length} match exactly. Domestic T20 (the Syed Mushtaq Ali
+        Trophy) was checked and left out: the public ball-by-ball record (Cricsheet) has only 91 SMAT matches since 2022, about a third
+        of each season, mostly televised and knockout games, 8 from 2024–25 and none from 2025–26. Ratings from such a patchy, televised-only
+        sample would favour a few players by chance, so the gap is named as a limitation instead.{' '}
         <Link href="/rajasthan/#sources" className="font-semibold text-pink-ink hover:underline">
           See the checks
         </Link>
