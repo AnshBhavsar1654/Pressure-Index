@@ -77,9 +77,7 @@ export function Topbar({ players }: { players: Entry[] }) {
           aria-label="Pressure Index home"
         >
           <Mark size={32} />
-          <span className="display text-[1.35rem] uppercase">
-            Pressure Index
-          </span>
+          <span className="display text-[1.15rem]">Pressure Index</span>
         </Link>
         <button
           onClick={() => setOpen(true)}
@@ -128,7 +126,7 @@ export function Topbar({ players }: { players: Entry[] }) {
               className={cn(
                 "flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-left text-[14px] font-medium",
                 (n.href === "/" ? path === "/" : path.startsWith(n.href))
-                  ? "bg-pink text-white"
+                  ? "bg-panel-2 text-foreground ring-1 ring-signal/60"
                   : "text-ink-2 hover:bg-panel-2",
               )}
             >
@@ -161,7 +159,7 @@ export function Topbar({ players }: { players: Entry[] }) {
                       value={`${p.name} ${role}`}
                       onSelect={() => go(`/players/${role}/${p.id}/`)}
                     >
-                      <span className="display num w-8 shrink-0 text-[1.1rem] text-pink">
+                      <span className="num w-8 shrink-0 text-[13px] font-medium text-signal-ink">
                         {p.rank ?? "–"}
                       </span>
                       <span className="min-w-0 truncate font-medium">{p.name}</span>

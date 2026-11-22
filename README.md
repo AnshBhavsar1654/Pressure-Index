@@ -1,70 +1,124 @@
-# Pressure Index: SupeRR Selector Season 2
+# Pressure Index
 
-Rajasthan Royals hackathon, Round 1. **Which batters and bowlers perform most reliably under pressure, and what should RR do at the IPL 2027 auction?**
+**Who performs when a T20 match is on the line?** An end-to-end machine-learning and analytics project over every IPL and
+men's T20 international delivery since 2022: models that score how much each ball could swing the result, player ratings built
+on the balls that mattered most, and an interactive dashboard to explore all of it.
 
-The submission is an interactive dashboard (Next.js, built with Bun, exported as a static site):
-
-| Page | What it answers |
+| | |
 |---|---|
-| Overview | The top 10 batters and bowlers under pressure, told through a real RR match |
-| My picks | The 20 picks at a glance, what RR need, then the 20 picks in full (gap-fillers first), **emerging picks** (signable players under 26 for IPL 2027, from public birth dates in `analysis/birth_dates.json`, on half the evidence bar: 25 pressure balls in 2+ matches, 10 in 2025–26, never dipping), **Indian options** (signable Indians in an IPL 2026 squad with 17+ pressure balls in 2+ matches who do not dip and rate about average or better; retentions took almost every above-average Indian, so the top 10 holds only two), short-term buys (35+ in 2027) and RR's retained squad |
-| How it works | The method in four steps, then the brief's five report sections (pressure definition, measurement with a worked example, fair comparisons, evidence for the top 10, reliability and limits), a table of every number chosen and why, and a glossary |
-| Data used | Every dataset: the data pack files taken as is, the public data blended in (2026 T20 World Cup), the public facts behind the selection rules, the public-record cross-check, and what was checked and left out |
-| Batters / Bowlers | Full rankings with an adjustable evidence bar, and a profile page for every player |
-| All players | Every player who batted or bowled in top-level cricket since 2022, searchable and filterable, each with a profile page |
-| IPL 2026 review | RR's season: all 16 matches ball by ball, where runs were won and lost, and the squad player by player |
-| Compare players | Up to three batters or bowlers side by side |
+| **Data** | 638,406 deliveries · 2,836 matches · IPL 2022–26 (367) · T20Is (2,469, incl. the 2022, 2024 and 2026 T20 World Cups) · open data from [Cricsheet](https://cricsheet.org) |
+| **Models** | Monotonic gradient-boosted run expectancy · logistic win probability on engineered features · exact final-over Markov model · empirical-Bayes shrinkage ratings · k-means archetypes |
+| **Validation** | Match-grouped 5-fold CV · season holdout · walk-forward backtests · 400× bootstrap · split halves · unit tests |
+| **Stack** | Python (pandas, scikit-learn, pyarrow) → JSON → Next.js 16 + TypeScript + Tailwind, hand-built SVG charts, static export |
 
-## The idea in one paragraph
-
-A win-probability model reads the scoreboard before every ball (in the final over of a chase it is worked out exactly, ball by ball). A ball's **stakes** are how far the next delivery could move that chance; the top 20% of balls by stakes are **pressure balls**, and so is every ball of a knockout. Each ball is judged on **runs added**: runs scored against what an average player gets from exactly the same spot, with a wicket charged at the runs it costs from there. T20I balls are also judged against T20Is in the same host country and against the same opponent that season, so slow pitches and weak attacks flatter nobody. A player's **pressure rating** is runs added per 100 pressure balls, leaning on his **usual level** (the same sum on every other ball) until his pressure record is long: `rating = (Σ recency × pressure runs added + 200 × usual level) ÷ (Σ recency + 200)`. Each year back counts 20% less. **Lift** = rating − usual level. Ratings use the IPL and T20Is between full-member nations only. To be ranked a player needs 50 pressure balls in 4 matches (a match counts with 6+ pressure balls), 20 of them in 2025–26 (so every ranked player has played top-level cricket in the last two years); a knockout first-innings ball counts half. Indian players need a third of that (17 balls, 2 matches, 7 in 2025–26), because the data pack has no domestic cricket. The submitted top 10s are ranked by the rating, among players RR can buy at the 2027 auction (not RR's own squad, other teams' retentions, retired players, Pakistani players, or anyone with no top-level cricket in 2026) who do not dip under pressure (lift ≥ 0). RR's retentions leave only 3 overseas places, so every signable Indian player who is above average under pressure is guaranteed a top-10 place (up to 5); no below-average player is promoted. Each list holds at most one Bangladeshi player, because the Bangladesh board often limits IPL release (NOC). `auction_pool.json` also lists retired players and players who cannot play IPL 2027 (`unavailable`, e.g. Harry Brook's ban). Rain-reduced matches are judged on their revised target, so the 2023 IPL final counts; only games cut below 10 overs a side are left out of pressure.
-
-Four settings in all (the 20% line, K = 200, the recency step, the evidence bar), each chosen with a **forward test**: ratings built from 2022–24 and 2022–25 only, scored on how players actually did under pressure in 2025 and 2026. Win impact, consistency and recent form are shown beside each rating as evidence, not blended in, because blending them made predictions worse. Ranks are stress-tested with 400 re-runs on resampled matches.
-
-## Data and trust
-
-- **The official SupeRR Selector Season 2 data pack is the base**: `ball_by_ball.csv`, `matches.csv`, `competitions.csv`, `competition_team_player_mapping.csv` and `playing_eleven.csv` (IPL and T20I, 2022 to 2026). The pack is not redistributed in this repo; place the unzipped files in `Data Pack/`.
-- **The 2026 ICC Men's T20 World Cup is added from public data** (the brief allows publicly available data alongside the pack, and the pack has no World Cup matches): 49 of the 55 matches (2 were washed out; Afghanistan's 4 group games are not available in the public data we could access) from [Cricsheet](https://cricsheet.org) (CC BY licence), fetched from a public Hugging Face mirror of Cricsheet's files and converted into the data pack's own format in `public_data/t20wc2026/` by `analysis/public_wc2026.py`. Players are matched to data pack ids by lining up the 55 matches that appear in both sources ball by ball (148 people), then by surname and initial within the same country only when exactly one player fits (71); 48 players, almost all from associate sides, are new. Every match is listed in `public_data/t20wc2026/player_map.csv` for checking.
-- **RR's IPL 2026 figures are checked against the public record**: league position, record, net run rate, playoff results, and the top five run-scorers and wicket-takers all match [Wikipedia: 2026 Rajasthan Royals season](https://en.wikipedia.org/wiki/2026_Rajasthan_Royals_season) exactly (15 of 15 checks). The dashboard shows the check table on the IPL 2026 review page.
-- **Domestic T20 (Syed Mushtaq Ali Trophy) was checked and left out.** Cricsheet's public SMAT record has only 91 matches since 2022 (about a third of each season, mostly televised and knockout games; 8 from 2024–25, none from 2025–26), too patchy to rate players fairly.
-- `analysis/nationality_overrides.json` corrects nationality for a few players with no T20Is in the window (for example Sunil Narine), so the overseas labels are right.
-- Team crests are kit-colour roundels with each side's short code. Official logos are trademarked, so they are not bundled; to use them, place the files in `web/public/logos/` and set the `logo` path for each team in `web/src/lib/teams.ts`.
-- Country flags are SVGs from the MIT-licensed `country-flag-icons` package, copied into `web/public/flags/`.
-- The evidence bar can be changed on the rankings pages (default 50 pressure balls in 4 matches); the no-dip and auction rules apply live.
-- `analysis/auction_pool.json` takes the official retention list (17 November 2026): add every retained player to `retained` (names as they appear in the data, or player ids) and rerun both analysis scripts. Retained players leave the top 10s and the auction lists, and RR players RR did not keep become buyable. Names the scripts cannot match are printed as a warning.
-- Every statistic is named once, in plain words, in `web/src/lib/terms.ts`. Tables, charts and the glossary all read from it, and every underlined term explains itself on hover.
-
-## Repo layout
+## How it works
 
 ```
-analysis/pipeline.py      pressure model, run value, player ratings, forward test, bootstrap  -> web/data/*.json
-analysis/rr2026.py        RR 2026 diagnosis, auction targets, cross-checks      -> web/data/rr2026.json
-web/                      Next.js dashboard (Bun, Tailwind, hand-built SVG charts)
-Data Pack/                raw data pack (not committed)
+Cricsheet JSON ──► canonical tables ──► match state before every ball
+                                             │
+              run expectancy (HistGBM, monotonic) ──► win probability (logistic + exact last over)
+                                             │
+                     stakes of every ball ──► pressure balls (top 20% + every knockout ball)
+                                             │
+               runs added vs an average player in the same spot (host-country & opponent adjusted)
+                                             │
+           rating = (Σ w·pressure runs added + K·usual level) / (Σ w + K)   ← shrinkage, K = 200
+                                             │
+            bootstrap intervals · forward tests · archetypes ──► dashboard JSON ──► Next.js
 ```
+
+1. **Win probability.** For a chase: log(runs needed ÷ runs the side can still expect), from the run-expectancy model, plus its
+   square, its interaction with time left, wickets in hand and required rate. The first innings is measured against a par total.
+   In the final over the model is replaced by an exact backward recursion over (runs needed, balls left, wickets).
+2. **Stakes.** The expected absolute change in win probability over every possible next ball (dot, 1, 2, 3, 4, 6, wicket, wide),
+   weighted by how often each happens in that phase. Pressure ball = top 20% by stakes, or any ball of a knockout.
+3. **Runs added.** Runs scored minus what an average batter makes from that exact state, with a wicket charged at the runs it
+   costs from there; mirrored for bowlers. T20I balls are recentred by host country and by opponent each season.
+4. **Rating.** Runs added per 100 pressure balls, shrunk toward the player's usual level until the pressure record is long
+   (half and half at 200 recency-weighted balls). **Lift** = rating − usual level.
+
+## Results
+
+**Win probability: the engineered linear model beats gradient boosting.** Match-grouped 5-fold CV (chase / first innings):
+
+| Model | Chase AUC | Chase Brier | First-inn. AUC | First-inn. Brier |
+|---|---|---|---|---|
+| **Logistic on engineered "resources" (production)** | **0.919** | **0.1154** | **0.744** | **0.2046** |
+| HistGradientBoosting (raw state + engineered) | 0.912 | 0.1217 | 0.731 | 0.2101 |
+| HistGradientBoosting + isotonic calibration | 0.911 | 0.1221 | 0.730 | 0.2095 |
+
+Permutation importance shows why: the engineered resources feature carries almost all of the signal. A logistic surface is also
+smooth in runs and balls, which measuring a ball's stakes needs.
+
+**The honest finding: future pressure output is mostly general skill.** Walk-forward backtests (rate on 2022–24 / 2022–25, score on
+2025 / 2026), correlation with next season's runs added per pressure ball:
+
+| Predictor | Batters | Bowlers |
+|---|---|---|
+| Pressure rating (K = 200) | 0.116 | 0.194 |
+| Usual level alone | 0.120 | 0.254 |
+| Gradient boosting on 12 player features | 0.090 | −0.011 |
+| Last season's raw pressure form | 0.003 | 0.046 |
+
+- A hyperparameter sweep (5 pressure lines × 5 values of K × 4 recency steps) finds prediction keeps improving with more shrinkage
+  (best: K = 800, r = 0.174 vs 0.155). Production keeps K = 200 on purpose: the rating is meant to *describe* pressure performance,
+  and at K = 800 it collapses into the usual level. The cost is stated, not hidden.
+- The learned next-season model does not beat the hand-built rating: about 200 player-seasons a year is too few, so it overfits.
+- Lift ("clutch") barely repeats between odd and even matches (split-half r ≈ −0.03), so it is shown, never scored.
+
+The full write-up, with interactive charts for every result, is on the dashboard's **Model Lab** page.
+
+## The dashboard
+
+| Page | What it shows |
+|---|---|
+| Overview | Headline numbers, the top 10 batters and bowlers, a featured World Cup final ball by ball, the pipeline |
+| Model Lab | Model comparison, calibration, importance, WP curves, run-expectancy surface, tuning heatmap, next-season model, bootstrap intervals, model card |
+| Batters / Bowlers | Rankings with an adjustable evidence bar that re-ranks in the browser, a pressure-vs-usual scatter, 90% intervals |
+| Player profiles | Every top-level player since 2022: season trend, phases, match-by-match strip, biggest moments |
+| Match explorer | All 886 top-level and World Cup matches: win-probability chart, pressure balls, biggest swings, runs added |
+| IPL teams | Every season's table rebuilt from the balls, and each team's runs won and lost by phase |
+| Insights | What changes under pressure, who rises and drops, new faces, playing-style archetypes (k-means + PCA) |
+| Methodology · Data & pipeline | Every definition and setting, the worked example, data sources and quality checks |
 
 ## Reproduce
 
 ```bash
-# 1. analysis (Python 3.12 with pandas, numpy, scikit-learn, pyarrow)
-python -I analysis/public_wc2026.py --download   # 2026 T20 World Cup from Cricsheet (optional; output is committed)
-python -I analysis/pipeline.py        # ~5 min; N_BOOT=50 for a quick run
-python -I analysis/rr2026.py
-python analysis/worked_example.py    # methodology page's step-by-step example; checks it matches the ratings
+# 1. pipeline (Python 3.11+)
+uv sync --extra dev                      # or: pip install -e ".[dev]"
+python -m pressure_index download        # Cricsheet archives + registers  -> data/raw/
+python -m pressure_index all             # build, model, evaluate, export  -> web/data/, artifacts/
+pytest -q && ruff check pressure_index tests
 
 # 2. dashboard
 cd web
 bun install
-bun run dev                           # http://localhost:3000
-bun run build                         # static site in web/out, host anywhere
-
-# 3. submission deck (Pressure_Index_RR_2027.pptx, built from web/data)
-cd ../deck
-npm install
-node build_deck.js
-
-# 4. HTML slide deck (Pressure_Index_RR_2027_slides.html, Swiss Modern style, built from web/data)
-cd ..
-node deck/build_slides.js
-node deck/export_slides_pptx.js     # same deck as Pressure_Index_RR_2027_slides.pptx (needs Microsoft Edge)
+bun run dev                              # http://localhost:3000
+bun run build                            # static site in web/out
 ```
+
+Every setting lives in [`pressure_index/config.toml`](pressure_index/config.toml). `N_BOOT=50` gives a quick export.
+
+## Repository layout
+
+```
+pressure_index/
+  data/          download.py (Cricsheet), build.py (canonical CSVs)
+  features/      match_state.py
+  models/        run_expectancy.py, win_prob.py, endgame.py, leverage.py
+  rating/        run_value.py, ratings.py (shrinkage, eligibility, ranking)
+  evaluation/    reliability.py (bootstrap, split half, forward test), wp_compare.py, tuning.py, next_season.py
+  analysis/      teams.py, archetypes.py
+  export/        dashboard.py, matches.py
+  pipeline.py    core stage · evaluate.py · __main__.py (CLI)
+data/reference/  hand-checked lookup tables (city → country, display names, nationality fixes)
+artifacts/       metrics JSON and the model card
+tests/           unit tests (monotonicity, endgame bounds, rating formula, no leakage across folds)
+web/             Next.js dashboard
+```
+
+## Data and licence
+
+Ball-by-ball data © [Cricsheet](https://cricsheet.org), released under the Open Data Commons Attribution License. Team and player
+names are used only to identify them; no logos are bundled. Not affiliated with the IPL, the ICC or any team.
+Code: MIT.

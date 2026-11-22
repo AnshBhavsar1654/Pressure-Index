@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Bullets, ordinal } from '@/components/kit'
+import { Bullets } from '@/components/kit'
 import { Term } from '@/components/Term'
 import { fmt } from '@/lib/format'
 import { winPts } from '@/lib/terms'
@@ -23,8 +23,6 @@ export interface Example {
     recent_balls: number; recent100: number; recent_from: number
   }
   rank: number
-  merit_rank: number
-  n_qualified: number
   n_ranked: number
   next: { rank: number; name: string; rating: number }[]
   boot: { p_top10: number; rank_med: number; rank_lo: number; rank_hi: number }
@@ -38,13 +36,13 @@ const sg = (n: number, d = 1) => fmt.signed(n, d)
 function Step({ n, title, children, sum }: { n: number; title: string; children: ReactNode; sum: ReactNode }) {
   return (
     <li className="grid gap-3 bg-panel p-5 md:grid-cols-[3rem_minmax(0,1fr)_minmax(0,1.1fr)] md:gap-6">
-      <span className="display num text-[2.4rem] leading-none text-pink">{n}</span>
+      <span className="display num text-[2.4rem] leading-none text-signal-ink">{n}</span>
       <div>
         <h3 className="text-[16px] font-semibold">{title}</h3>
         <div className="mt-2">{children}</div>
       </div>
       <div className="num rounded-lg bg-panel-2 px-4 py-3 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink">
-        <span className="mb-1 block text-[12.5px] font-semibold text-blue">The numbers</span>
+        <span className="mb-1 block text-[12.5px] font-semibold text-data-ink">The numbers</span>
         {sum}
       </div>
     </li>
@@ -133,7 +131,7 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
           items={[
             `All ${fmt.int(s.p_balls)} of ${who}’s pressure balls, in ${s.p_matches} matches`,
             'IPL and T20Is between full-member nations only',
-            '2026 counts in full, 2025 at 0.8, down to 2022 at 0.2: an auction buys 2027 form',
+            '2026 counts in full, 2025 at 0.8, down to 2022 at 0.2: recent form matters most',
           ]}
         />
       </Step>
@@ -219,9 +217,8 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
         <Bullets
           items={[
             'Ranked by the rating alone',
-            `1st of the ${e.n_ranked} qualified batters RR can buy who rise under pressure`,
-            `${ordinal(e.merit_rank)} of all ${e.n_qualified} qualified batters, including those already retained`,
-            'The whole ranking is re-run 400 times on resampled matches, so a pick cannot hang on a few lucky games',
+            `1st of the ${e.n_ranked} qualified batters`,
+            'The whole ranking is re-run 400 times on resampled matches, so a rank cannot hang on a few lucky games',
           ]}
         />
       </Step>
@@ -230,7 +227,7 @@ export function WorkedExample({ e, threshold }: { e: Example; threshold: number 
         pressure balls; <Term k="consistency">consistency</Term> {s.c_pos} of {s.c_n} pressure innings above average;{' '}
         <Term k="recentForm">recent form</Term> {sg(s.recent100)} over {s.recent_balls} pressure balls in {s.recent_from}–26. Plain
         numbers agree: strike rate {fmt.dec(e.press.sr, 0)} under pressure against {fmt.dec(e.norm.sr, 0)} normally.{' '}
-        <Link href={`/players/bat/${e.id}/`} className="font-semibold text-pink-ink hover:underline">
+        <Link href={`/players/bat/${e.id}/`} className="font-semibold text-signal-ink hover:underline">
           Open {who}’s full profile
         </Link>
       </li>

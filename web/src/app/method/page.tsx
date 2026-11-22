@@ -3,7 +3,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Flag } from '@/components/Flag'
 import { Bullets, PageHead, SectionHead, Stat, signed } from '@/components/kit'
-import { getExample, getGrid, getRanked, getRole, getRR, getSummary } from '@/lib/data'
+import { getExample, getGrid, getLab, getRanked, getRole, getSummary } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import { TERMS, winPts } from '@/lib/terms'
 import type { Player, Role } from '@/lib/types'
@@ -14,7 +14,7 @@ import { ChaseMap, PressureShape } from '@/views/PressureCharts'
 import { SanityChecks } from '@/views/SanityChecks'
 import { WorkedExample } from '@/views/WorkedExample'
 
-export const metadata: Metadata = { title: 'How it works' }
+export const metadata: Metadata = { title: 'Methodology' }
 
 const CONTENTS: [string, string][] = [
   ['steps', 'The method in 4 steps'],
@@ -31,14 +31,14 @@ export default function MethodPage() {
   const s = getSummary()
   const bat = getRole('bat')
   const bowl = getRole('bowl')
-  const rr = getRR()
+  const lab = getLab()
   const ex = getExample()
   const c = s.contrast
   const mo = s.moments[0]
   const e = bat.eligibility
   const weights = Object.entries(s.season_weights).map(([y, v]) => `${y}: ${v}`).join(' · ')
   // the small-sample example on this page is read from the data, never typed in
-  const owen = bat.players.find((p) => p.name === 'Mitchell Owen')
+  const owen = bat.players.filter((p) => p.p_balls >= 25 && p.p_balls <= 80).toSorted((a, b) => (b.p_raw100 - b.p_rv100) - (a.p_raw100 - a.p_rv100))[0]
 
   const steps: { t: string; d: ReactNode[]; ex: ReactNode }[] = [
     {
@@ -124,11 +124,11 @@ export default function MethodPage() {
   // every setting and assumption, with its value and the reason for it
   const settings: { group: string; rows: [string, string, string][] }[] = [
     {
-      group: 'The four model settings (each chosen with the forward test)',
+      group: 'The four model settings (tested with walk-forward backtests)',
       rows: [
         ['Pressure line', `Top 20% of balls by stakes (${s.pressure_threshold.toFixed(2)}×)`, 'Rare enough to be real pressure, common enough to give each player a usable sample'],
-        ['Lean on usual level (K)', `${s.K} balls`, 'A pressure record counts half at 200 recency-weighted balls, more after'],
-        ['Recency', weights, 'Each year back 20% less; steeper steps helped batting a little and hurt bowling more'],
+        ['Lean on usual level (K)', `${s.K} balls`, lab.tuning ? `A pressure record counts half at ${s.K} weighted balls. The sweep prefers K = ${lab.tuning.best.K} (forward r ${lab.tuning.best.mean.toFixed(3)} vs ${lab.tuning.production.mean.toFixed(3)}); kept at ${s.K} so the rating still describes pressure, not just general skill` : 'A pressure record counts half at 200 weighted balls'],
+        ['Recency', weights, 'Each year back 20% less; the sweep found recency matters little (0.12 to 0.12 across steps)'],
         ['Evidence to be ranked', `${e.min_pressure_balls} pressure balls, ${e.min_pressure_matches} matches, ${e.min_recent_balls} in ${e.recent_from}–26`, 'Enough to judge, and every pick has played top-level cricket recently'],
       ],
     },
@@ -161,43 +161,25 @@ export default function MethodPage() {
         ['Bowler charges', 'Bat runs, wides and no-balls; not byes or leg byes', 'A bowler cannot stop a bye'],
         ['Bowler wickets', 'Run outs not credited', 'Not the bowler’s doing'],
         ['Average = 0', 'Recentred per competition and season', 'The 2024–26 IPL scoring boom flatters nobody'],
-        ['T20I conditions', 'Recentred by host country × season, then opponent × season', 'Bangladesh T20Is go at 7.9 an over, other T20Is 8.7; weak attacks flatter everyone'],
+        ['T20I conditions', 'Recentred by host country × season, then opponent × season', 'Slow home pitches and weak attacks flatter nobody'],
         ['Which cricket', `IPL and T20Is between the 12 full members (${fmt.int(s.n_top_level_matches)} matches)`, 'One clear rule instead of a made-up discount for associate cricket'],
       ],
     },
     {
-      group: 'Who can be ranked and recommended',
+      group: 'Who can be ranked',
       rows: [
-        ['Indian players', `A third of the bar: ${e.indian_min[0]} balls, ${e.indian_min[1]} matches, ${e.indian_min[2]} in ${e.recent_from}–26`, 'The pack has no domestic cricket, so an Indian player’s only top-level cricket is the IPL'],
-        ['Indian places', `Up to ${e.indian_places} guaranteed, only if rating > 0`, rr.slots ? `RR have only ${rr.slots.open_overseas} overseas places left; never a below-average player` : 'Overseas places are scarce'],
-        ['Bangladesh', `At most ${e.max_bangladesh} per top 10`, 'The board often limits IPL release (NOC)'],
-        ['Active in 2026', 'Played top-level cricket in 2026 (IPL or full-member T20I)', 'An auction buys 2027 form; the 2025–26 evidence rule alone can be met in early 2025'],
-        ['No dip', 'Lift must be 0 or more', 'The brief asks who rises; a player who dips is never picked'],
-        ['Not buyable', 'RR’s squad, other teams’ retentions, retired, banned, Pakistani players', 'The list is for the 2027 auction'],
-        ['Ordering', 'By pressure rating alone', 'Blending in win impact or consistency predicted worse'],
+        ['Evidence bar', `${e.min_pressure_balls} pressure balls in ${e.min_pressure_matches} matches, ${e.min_recent_balls} of them in ${e.recent_from}–26`, 'Enough to judge, and every ranked player has played top-level cricket recently'],
+        ['Ordering', 'By pressure rating alone', 'Blending in win impact or consistency predicted worse in the forward test'],
+        ['Labels, not filters', `Lift, “active in ${e.active_season}”, “new face” (debut ${e.new_from}+) and archetype are shown and filterable, never used to rank`, 'Keep the rating a single, testable quantity'],
       ],
     },
     {
       group: 'Checks',
       rows: [
-        ['Forward test', 'Rate on 2022–24 and 2022–25, score on 2025 and 2026; 25+ balls before, 24+ after', 'The only test that asks what we need: who delivers next'],
-        ['Re-runs', '400 resamples of whole matches (fixed seed)', 'Shows which ranks are safe'],
-        ['Safe pick', 'Top 10 in 50%+ of re-runs; under 50% is a close call', 'A plain reading of the re-runs'],
+        ['Forward test', 'Rate on 2022–24 and 2022–25, score on 2025 and 2026; 25+ balls before, 24+ after', 'The test that asks what matters: who delivers next'],
+        ['Hyperparameter sweep', lab.tuning ? `${lab.tuning.grid.pctl.length * lab.tuning.grid.K.length * lab.tuning.grid.step.length} combinations of pressure line × K × recency` : 'Pressure line × K × recency', 'Results in the Model Lab'],
+        ['Bootstrap', '400 resamples of whole matches (fixed seed)', 'Rank and rating intervals'],
         ['Split halves', 'Odd against even matches', 'Shows which measures repeat'],
-      ],
-    },
-    {
-      group: 'Picks page only (never the ranking)',
-      rows: [
-        ['Emerging', 'Born on or after 1 April 2001 (under 26 for IPL 2027)', 'The IPL Emerging Player age test'],
-        ['Emerging bar', '25 pressure balls, 2 matches, 10 in 2025–26; 5 per role; no dip', 'Half the main bar: young players have had less time'],
-        ['Tipped but dipping', '50+ pressure balls and negative lift', 'Enough evidence to say so'],
-        ['Indian options', 'Signable Indian in an IPL 2026 squad; 17+ pressure balls in 2+ matches; no dip; rating −1 or better; listed in his main role', 'Retentions took almost every above-average Indian; these are the next best, shown as options, not picks'],
-        ['Short-term buy', '35 or older during IPL 2027', 'Flagged, not marked down'],
-        ['Role at RR', 'Best phase with 30+ pressure balls (15 for emerging)', 'Fewer balls in a phase is too thin to call a strength'],
-        ['RR gap', 'A phase where RR were below average, or behind the other playoff sides', 'The bar for winning the title'],
-        ['Retained roles', 'Keeper if he kept in a quarter of matches since 2024; all-rounder 6+ balls bowled and 8+ faced a match; bowler 6+ balls a match', 'The pack has no role field'],
-        ['Squad rules', '25 players, 8 overseas', 'IPL squad limits'],
       ],
     },
   ]
@@ -211,13 +193,13 @@ export default function MethodPage() {
   return (
     <>
       <PageHead
-        title="How it works"
-        summary="Two questions for every ball since 2022: how much was at stake, and how did the player do against an average player in the same spot?"
+        title="Methodology"
+        summary="Two questions for every ball since 2022: how much was at stake, and how did the player do against an average player in the same spot? Models, validation and every setting, with the real numbers."
       />
 
       <nav aria-label="On this page" className="mb-6 flex flex-wrap gap-2">
         {CONTENTS.map(([id, label]) => (
-          <a key={id} href={`#${id}`} className="rounded-lg border border-line bg-panel px-3 py-1.5 text-[13px] font-medium text-ink-2 hover:border-pink hover:text-foreground">
+          <a key={id} href={`#${id}`} className="rounded-lg border border-line bg-panel px-3 py-1.5 text-[13px] font-medium text-ink-2 hover:border-signal hover:text-foreground">
             {label}
           </a>
         ))}
@@ -227,13 +209,13 @@ export default function MethodPage() {
       <ol id="steps" className="flex scroll-mt-24 flex-col gap-px overflow-hidden rounded-[10px] border border-line bg-line">
         {steps.map((st, i) => (
           <li key={st.t} className="grid gap-4 bg-panel p-5 md:grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] md:gap-6">
-            <span className="display num text-[3rem] leading-none text-pink">{i + 1}</span>
+            <span className="num text-[2rem] font-semibold leading-none text-signal-ink">0{i + 1}</span>
             <div>
               <h2 className="mb-2 text-[17px] font-semibold">{st.t}</h2>
               <Bullets items={st.d} />
             </div>
             <p className="rounded-lg bg-panel-2 px-4 py-3 text-[14px] leading-relaxed text-ink-2 [&_b]:text-ink">
-              <span className="mb-1 block text-[12.5px] font-semibold text-blue">Example</span>
+              <span className="mb-1 block text-[12.5px] font-semibold text-data-ink">Example</span>
               {st.ex}
             </p>
           </li>
@@ -245,9 +227,9 @@ export default function MethodPage() {
         The label never sees how players did, yet cricket changes just as you would expect when it is on.
       </SectionHead>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-        <Stat label="Wickets per 100 balls" value={c.pressure.wkt_pct.toFixed(1)} tone="pink" note={`against ${c.normal.wkt_pct.toFixed(1)} on other balls`} />
-        <Stat label="Wides and no-balls" value={`${c.pressure.extras_pct.toFixed(1)}%`} tone="pink" note={`against ${c.normal.extras_pct.toFixed(1)}%: bowlers feel it too`} />
-        <Stat label="Dot balls" value={`${c.pressure.dot_pct.toFixed(0)}%`} tone="pink" note={`against ${c.normal.dot_pct.toFixed(0)}%`} />
+        <Stat label="Wickets per 100 balls" value={c.pressure.wkt_pct.toFixed(1)} tone="signal" note={`against ${c.normal.wkt_pct.toFixed(1)} on other balls`} />
+        <Stat label="Wides and no-balls" value={`${c.pressure.extras_pct.toFixed(1)}%`} tone="signal" note={`against ${c.normal.extras_pct.toFixed(1)}%: bowlers feel it too`} />
+        <Stat label="Dot balls" value={`${c.pressure.dot_pct.toFixed(0)}%`} tone="signal" note={`against ${c.normal.dot_pct.toFixed(0)}%`} />
         <Stat label="Pressure balls found" value={fmt.int(c.pressure.balls)} note={`out of ${fmt.int(s.n_balls)} deliveries`} />
       </div>
       <div className="mt-6 flex flex-col gap-6">
@@ -276,7 +258,7 @@ export default function MethodPage() {
 
       {/* ------------------------------------------------------------ 2. measurement */}
       <SectionHead title="2. Measuring performance" id="measure">
-        Every step for the top-ranked batter, {ex.name}, with the real numbers. A script checks the sums against the published rating.
+        Every step for the top-ranked batter, {ex.name}, with the real numbers. The export step asserts these sums match the published rating.
       </SectionHead>
       <WorkedExample e={ex} threshold={s.pressure_threshold} />
 
@@ -303,34 +285,31 @@ export default function MethodPage() {
       </div>
       <p className="mt-2 text-[13px] text-ink-3">
         Full list of files, and what was blended in from public data:{' '}
-        <Link href="/sources/" className="font-semibold text-pink-ink hover:underline">
-          Data used
+        <Link href="/sources/" className="font-semibold text-signal-ink hover:underline">
+          Data &amp; pipeline
         </Link>
       </p>
 
       {/* ------------------------------------------------------------ 3. fair comparisons */}
       <SectionHead title="3. Fair comparisons" id="fair">
-        Who can be ranked, who can be picked, and the choices that stop the wrong things being rewarded.
+        Who can be ranked, and the choices that stop the wrong things being rewarded.
       </SectionHead>
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <Card title="Who can be ranked">
           <Bullets
             items={[
               `${e.min_pressure_balls}+ pressure balls in ${e.min_pressure_matches}+ matches`,
-              `${e.min_recent_balls}+ of them in ${e.recent_from}–26, so every pick is current`,
-              `Indian players: a third of that (${e.indian_min[0]} balls, ${e.indian_min[1]} matches, ${e.indian_min[2]} recent), as the pack has no domestic cricket`,
+              `${e.min_recent_balls}+ of them in ${e.recent_from}–26, so every ranked player is current`,
               `${bat.eligibility.n_eligible} batters and ${bowl.eligibility.n_eligible} bowlers qualify`,
             ]}
           />
         </Card>
-        <Card title="Who can be picked">
+        <Card title="What the ranking ignores">
           <Bullets
             items={[
-              'Only players RR can buy at the 2027 auction',
-              'Only players active in 2026 (IPL or full-member T20I)',
-              'Never a player who dips under pressure (negative lift)',
-              `Each above-average Indian gets a place (up to ${e.indian_places})${rr.slots ? `: RR have ${rr.slots.open_overseas} overseas places left` : ''}`,
-              `At most ${e.max_bangladesh} Bangladeshi player per list (board release)`,
+              'Team, nationality and age never enter the rating',
+              'Players who dip under pressure stay in the list: lift is shown, not filtered',
+              `Inactive players keep their rating; the table can filter to those active in ${e.active_season}`,
             ]}
           />
         </Card>
@@ -354,7 +333,7 @@ export default function MethodPage() {
         <Card title="Pitches and opponents">
           <Bullets
             items={[
-              'T20Is: Bangladesh 7.9 runs an over, other T20Is 8.7, the IPL 9.3',
+              'Scoring rates differ a lot between host countries and opponents',
               'Each T20I ball is compared within its host country, then its opponent, each season',
               'Batting forecasts roughly doubled; bowling dipped slightly, within noise',
             ]}
@@ -381,20 +360,8 @@ export default function MethodPage() {
         <Card title="Economy and wickets both count">
           <Bullets items={['Every run kept below an average bowler from the same spot', 'Each wicket at the runs it costs from there (about 10 early, 2.6 at the death)']} />
         </Card>
-        <Card title="Built for 2027">
-          <Bullets
-            items={[
-              '2026 counts in full; each year back 20% less',
-              'Nobody is marked down for age; 35+ is flagged as a short-term buy instead',
-              <>
-                Under-26s get their own{' '}
-                <Link href="/picks/#emerging" className="font-semibold text-pink-ink hover:underline">
-                  emerging list
-                </Link>{' '}
-                on half the bar
-              </>,
-            ]}
-          />
+        <Card title="Recency">
+          <Bullets items={['The latest season counts in full; each year back 20% less', 'Nobody is marked down for age or experience']} />
         </Card>
       </div>
 
@@ -403,12 +370,12 @@ export default function MethodPage() {
         title="4. Evidence for the top 10"
         id="top10"
         action={
-          <Link href="/picks/" className="text-[14px] font-semibold text-pink-ink hover:underline">
-            Why I back each one
+          <Link href="/rankings/bat/" className="text-[14px] font-semibold text-signal-ink hover:underline">
+            Full rankings
           </Link>
         }
       >
-        Ordered by pressure rating. Win impact and top-10 confidence are evidence, not part of the order.
+        Ordered by pressure rating. Win impact and top-10 confidence (bootstrap) are evidence, not part of the order.
       </SectionHead>
       <div className="grid gap-4 xl:grid-cols-2">
         {(['bat', 'bowl'] as const).map((role) => (
@@ -423,9 +390,6 @@ export default function MethodPage() {
           </>,
           <>
             <b>Confidence can differ from rank:</b> a long record is steadier than a short one with a similar rating
-          </>,
-          <>
-            <b>Rank 10 below a higher rating:</b> the guaranteed Indian place and the one-Bangladeshi rule can move a player in or out
           </>,
         ]}
       />
@@ -471,15 +435,22 @@ export default function MethodPage() {
         <Card title="What the test shows">
           <Bullets
             items={[
+              ...(['bat', 'bowl'] as const).map((r) => {
+                const f = s.forward[r]
+                const who = r === 'bat' ? 'Batters' : 'Bowlers'
+                return f.rating >= f.normal ? (
+                  <>
+                    <b>{who}:</b> the rating ({f.rating.toFixed(2)}) is the best predictor, ahead of usual level alone ({f.normal.toFixed(2)})
+                  </>
+                ) : (
+                  <>
+                    <b>{who}:</b> usual level alone predicts better ({f.normal.toFixed(2)} against {f.rating.toFixed(2)}): next season’s pressure output is mostly general skill, which is why the rating leans on it until the record is long
+                  </>
+                )
+              }),
               <>
-                <b>Bowlers:</b> the rating is the best predictor, beating usual level and lift alone
-              </>,
-              <>
-                <b>Batters:</b> usual level predicts slightly better, so the rating leans on it until the record is long
-              </>,
-              <>
-                <b>“Clutch” is real but small:</b> lift repeats weakly between odd and even matches ({bat.split_half.lift.toFixed(2)} batting,{' '}
-                {bowl.split_half.lift.toFixed(2)} bowling), so it is a filter, not a score
+                <b>“Clutch” barely repeats:</b> lift on odd matches says almost nothing about lift on even matches ({bat.split_half.lift.toFixed(2)} batting,{' '}
+                {bowl.split_half.lift.toFixed(2)} bowling), so it is shown as a description, never used as a score
               </>,
               'Blending in win impact, lift or consistency made forecasts worse',
             ]}
@@ -490,8 +461,7 @@ export default function MethodPage() {
             items={[
               `Top of each list is solid: of the top four, ${solid('bat')} batters and ${solid('bowl')} bowlers stay top 10 in over half of re-runs`,
               'Lower ranks are close calls that swap with the next few names',
-              'A Bangladeshi player’s confidence is lower, as another may take the one place',
-              'Not seen: fielding, pitches, match-ups, injuries, domestic cricket, the 2022 and 2024 World Cups',
+              'Not seen: fielding, match-ups (bowling type is not in the open data), injuries, domestic and franchise leagues other than the IPL',
               'First-innings pressure is harder to measure, so pressure balls lean towards chases',
             ]}
           />
@@ -552,7 +522,7 @@ export default function MethodPage() {
           {settings.map((g) => (
             <tbody key={g.group}>
               <tr className="border-b border-line bg-panel-2">
-                <th colSpan={3} className="px-4 py-2 text-left text-[12.5px] font-semibold uppercase tracking-wide text-pink-ink">
+                <th colSpan={3} className="px-4 py-2 text-left text-[12.5px] font-semibold uppercase tracking-wide text-signal-ink">
                   {g.group}
                 </th>
               </tr>
@@ -568,9 +538,9 @@ export default function MethodPage() {
         </table>
       </div>
       <p className="mt-2 text-[13px] text-ink-3">
-        Reproduce: <code className="rounded bg-panel-2 px-1">python -I analysis/pipeline.py</code>, then{' '}
-        <code className="rounded bg-panel-2 px-1">analysis/rr2026.py</code> and <code className="rounded bg-panel-2 px-1">analysis/worked_example.py</code>.
-        A rerun gives byte-identical results.
+        Reproduce: <code className="rounded bg-panel-2 px-1">python -m pressure_index download</code>, then{' '}
+        <code className="rounded bg-panel-2 px-1">python -m pressure_index all</code>. Every setting lives in{' '}
+        <code className="rounded bg-panel-2 px-1">pressure_index/config.toml</code>; a rerun with the same data gives identical results.
       </p>
 
       <SectionHead title="Glossary" id="glossary" />
@@ -615,19 +585,18 @@ function TopTable({ role, players }: { role: Role; players: Player[] }) {
         <tbody>
           {players.map((p) => (
             <tr key={p.id} className="border-b border-line last:border-0">
-              <td className="display num px-3 py-2 text-[1.1rem] text-pink">{p.rank}</td>
+              <td className="num px-3 py-2 font-semibold text-signal-ink">{p.rank}</td>
               <td className="py-2">
                 <span className="flex items-center gap-2">
                   <Flag country={p.country} size={16} />
                   <Link href={`/players/${role}/${p.id}/`} className="font-medium hover:underline">
                     {p.name}
                   </Link>
-                  {p.indian && <span className="rounded bg-pink-soft px-1.5 text-[11px] font-semibold text-pink-ink">IND</span>}
                 </span>
               </td>
               <td className="num py-2 text-right font-semibold">{signed(p.p_rv100)}</td>
               <td className="num py-2 text-right text-ink-2">{signed(p.n_rv100)}</td>
-              <td className="num py-2 text-right text-pink-ink">{signed(p.delta100)}</td>
+              <td className="num py-2 text-right text-signal-ink">{signed(p.delta100)}</td>
               <td className="num py-2 text-right">{winPts(p.wpa100)}</td>
               <td className="num py-2 text-right">{p.p_balls}</td>
               <td className="num px-3 py-2 text-right">{fmt.pct(p.boot?.p_top10)}</td>
@@ -644,7 +613,7 @@ function Details({ title, children }: { title: string; children: ReactNode }) {
     <details className="panel group">
       <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-5 py-3 text-[15px] font-semibold">
         {title}
-        <span className="text-[13px] font-medium text-pink-ink group-open:hidden">Show</span>
+        <span className="text-[13px] font-medium text-signal-ink group-open:hidden">Show</span>
         <span className="hidden text-[13px] font-medium text-ink-3 group-open:inline">Hide</span>
       </summary>
       <div className="border-t border-line p-5">{children}</div>

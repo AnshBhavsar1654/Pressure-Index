@@ -18,9 +18,8 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
   const { role } = await params
   const data = getRole(role)
   // the list never shows per-match detail, so it is not sent to the browser
-  const floor = data.eligibility
   const players = data.players
-    .filter((p) => p.p_balls >= floor.export_min_balls && p.p_matches >= floor.export_min_matches)
+    .filter((p) => p.p_balls >= 10 && p.p_matches >= 1)
     .map((p) => ({ ...p, matches: [], seasons: [], phases: [], moments: [] }))
   const [a, b, c] = getRanked(role)
   const noun = role === 'bat' ? 'batters' : 'bowlers'
@@ -30,8 +29,8 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
         title={role === 'bat' ? 'Batters under pressure' : 'Bowlers under pressure'}
         summary={
           <>
-            {a.name}, {b.name} and {c.name} lead the {data.eligibility.n_ranked} qualified {noun} RR can buy.{' '}
-            <Link href="/method/#fair" className="font-semibold text-pink-ink hover:underline">
+            {a.name}, {b.name} and {c.name} lead the {data.eligibility.n_ranked} qualified {noun}, ranked by runs added per 100 pressure balls after shrinkage toward each player’s usual level.{' '}
+            <Link href="/method/#fair" className="font-semibold text-signal-ink hover:underline">
               Who qualifies
             </Link>
           </>
@@ -49,7 +48,7 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
                 <b>Lift +5:</b> 5 better under pressure than usual
               </>,
               <>
-                <b>Top-10 confidence 60%:</b> top 10 in 6 of 10 re-runs
+                <b>Top-10 confidence 60%:</b> top 10 in 6 of 10 bootstrap re-runs; the small range under each rating is its 90% interval
               </>,
             ]}
           />
@@ -63,8 +62,8 @@ export default async function RankingsPage({ params }: { params: Promise<{ role:
           balls: data.eligibility.min_pressure_balls,
           matches: data.eligibility.min_pressure_matches,
           recentBalls: data.eligibility.min_recent_balls,
-          minBalls: data.eligibility.export_min_balls,
-          minMatches: data.eligibility.export_min_matches,
+          minBalls: 10,
+          minMatches: 1,
         }}
       />
     </>

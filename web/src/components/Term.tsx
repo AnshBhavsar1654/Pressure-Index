@@ -23,10 +23,10 @@ export function Term({ k, role = 'bat', children, className }: { k: TermKey; rol
 }
 
 /** Badge for a player new to top-level cricket, explained on hover. */
-export function EmergingTag() {
+export function NewFaceTag() {
   return (
-    <Tag tone="gold">
-      <Term k="emerging" className="no-underline" />
+    <Tag tone="hi">
+      <Term k="newFace" className="no-underline" />
     </Tag>
   )
 }

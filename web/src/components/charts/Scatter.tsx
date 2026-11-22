@@ -18,7 +18,7 @@ interface Props {
 
 /**
  * Baseline (x) vs pressure (y) run value per 100 balls. Points above the diagonal
- * lift under pressure; the top 10 by live score wear the pink accent.
+ * lift under pressure; the top 10 by live score wear the orange accent.
  */
 export function PressureScatter({ players, highlight, selected, onSelect, role = 'bat', height: baseHeight = 420 }: Props) {
   const height = baseHeight * useZoom()
@@ -59,10 +59,10 @@ export function PressureScatter({ players, highlight, selected, onSelect, role =
         <text x={x(d1) - 6} y={y(d1) + 14} textAnchor="end" {...AXIS.label}>
           same as baseline
         </text>
-        <text x={m.l + 8} y={m.t + 12} {...AXIS.label} fill="var(--pink)" fontWeight={600}>
+        <text x={m.l + 8} y={m.t + 12} {...AXIS.label} fill="var(--signal)" fontWeight={600}>
           ↑ better under pressure
         </text>
-        <text x={width - m.r - 8} y={height - m.b - 8} textAnchor="end" {...AXIS.label} fill="var(--blue)" fontWeight={600}>
+        <text x={width - m.r - 8} y={height - m.b - 8} textAnchor="end" {...AXIS.label} fill="var(--data)" fontWeight={600}>
           worse under pressure ↓
         </text>
         <text x={(m.l + width - m.r) / 2} y={height - 6} textAnchor="middle" {...AXIS.label}>
@@ -81,7 +81,7 @@ export function PressureScatter({ players, highlight, selected, onSelect, role =
               cx={x(p.n_rv100)}
               cy={y(p.p_rv100)}
               r={isSel ? r + 2 : r}
-              fill={top ? 'var(--pink)' : 'var(--neutral-mark)'}
+              fill={top ? 'var(--signal)' : 'var(--neutral-mark)'}
               fillOpacity={top ? 0.95 : 0.75}
               stroke={isSel ? 'var(--ink)' : 'var(--surface)'}
               strokeWidth={isSel ? 2 : 1.5}

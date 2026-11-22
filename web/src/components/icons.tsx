@@ -24,7 +24,7 @@ export function BatIcon({ size = 19, weight = 'regular', ...rest }: P) {
 /** Cricket ball: circle with the raised seam. */
 export function BallIcon({ size = 19, weight = 'regular', ...rest }: P) {
   const fill = weight === 'fill'
-  const seam = fill ? 'var(--pink)' : 'currentColor'
+  const seam = fill ? 'var(--signal)' : 'currentColor'
   return (
     <svg width={size} height={size} viewBox="0 0 256 256" fill="none" stroke="currentColor" strokeWidth={16} strokeLinecap="round" strokeLinejoin="round" aria-hidden {...rest}>
       <circle cx="128" cy="128" r="96" fill={fill ? 'currentColor' : 'none'} />

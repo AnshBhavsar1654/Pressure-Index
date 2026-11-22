@@ -17,7 +17,6 @@ const IPL_CODES: Record<string, string> = {
   'Mumbai Indians': 'MI',
   'Chennai Super Kings': 'CSK',
   'Royal Challengers Bengaluru': 'RCB',
-  'Royal Challengers Bangalore': 'RCB',
   'Kolkata Knight Riders': 'KKR',
   'Sunrisers Hyderabad': 'SRH',
   'Delhi Capitals': 'DC',

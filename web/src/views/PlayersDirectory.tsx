@@ -4,8 +4,8 @@ import { MagnifyingGlassIcon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useDeferredValue, useMemo, useState } from 'react'
 import { Flag } from '@/components/Flag'
-import { NAT_OPTIONS, natMatch, Pick, Segmented, type Nat } from '@/components/filters'
-import { PlayerAvatar, RetainedMark, signed } from '@/components/kit'
+import { Pick, Segmented } from '@/components/filters'
+import { PlayerAvatar, signed } from '@/components/kit'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -20,8 +20,7 @@ export type DirRow = {
   name: string
   country: string | null
   team: string | null
-  /** franchise that retained them for IPL 2027 */
-  retained: string | null
+  active: boolean
   kind: 'Batter' | 'Bowler' | 'All-rounder'
   bat?: RoleLine
   bowl?: RoleLine
@@ -37,7 +36,6 @@ const PAGE = 50
 export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
   const [q, setQ] = useState('')
   const [kind, setKind] = useState<Kind>('all')
-  const [nat, setNat] = useState<Nat>('all')
   const [team, setTeam] = useState('all')
   const [country, setCountry] = useState('all')
   const [ranked, setRanked] = useState<Ranked>('all')
@@ -73,7 +71,6 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
         (r) =>
           (!term || r.name.toLowerCase().includes(term)) &&
           (kind === 'all' || r.kind === kind) &&
-          natMatch(nat, r.country) &&
           (team === 'all' || r.team === team) &&
           (country === 'all' || r.country === country) &&
           (ranked === 'all' || r.bat?.rank != null || r.bowl?.rank != null) &&
@@ -84,13 +81,12 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
         const y = val(b)
         return (typeof x === 'string' ? x.localeCompare(y as string) : x - (y as number)) * sort.dir
       })
-  }, [all, dq, kind, nat, team, country, ranked, dMin, sort])
+  }, [all, dq, kind, team, country, ranked, dMin, sort])
 
-  const filtered = q || kind !== 'all' || nat !== 'all' || team !== 'all' || country !== 'all' || ranked !== 'all' || minBalls !== 0
+  const filtered = q || kind !== 'all' || team !== 'all' || country !== 'all' || ranked !== 'all' || minBalls !== 0
   const clear = () => {
     setQ('')
     setKind('all')
-    setNat('all')
     setTeam('all')
     setCountry('all')
     setRanked('all')
@@ -135,7 +131,6 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
                 { value: 'All-rounder', label: 'All-rounders' },
               ]}
             />
-            <Segmented label="Nationality" value={nat} onChange={(v) => (setNat(v), setShown(PAGE))} options={NAT_OPTIONS} />
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Pick label="IPL team" value={team} onChange={(v) => (setTeam(v), setShown(PAGE))} options={teams} allLabel="All IPL teams" />
@@ -146,7 +141,7 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
               onChange={(v) => (setRanked(v), setShown(PAGE))}
               options={[
                 { value: 'all', label: 'Everyone' },
-                { value: 'ranked', label: 'In my ranking' },
+                { value: 'ranked', label: 'Ranked' },
               ]}
             />
             <div className="flex min-w-80 items-center gap-3 rounded-lg border border-line bg-panel-2 px-3 py-1.5">
@@ -154,7 +149,7 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
                 Min pressure balls
               </span>
               <Slider className="min-w-32 flex-1" aria-labelledby="dir-min" min={0} max={300} step={1} value={[minBalls]} onValueChange={([v]) => (setMinBalls(v), setShown(PAGE))} />
-              <span className="display num w-9 text-right text-[1.3rem] text-pink">{minBalls}</span>
+              <span className="display num w-9 text-right text-[1.3rem] text-signal-ink">{minBalls}</span>
             </div>
             {filtered && (
               <Button variant="ghost" className="rounded-lg" onClick={clear}>
@@ -181,9 +176,9 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
                 <TableHead className="h-11 text-[12.5px] font-medium text-ink-3">Country, team</TableHead>
                 <TableHead className="h-11 text-[12.5px] font-medium text-ink-3">Role</TableHead>
                 {head('balls', 'Pressure balls', 'Batting and bowling combined')}
-                {head('batRank', 'Batting rank', 'Rank in my batting ranking of players RR could sign')}
+                {head('batRank', 'Batting rank', 'Rank among qualified batters, by pressure rating')}
                 {head('batRv', 'Batting, runs added', 'Runs added per 100 pressure balls faced')}
-                {head('bowlRank', 'Bowling rank', 'Rank in my bowling ranking of players RR could sign')}
+                {head('bowlRank', 'Bowling rank', 'Rank among qualified bowlers, by pressure rating')}
                 {head('bowlRv', 'Bowling, runs saved', 'Runs saved per 100 pressure balls bowled')}
                 <TableHead className="h-11 pr-5 text-right text-[12.5px] font-medium text-ink-3">Profiles</TableHead>
               </TableRow>
@@ -193,11 +188,10 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
                 <TableRow key={r.id}>
                   <TableCell className="py-2 pl-5">
                     <span className="flex items-center gap-3">
-                      <PlayerAvatar name={r.name} rr={r.team === 'Rajasthan Royals'} size={32} />
+                      <PlayerAvatar name={r.name} size={32} />
                       <Link href={`/players/${r.bat && (!r.bowl || r.bat.balls >= r.bowl.balls) ? 'bat' : 'bowl'}/${r.id}/`} className="font-medium hover:underline">
                         {r.name}
                       </Link>
-                      {r.retained && <RetainedMark team={r.retained} size={17} />}
                     </span>
                   </TableCell>
                   <TableCell>
@@ -208,9 +202,9 @@ export function PlayersDirectory({ rows: all }: { rows: DirRow[] }) {
                   </TableCell>
                   <TableCell className="text-ink-2">{r.kind}</TableCell>
                   <TableCell className="num text-right">{r.balls}</TableCell>
-                  <TableCell className="num text-right">{r.bat?.rank != null ? <span className="display text-[1.15rem] text-pink">{r.bat.rank}</span> : '–'}</TableCell>
+                  <TableCell className="num text-right">{r.bat?.rank != null ? <span className="display text-[1.15rem] text-signal-ink">{r.bat.rank}</span> : '–'}</TableCell>
                   <TableCell className="num text-right">{r.bat ? signed(r.bat.rv100) : '–'}</TableCell>
-                  <TableCell className="num text-right">{r.bowl?.rank != null ? <span className="display text-[1.15rem] text-pink">{r.bowl.rank}</span> : '–'}</TableCell>
+                  <TableCell className="num text-right">{r.bowl?.rank != null ? <span className="display text-[1.15rem] text-signal-ink">{r.bowl.rank}</span> : '–'}</TableCell>
                   <TableCell className="num text-right">{r.bowl ? signed(r.bowl.rv100) : '–'}</TableCell>
                   <TableCell className="pr-5">
                     <span className="flex justify-end gap-1.5">

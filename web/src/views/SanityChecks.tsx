@@ -26,8 +26,7 @@ export function SanityChecks({ pools }: { pools: Pools }) {
   const rinku = find(pools, 'bat', 'Rinku Singh', '2023-04-09')
   const kkr = find(pools, 'bat', 'Jos Buttler', '2024-04-16')
   const rcb = find(pools, 'bat', 'Jos Buttler', '2024-04-06')
-  const tushar = find(pools, 'bowl', 'Tushar Deshpande', '2026-04-04')
-  const short = find(pools, 'bat', 'Matthew Short', '2026-04-18')
+  const hardik = find(pools, 'bowl', 'Hardik Pandya', '2024-06-29')
   const patidar = find(pools, 'bat', 'Rajat Patidar', '2026-05-26')
   const jadeja = find(pools, 'bat', 'Ravindra Jadeja', '2023-05-29')
   const mohit = find(pools, 'bowl', 'Mohit Sharma', '2023-05-29')
@@ -50,16 +49,16 @@ export function SanityChecks({ pools }: { pools: Pools }) {
   if (kkr && rcb)
     cards.push({
       title: 'Jos Buttler: two hundreds, ten days apart, 2024',
-      story: `Against RCB he made 100 in a chase of 184 that was won with five balls to spare. Against KKR he made 107 chasing 224, with RR eight down and needing 36 off the last 15 balls.`,
+      story: `Against RCB he made 100 in a chase of 184 that was won with five balls to spare. Against KKR he made 107 chasing 224, eight down and needing 36 off the last 15 balls.`,
       verdict: `The KKR hundred counts far more: ${pts(kkr.m.wpa)} of win chance from ${kkr.m.balls} pressure balls at ${kkr.m.li.toFixed(1)}× average stakes, against ${pts(rcb.m.wpa)} from ${rcb.m.balls} balls at ${rcb.m.li.toFixed(1)}× for RCB, where his pressure runs came early in a chase that never got tight.`,
       href: `/players/bat/${kkr.p.id}/`,
     })
-  if (tushar?.mo)
+  if (hardik)
     cards.push({
-      title: 'Tushar Deshpande v Gujarat Titans, 2026',
-      story: `${tushar.mo.headline ?? momentLine(tushar.mo, 'bowl')} with three Gujarat wickets left.`,
-      verdict: `RR were ${fmt.chance(tushar.mo.wp_from)} to win when the over began. The spell ranks ${ordinalWord(tushar.place)} of his ${tushar.p.matches.length} pressure matches, adding ${pts(tushar.m.wpa)} of win chance.`,
-      href: `/players/bowl/${tushar.p.id}/`,
+      title: 'Hardik Pandya v South Africa, T20 World Cup final 2024',
+      story: `South Africa needed 16 off the final over with Miller on strike. ${hardik.mo?.headline ?? 'He defended it'}: Miller caught on the boundary first ball, India won by 7 runs.`,
+      verdict: `${hardik.mo ? `India were ${fmt.chance(hardik.mo.wp_from)} to win when his pressure work began. ` : ''}His ${hardik.m.balls} pressure balls in the final added ${pts(hardik.m.wpa)} of win chance, ranking ${ordinalWord(hardik.place)} of his ${hardik.p.matches.length} pressure matches. Every ball of a knockout is a pressure ball.`,
+      href: `/players/bowl/${hardik.p.id}/`,
     })
 
   if (patidar)
@@ -68,13 +67,6 @@ export function SanityChecks({ pools }: { pools: Pools }) {
       story: `Batting first in a knockout, he made ${patidar.m.r} off ${patidar.m.balls} balls as RCB set 254; Gujarat’s chase fell 92 runs short.`,
       verdict: `A first-innings knock, but in a knockout every ball is a pressure ball: all ${patidar.m.balls} count, adding ${patidar.m.rv > 0 ? '+' : ''}${patidar.m.rv.toFixed(0)} runs against an average batter in the same spots and ${pts(patidar.m.wpa)} of win chance. In a league game the same innings would count towards his usual level instead.`,
       href: `/players/bat/${patidar.p.id}/`,
-    })
-  if (short)
-    cards.push({
-      title: 'Matthew Short v Sunrisers Hyderabad, 2026',
-      story: `The other side of the coin: ${short.m.r} off ${short.m.balls} pressure balls in a chase of 195 that CSK lost, after a fast start.`,
-      verdict: `Not a hero’s innings, and the model agrees: it took ${Math.abs(short.m.wpa * 100).toFixed(0)} points off CSK’s chance of winning. The scoring rate fell behind what the chase needed, though CSK were still in it when he was out; the match was lost after he left.`,
-      href: `/players/bat/${short.p.id}/`,
     })
 
   // the biggest turnarounds anywhere in the data, ordered by the swing the table shows (team's chance of winning
@@ -94,12 +86,12 @@ export function SanityChecks({ pools }: { pools: Pools }) {
           <article key={c.title} className="panel flex flex-col gap-2 p-5">
             <h3 className="text-[15.5px] font-semibold">{c.title}</h3>
             <p className="text-[14px] leading-relaxed text-ink-2">{c.story}</p>
-            <p className="rounded-lg bg-pink-soft/50 px-3 py-2 text-[13.5px] leading-relaxed text-ink">
-              <span className="mb-0.5 block text-[12px] font-semibold text-pink-ink">What the model says</span>
+            <p className="rounded-lg bg-signal-soft/50 px-3 py-2 text-[13.5px] leading-relaxed text-ink">
+              <span className="mb-0.5 block text-[12px] font-semibold text-signal-ink">What the model says</span>
               {c.verdict}
             </p>
             {c.href && (
-              <Link href={c.href} className="mt-auto text-[13px] font-semibold text-pink-ink hover:underline">
+              <Link href={c.href} className="mt-auto text-[13px] font-semibold text-signal-ink hover:underline">
                 Open the profile
               </Link>
             )}
@@ -142,7 +134,7 @@ export function SanityChecks({ pools }: { pools: Pools }) {
                       <span className="font-semibold">
                         {fmt.chance(mo.wp_from)} → {fmt.chance(mo.wp_to)}
                       </span>
-                      <span className="block text-[12px] text-pink-ink">{pts(swing(mo))}</span>
+                      <span className="block text-[12px] text-signal-ink">{pts(swing(mo))}</span>
                     </TableCell>
                   </TableRow>
                 ))}

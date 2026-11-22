@@ -5,11 +5,11 @@ import { area, curveMonotoneX, line } from 'd3-shape'
 import { useMemo, useState } from 'react'
 import { AXIS, Tooltip, useWidth, type TipState } from './core'
 
-type W = [number, number, number, number] // idx, RR win prob, pressure flag, innings
+type W = [number, number, number, number] // idx, win prob of the side batting first, pressure flag, innings
 
 /**
- * RR's win probability through one match. The line draws itself once on load
- * (the page's single orchestrated motion); high-pressure deliveries are lit pink.
+ * Win probability of the side batting first through one match. The line draws itself once on load
+ * (the page's single orchestrated motion); high-pressure deliveries are lit orange.
  */
 export function WinWorm({
   worm,
@@ -17,12 +17,15 @@ export function WinWorm({
   animate = false,
   compact = false,
   labels,
+  sides,
 }: {
   worm: W[]
   height?: number
   animate?: boolean
   compact?: boolean
   labels?: { first: string; second: string }
+  /** the two teams: `up` is the side whose chance is plotted (batting first) */
+  sides?: { up: string; down: string }
 }) {
   const [ref, width] = useWidth<HTMLDivElement>()
   const [tip, setTip] = useState<TipState | null>(null)
@@ -55,9 +58,9 @@ export function WinWorm({
             {w[3] === 1 ? labels?.first ?? 'First innings' : labels?.second ?? 'Second innings'}, delivery {ballInInnings(i)}
           </div>
           <div>
-            RR win chance <b className="num">{Math.round(w[1] * 100)}%</b>
+            {sides?.up ?? 'Batting side'} win chance <b className="num">{Math.round(w[1] * 100)}%</b>
           </div>
-          {w[2] === 1 && <div className="font-medium text-pink-ink">High-pressure ball</div>}
+          {w[2] === 1 && <div className="font-medium text-signal-ink">High-pressure ball</div>}
         </div>
       ),
     })
@@ -65,7 +68,7 @@ export function WinWorm({
 
   return (
     <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
-      <svg width={width} height={height} role="img" aria-label="Rajasthan Royals win probability through the match">
+      <svg width={width} height={height} role="img" aria-label={`${sides?.up ?? 'Batting-first side'} win probability through the match`}>
         <defs>
           <clipPath id={`clip-${n}-${height}`}>
             <rect x={m.l} y={m.t} width={Math.max(0, width - m.l - m.r)} height={height - m.t - m.b} />
@@ -81,7 +84,7 @@ export function WinWorm({
             </g>
           ))}
         {compact && <line x1={m.l} x2={width - m.r} y1={y(0.5)} y2={y(0.5)} stroke={AXIS.grid} />}
-        {/* pressure balls: thin pink ticks along the base so they never hide the line */}
+        {/* pressure balls: thin orange ticks along the base so they never hide the line */}
         <g className={animate ? 'worm-fade' : undefined}>
           {press.map((w) => (
             <rect
@@ -90,14 +93,14 @@ export function WinWorm({
               y={m.t}
               width={Math.max(1.6, (width - m.l - m.r) / n)}
               height={height - m.t - m.b}
-              fill="var(--pink)"
+              fill="var(--signal)"
               opacity={0.06}
             />
           ))}
         </g>
         <g clipPath={`url(#clip-${n}-${height})`}>
-          <path d={fillUp} fill="var(--pink)" fillOpacity={0.16} className={animate ? 'worm-fade' : undefined} />
-          <path d={fillDn} fill="var(--blue)" fillOpacity={0.16} className={animate ? 'worm-fade' : undefined} />
+          <path d={fillUp} fill="var(--signal)" fillOpacity={0.16} className={animate ? 'worm-fade' : undefined} />
+          <path d={fillDn} fill="var(--data)" fillOpacity={0.16} className={animate ? 'worm-fade' : undefined} />
         </g>
         {split > 0 && (
           <g>
@@ -120,11 +123,11 @@ export function WinWorm({
         />
         {!compact && (
           <>
-            <text x={width - m.r} y={y(0.97)} textAnchor="end" {...AXIS.label} fill="var(--pink-ink)" fontWeight={600}>
-              RR ahead
+            <text x={width - m.r} y={y(0.97)} textAnchor="end" {...AXIS.label} fill="var(--signal-ink)" fontWeight={600}>
+              {sides?.up ?? 'batting first'} ahead
             </text>
-            <text x={width - m.r} y={y(0.03)} textAnchor="end" {...AXIS.label} fill="var(--blue)" fontWeight={600}>
-              opposition ahead
+            <text x={width - m.r} y={y(0.03)} textAnchor="end" {...AXIS.label} fill="var(--data-ink)" fontWeight={600}>
+              {sides?.down ?? 'chasing side'} ahead
             </text>
           </>
         )}

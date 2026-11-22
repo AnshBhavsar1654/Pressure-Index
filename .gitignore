@@ -5,12 +5,15 @@ dist/
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
+.ruff_cache/
 .vercel
 
-# raw hackathon data pack (not redistributed)
-Data Pack/
-analysis/cache/
+# pipeline working data: rebuilt with `python -m pressure_index download` and `... all`
+data/raw/
+data/processed/
+data/cache/
+artifacts/models/
 
-# raw Cricsheet downloads (re-fetch with: python -I analysis/public_wc2026.py --download)
-public_data/cricsheet_raw/
-.frontend-slides/
+# any local copy of third-party data that is not redistributable
+Data Pack/

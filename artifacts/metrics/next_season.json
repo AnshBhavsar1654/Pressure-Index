@@ -1,0 +1,130 @@
+{
+ "bat": {
+  "n": 165,
+  "train_years": [
+   2023,
+   2024,
+   2025
+  ],
+  "corr": {
+   "gbm": 0.09,
+   "rating": 0.116,
+   "normal": 0.12,
+   "last": 0.003
+  },
+  "importance": [
+   {
+    "feature": "Usual level",
+    "drop": 0.079
+   },
+   {
+    "feature": "Powerplay share",
+    "drop": 0.037
+   },
+   {
+    "feature": "T20I share",
+    "drop": 0.033
+   },
+   {
+    "feature": "Last season (pressure)",
+    "drop": 0.0215
+   },
+   {
+    "feature": "Win chance added",
+    "drop": 0.019
+   },
+   {
+    "feature": "Pressure rating",
+    "drop": 0.0135
+   },
+   {
+    "feature": "Seasons active",
+    "drop": 0.0045
+   },
+   {
+    "feature": "Consistency",
+    "drop": 0.0045
+   },
+   {
+    "feature": "Other balls (log)",
+    "drop": -0.0065
+   },
+   {
+    "feature": "Lift",
+    "drop": -0.0085
+   },
+   {
+    "feature": "Pressure balls (log)",
+    "drop": -0.0215
+   },
+   {
+    "feature": "Death-overs share",
+    "drop": -0.0255
+   }
+  ]
+ },
+ "bowl": {
+  "n": 164,
+  "train_years": [
+   2023,
+   2024,
+   2025
+  ],
+  "corr": {
+   "gbm": -0.011,
+   "rating": 0.194,
+   "normal": 0.254,
+   "last": 0.046
+  },
+  "importance": [
+   {
+    "feature": "T20I share",
+    "drop": 0.1025
+   },
+   {
+    "feature": "Pressure rating",
+    "drop": 0.063
+   },
+   {
+    "feature": "Other balls (log)",
+    "drop": 0.0345
+   },
+   {
+    "feature": "Lift",
+    "drop": 0.016
+   },
+   {
+    "feature": "Consistency",
+    "drop": 0.0125
+   },
+   {
+    "feature": "Seasons active",
+    "drop": 0.0125
+   },
+   {
+    "feature": "Last season (pressure)",
+    "drop": 0.003
+   },
+   {
+    "feature": "Win chance added",
+    "drop": 0.0005
+   },
+   {
+    "feature": "Powerplay share",
+    "drop": -0.0285
+   },
+   {
+    "feature": "Death-overs share",
+    "drop": -0.0305
+   },
+   {
+    "feature": "Usual level",
+    "drop": -0.0325
+   },
+   {
+    "feature": "Pressure balls (log)",
+    "drop": -0.1085
+   }
+  ]
+ }
+}

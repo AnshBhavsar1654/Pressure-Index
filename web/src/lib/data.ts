@@ -2,9 +2,10 @@ import 'server-only'
 import fs from 'node:fs'
 import path from 'node:path'
 import type { Example } from '@/views/WorkedExample'
-import type { ChaseGrid, RoleData, RRData, Summary } from './types'
+import type { ChaseGrid, MatchDetail, MatchIndexRow, ModelLab, RoleData, Summary, TeamsData } from './types'
 
 // All data is read from ./data at build time (static export), never in the browser.
+// The files are written by the Python pipeline: `python -m pressure_index export`.
 const dir = path.join(process.cwd(), 'data')
 const cache = new Map<string, unknown>()
 
@@ -15,73 +16,22 @@ function read<T>(file: string): T {
 }
 
 export const getSummary = () => read<Summary>('summary.json')
-/** One player's rating rebuilt step by step (analysis/worked_example.py). */
+/** The top-rated batter's rating rebuilt step by step (checked against the published figures). */
 export const getExample = () => read<Example>('example.json')
-// Nationality fixes shared with the RR analysis: players with no T20Is in the window
-// (analysis/nationality_overrides.json), and IPL players with no cap, who are Indian.
-const overrides: Record<string, string> = (() => {
-  try {
-    return JSON.parse(fs.readFileSync(path.join(process.cwd(), '..', 'analysis', 'nationality_overrides.json'), 'utf8')).overrides
-  } catch {
-    return {}
-  }
-})()
-
-function withNationality(d: RoleData): RoleData {
-  for (const p of d.players) {
-    p.country = overrides[p.name] ?? p.country ?? (p.ipl_team ? 'India (uncapped)' : null)
-  }
-  return d
-}
-
-const roles = new Map<string, RoleData>()
-export const getRole = (role: 'bat' | 'bowl') => {
-  if (!roles.has(role)) roles.set(role, withNationality(read<RoleData>(role === 'bat' ? 'batters.json' : 'bowlers.json')))
-  return roles.get(role)!
-}
-/** The public inputs kept next to the analysis (counts for the data page). */
-export function getInputs() {
-  const a = (f: string) => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(process.cwd(), '..', 'analysis', f), 'utf8'))
-    } catch {
-      return {}
-    }
-  }
-  const pool = a('auction_pool.json')
-  const retained: Record<string, string[]> = pool.retained ?? {}
-  const csvRows = (f: string) => {
-    try {
-      return fs.readFileSync(path.join(process.cwd(), '..', 'public_data', 't20wc2026', f), 'utf8').trim().split('\n').slice(1)
-    } catch {
-      return []
-    }
-  }
-  const how = csvRows('player_map.csv').map((r) => r.split(',').at(-1)?.trim() ?? '')
-  return {
-    retainedPlayers: Object.values(retained).reduce((n, l) => n + l.length, 0),
-    retainedTeams: Object.keys(retained).length,
-    retentionDate: (pool.updated as string) ?? null,
-    retired: (pool.retired as string[] | undefined)?.length ?? 0,
-    unavailable: (pool.unavailable as string[] | undefined) ?? [],
-    birthDates: Object.keys(a('birth_dates.json').born ?? {}).length,
-    nationality: Object.keys(overrides).length,
-    roles: Object.keys(a('role_overrides.json').roles ?? {}),
-    mapped: {
-      ballByBall: how.filter((h) => h === 'matched ball by ball').length,
-      byName: how.filter((h) => h === 'matched by name in country').length,
-      added: how.filter((h) => h === 'new to the data').length,
-    },
-  }
-}
-
+export const getRole = (role: 'bat' | 'bowl') => read<RoleData>(role === 'bat' ? 'batters.json' : 'bowlers.json')
 export const getGrid = () => read<ChaseGrid>('chase_grid.json')
-export const getRR = () => read<RRData>('rr2026.json')
+export const getTeams = () => read<TeamsData>('teams.json')
+export const getMatches = () => read<{ matches: MatchIndexRow[] }>('matches.json').matches
+export const getLab = () => read<ModelLab>('model_lab.json')
 
-/** My ranking: qualified players RR can sign, best first. */
+/** Everyone who clears the evidence bar, best first. */
 export const getRanked = (role: 'bat' | 'bowl') =>
   getRole(role)
     .players.filter((p) => p.rank != null)
     .toSorted((a, b) => a.rank! - b.rank!)
-/** Everyone who clears the bar, signable or not: the pool every rating is measured against. */
-export const getQualified = (role: 'bat' | 'bowl') => getRole(role).players.filter((p) => p.merit_rank != null)
+/** Same pool: kept as a separate name for the pages that compare against "everyone qualified". */
+export const getQualified = getRanked
+
+/** One match's ball-by-ball detail (the same file the match explorer fetches in the browser). */
+export const getMatchDetail = (id: number) =>
+  JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'matches', `${id}.json`), 'utf8')) as MatchDetail

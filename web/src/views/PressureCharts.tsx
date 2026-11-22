@@ -12,14 +12,14 @@ export function ChaseMap({ grid }: { grid: ChaseGrid }) {
   return (
     <ChartFrame
       title="Where pressure lives in a chase"
-      subtitle="Each square is a chase situation: runs still needed (up) against overs left (across). Darker pink means one ball changes the result more. Move the slider to see how losing wickets shifts the danger zone."
+      subtitle="Each square is a chase situation: runs still needed (up) against overs left (across). Darker orange means one ball changes the result more. Move the slider to see how losing wickets shifts the danger zone."
       legend={
         <div className="flex flex-wrap items-center gap-3 text-[14px] text-ink-2">
           <label htmlFor="wk" className="font-semibold text-ink">
             Wickets in hand
           </label>
           <input id="wk" type="range" min={1} max={10} value={wkts} onChange={(e) => setWkts(Number(e.target.value))} className="h-6 w-52" />
-          <span className="display num w-6 text-[1.7rem] text-pink">{wkts}</span>
+          <span className="display num w-6 text-[1.7rem] text-signal-ink">{wkts}</span>
         </div>
       }
       footnote="Pale bottom-left: the chase is as good as won. Pale top-right: as good as lost. Neither is pressure, however tense it looks."
@@ -33,7 +33,7 @@ export function PressureShape({ s }: { s: Summary }) {
   const overs = [1, 2].map((inn) => ({
     key: `inn${inn}`,
     label: inn === 1 ? 'Batting first' : 'Chasing',
-    color: inn === 1 ? 'var(--blue)' : 'var(--pink)',
+    color: inn === 1 ? 'var(--data)' : 'var(--signal)',
     points: s.by_over.filter((r) => r.innings === inn).map((r) => ({ x: r.over, y: r.li })),
   }))
   return (
@@ -51,8 +51,8 @@ export function PressureShape({ s }: { s: Summary }) {
         legend={
           <Legend
             items={[
-              { label: 'Batting first', color: 'var(--blue)' },
-              { label: 'Chasing', color: 'var(--pink)' },
+              { label: 'Batting first', color: 'var(--data)' },
+              { label: 'Chasing', color: 'var(--signal)' },
             ]}
           />
         }

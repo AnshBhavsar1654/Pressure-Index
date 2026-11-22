@@ -53,60 +53,50 @@ export interface PlayerMatch {
 export interface Player {
   id: number
   name: string
-  /** rank in the submitted ranking (qualified, signable at the 2027 auction, not worse under pressure than usual); null otherwise */
+  /** rank among every player who clears the evidence bar, by rating; null below the bar */
   rank: number | null
-  /** rank among every qualified player by rating, before any auction rule */
-  merit_rank: number | null
-  /** why a player is outside the submitted ranking: cannot be signed, or dips under pressure */
-  excluded: 'rr' | 'pakistan' | 'retained' | 'retired' | 'unavailable' | 'inactive' | 'dips' | null
-  /** Indian player: a third of the evidence bar, and a priority top-10 place if above average */
-  indian: boolean
-  /** rank among Indian options beyond the top 10 (signable, in a 2026 squad, above average, not dipping) */
-  india_rank: number | null
-  /** franchise that retained the player for IPL 2027, from the announced lists */
-  retained_by: string | null
-  score: number | null
+  /** latest national side; IPL-only players are Indian unless the reference table says otherwise */
   country: string | null
+  /** has played a T20 international in the data */
+  capped: boolean
   ipl_team: string | null
   ipl_season: number | null
-  hand: string | null
-  bowl_type: string | null
-  pace: string | null
   p_balls: number
   p_matches: number
   n_balls: number
-  /** pressure balls as the evidence bar counts them (a knockout first-innings ball counts half), all and 2025-26 */
+  /** pressure balls as the evidence bar counts them (a knockout first-innings ball counts half), all and recent */
   p_eff: number
   r_eff: number
-  /** THE rating: runs added per 100 pressure balls, leaning on the usual level until the record is long */
+  /** THE rating: runs added per 100 pressure balls, shrunk toward the usual level until the record is long */
   p_rv100: number
   /** usual level: the same measure on the other balls */
   n_rv100: number
-  /** the raw pressure record (recency-weighted runs added per 100 pressure balls), before leaning on the usual level */
+  /** the raw pressure record (recency-weighted runs added per 100 pressure balls), before shrinkage */
   p_raw100: number
   /** lift: rating minus usual level */
   delta100: number
-  /** win chance added per 100 pressure balls (a fraction; ×100 for points) */
+  /** win chance added per 100 pressure balls (a fraction; x100 for points) */
   wpa100: number
   /** share of pressure innings or spells (6+ balls) that beat the average; null if none */
   cons: number | null
   c_n: number
-  /** the rating for 2025-26 alone */
+  /** the rating for the recent seasons alone */
   recent100: number
-  /** pressure balls and matches in 2025-26 */
   r_balls: number
   r_matches: number
-  /** first season the player appears in the data */
+  /** first season the player appears in top-level cricket in the data */
   debut: number
-  /** public birth date (YYYY-MM-DD, or YYYY where clearly older than the cutoff); only for the label's candidate pool */
-  born: string | null
-  /** under 26 at the start of IPL 2027 (born on or after eligibility.emerging_born_from): a label, not a quota */
-  emerging: boolean
+  /** played top-level cricket in the latest season */
+  active: boolean
+  /** first top-level season within the last three */
+  new_face: boolean
+  /** unsupervised playing-style cluster and its position on the 2-D map (players with 300+ balls) */
+  archetype: { name: string; x: number; y: number } | null
   z?: Record<ComponentKey, number>
   /** share of the pool (0-100) this player beats on each piece of evidence */
   beats?: Record<ComponentKey, number>
-  /** bootstrap rank stability, computed for the default pool only */
-  boot: { p_top10: number; rank_med: number; rank_lo: number; rank_hi: number } | null
+  /** bootstrap (400 match resamples): rank and rating intervals, for qualified players */
+  boot: { p_top10: number; rank_med: number; rank_lo: number; rank_hi: number; rating_lo: number | null; rating_hi: number | null } | null
   press: TradStats
   norm: TradStats
   seasons: { season: number; p_balls: number; p_rv100: number | null; n_rv100: number | null }[]
@@ -126,17 +116,13 @@ export interface RoleData {
   eligibility: {
     min_pressure_balls: number
     min_pressure_matches: number
-    recent_from: number; min_recent_balls: number
-    emerging_born_from: string
-    indian_bar: number; indian_places: number; scout_min_balls: number; n_indian_top10: number; max_bangladesh: number
-    /** the Indian bar: [pressure balls, matches, 2025-26 pressure balls] */
-    indian_min: [number, number, number]
+    recent_from: number
+    min_recent_balls: number
+    new_from: number
+    active_season: number
     n_eligible: number
-    /** qualified players RR can sign: the submitted ranking */
     n_ranked: number
     n_players: number
-    export_min_balls: number
-    export_min_matches: number
     n_exported: number
   }
 }
@@ -158,6 +144,7 @@ export interface WpMetrics {
   n_balls: number
   n_matches: number
   calibration: { pred: number; actual: number; n: number }[]
+  coef?: Record<string, number>
 }
 
 export interface Summary {
@@ -165,10 +152,12 @@ export interface Summary {
   n_matches: number
   n_ipl_matches: number
   n_t20i_matches: number
-  seasons: number[]
+  n_t20i_full: number
   n_top_level_matches: number
-  /** public data added next to the data pack: the 2026 T20 World Cup from Cricsheet */
-  public: { name: string; source: string; matches: number; balls: number } | null
+  n_top_level_balls: number
+  seasons: number[]
+  world_cups: { name: string; matches: number }[]
+  source: { name: string; url: string; licence: string }
   pressure_threshold: number
   pressure_pctl: number
   K: number
@@ -178,8 +167,6 @@ export interface Summary {
   n_reduced_included: number
   n_short_excluded: number
   forward: Record<Role, { n: number; rating: number; normal: number; lift: number; wpa100: number }>
-  /** Indian players first seen in `from` or later with 60+ balls: how many were kept and how many reached the auction */
-  new_indians: { total: number; kept: number; available: number; from: number }
   wp_model: Record<'1' | '2', WpMetrics> & {
     /** final over of a chase: the smooth model against the exact calculation, checked against results */
     endgame: { balls: number; brier_old: number; brier_new: number; rows: { situation: string; n: number; actual: number; old: number; new: number }[] }
@@ -188,7 +175,7 @@ export interface Summary {
   by_phase: { innings: number; phase: string; balls: number; pressure_share: number; li: number }[]
   by_over: { innings: number; over: number; li: number; share: number }[]
   li_hist: { x: number; n: number; p: number }[]
-  moments: { match: string; comp: string; date: string; over: string; state: string; striker: string; bowler: string; li: number; wp: number; result: string }[]
+  moments: { id: number; match: string; comp: string; date: string; over: string; state: string; striker: string; bowler: string; li: number; wp: number; result: string }[]
 }
 
 export interface ChaseGrid {
@@ -204,20 +191,9 @@ const COMP_FIELD: Record<ComponentKey, 'p_rv100' | 'n_rv100' | 'delta100' | 'wpa
   consistency: 'cons',
 }
 
-/** A player can be recommended if RR can sign him and he is not worse under pressure than usual. */
-export const recommendable = (p: Pick<Player, 'excluded' | 'delta100'>) => !p.excluded && p.delta100 >= 0
-
-/** Indian players need this share of the evidence bar (rounded up): the data pack has no domestic cricket. */
-export const INDIAN_BAR = 1 / 3
-/** The pipeline's priority rule: up to this many above-average Indians are guaranteed a top-10 place. */
-export const INDIAN_PLACES = 5
-/** Board release (NOC) risk: at most this many Bangladeshi players in a top 10. */
-export const MAX_BANGLADESH = 1
-
 /**
  * Rank a pool by the rating. Each piece of evidence is also put on a common scale within the pool
- * (z, shown as "better than X%"), but only the rating decides the order. Players who cannot be
- * signed, or who dip under pressure, stay in the pool and keep their place in the order but take no rank.
+ * (z, shown as "better than X%"), but only the rating decides the order.
  */
 export function rescore(players: Player[]) {
   const keys = Object.keys(COMP_FIELD) as ComponentKey[]
@@ -229,7 +205,6 @@ export function rescore(players: Player[]) {
       return [k, { mean, sd }]
     }),
   ) as Record<ComponentKey, { mean: number; sd: number }>
-  // "beats X%": the real share of the pool below the player, not a bell-curve guess from the z-score
   const sorted = Object.fromEntries(
     keys.map((k) => [k, players.map((p) => p[COMP_FIELD[k]]).filter((x): x is number => x != null).toSorted((a, b) => a - b)]),
   ) as Record<ComponentKey, number[]>
@@ -240,26 +215,14 @@ export function rescore(players: Player[]) {
     while (below < xs.length && xs[below] < v) below++
     return Math.round((100 * below) / xs.length)
   }
-  const scored = players.map((p) => {
-    const z = Object.fromEntries(keys.map((k) => [k, ((p[COMP_FIELD[k]] ?? stats[k].mean) - stats[k].mean) / stats[k].sd])) as Record<ComponentKey, number>
-    const beats = Object.fromEntries(keys.map((k) => [k, share(k, p[COMP_FIELD[k]])])) as Record<ComponentKey, number>
-    return { ...p, z, beats, liveScore: p.p_rv100 }
-  })
-  scored.sort((a, b) => b.liveScore - a.liveScore)
-  // same rule as the pipeline: each above-average Indian gets a top-10 place (up to 5), the rest on merit
-  const cand = scored.filter(recommendable)
-  const top = cand.filter((p) => p.indian && p.liveScore > 0).slice(0, INDIAN_PLACES)
-  let bd = 0
-  for (const p of cand) {
-    if (top.length >= 10) break
-    if (top.includes(p)) continue
-    if (p.country === 'Bangladesh' && bd++ >= MAX_BANGLADESH) continue
-    top.push(p)
-  }
-  top.sort((a, b) => b.liveScore - a.liveScore)
-  const order = [...top, ...cand.filter((p) => !top.includes(p))]
-  const rankOf = new Map(order.map((p, i) => [p.id, i + 1]))
-  return scored.map((p) => ({ ...p, liveRank: rankOf.get(p.id) ?? null }))
+  const scored = players
+    .map((p) => {
+      const z = Object.fromEntries(keys.map((k) => [k, ((p[COMP_FIELD[k]] ?? stats[k].mean) - stats[k].mean) / stats[k].sd])) as Record<ComponentKey, number>
+      const beats = Object.fromEntries(keys.map((k) => [k, share(k, p[COMP_FIELD[k]])])) as Record<ComponentKey, number>
+      return { ...p, z, beats, liveScore: p.p_rv100 }
+    })
+    .toSorted((a, b) => b.liveScore - a.liveScore)
+  return scored.map((p, i) => ({ ...p, liveRank: (i + 1) as number | null }))
 }
 
 export type ScoredPlayer = ReturnType<typeof rescore>[number]
@@ -281,89 +244,88 @@ export const COMPONENT_TERM: Record<ComponentKey, TermKey> = {
   consistency: 'consistency',
 }
 
-
-/* ----------------------------------------------------------------- RR 2026 */
-export interface PhaseStats {
-  bat_rv_pm: number; bowl_rv_pm: number; bat_rpo: number; bowl_rpo: number
+/* ----------------------------------------------------------------- teams */
+export interface TeamPhase {
+  phase: string; overs: string; bat: number; bowl: number; bat_rpo: number; bowl_rpo: number; bat_rank: number; bowl_rank: number
 }
-export interface RRPhase {
-  phase: string; overs: string; rr: PhaseStats; league: PhaseStats; top4: PhaseStats
-  bat_rank: number; bowl_rank: number; teams: { team: string; bat: number; bowl: number }[]
-  /** the best side in this phase, batting and bowling */
-  best: Record<'bat' | 'bowl', { team: string; v: number }>
-}
-export interface RRMatch {
-  id: number; date: string; opp: string; stage: string; result: string; won: boolean; rr_batted_first: boolean
+export interface TeamMatch {
+  id: number; date: string; opp: string; stage: string; result: string; won: boolean | null
   scores: Record<string, { team: string; runs: number; wkts: number; balls: number }>
   bat_rv: number; bowl_rv: number; pressure_balls: number
-  best: { bat: string | null; bowl: string | null }; worst: { bat: string | null; bowl: string | null }
-  worm: [number, number, number, number][] // ball idx, RR win prob, pressure flag, innings
 }
-export interface SquadPlayer {
-  id: number; name: string; nat: string; overseas: boolean; matches: number
-  /** kept by RR for IPL 2027 (false until RR announce) */
-  retained?: boolean
-  bat?: { balls: number; runs: number; outs: number; sr: number; avg: number | null; rv: number; rv100: number
-    p_balls: number; p_rv100: number | null; phases: Record<string, { balls: number; sr: number; rv100: number | null }> }
-  bowl?: { balls: number; runs: number; wkts: number; econ: number; rv: number; rv100: number; type: string; pace: string
-    p_balls: number; p_rv100: number | null; phases: Record<string, { balls: number; econ: number; rv100: number | null }> }
+export interface TeamPlayer {
+  id: number; name: string; matches: number; rv: number
+  bat?: { balls: number; runs: number; outs: number; sr: number; rv: number; p_balls: number; p_rv100: number | null }
+  bowl?: { balls: number; runs: number; wkts: number; econ: number; rv: number; p_balls: number; p_rv100: number | null }
 }
-export interface Gap {
-  key: string; discipline: 'bat' | 'bowl'; phase: string; rr_rv_pm: number; top4_rv_pm: number
-  gap_vs_avg: number; gap_vs_top4: number; rank: number
+export interface TeamSeason {
+  summary: { pos: number; played: number; won: number; lost: number; nr: number; points: number; nrr: number
+    matches: number; wins_all: number; bat_rv_pm: number; bowl_rv_pm: number }
+  phases: TeamPhase[]
+  order: { band: string; balls_pm: number; rv_pm: number; sr: number; league_sr: number }[]
+  pressure: { bat_rv100: number; bowl_rv100: number; bat_rv_pm: number; bowl_rv_pm: number; balls_pm: number }
+  matches: TeamMatch[]
+  squad: TeamPlayer[]
 }
-/** A player RR kept for 2027. role: keeper if he kept wicket in a quarter of his matches since 2024, all-rounder
- * if he bowled 6+ and faced 8+ balls a match, bowler if he bowled 6+ balls a match, batter otherwise; null = no matches yet. */
-export interface RetainedPlayer {
-  id: number; name: string; role: 'batter' | 'keeper' | 'allrounder' | 'bowler' | null; overseas: boolean
-  /** 'public record' when the data cannot show the role (analysis/role_overrides.json) */
-  role_source?: 'data' | 'public record'
-  matches: number; wk_matches: number
-  bat26: { runs: number; sr: number } | null
-  bowl26: { wkts: number; econ: number } | null
-}
-/** a role RR need to fix for 2027 */
-export interface Recommendation {
-  gap: Gap; role: string; role_desc: string
-}
-export interface RRData {
-  season: number
-  summary: { pos: number; played: number; won: number; lost: number; points: number; nrr: number
-    playoff_result: string | null; matches: number; wins_all: number }
+export interface Season {
+  season: number; champion: string | null
   table: { pos: number; team: string; played: number; won: number; lost: number; nr: number; points: number; nrr: number }[]
-  top4: string[]
-  /** the other playoff sides: RR's benchmark (`top4` stats in each phase are their average) */
-  bench: string[]
-  phases: RRPhase[]
-  matchups: { bat_vs_pace: number; bat_vs_spin: number; bowl_pace: number; bowl_spin: number
-    teams: { team: string; bat_vs_pace: number; bat_vs_spin: number; bowl_pace: number; bowl_spin: number }[] }
-  order: { band: string; balls_pm: number; rv_pm: number; sr: number; league_sr: number; rv100: number; league_rv100: number }[]
-  pressure: { bat: { balls_pm: number; rv_pm: number; rv100: number }; bowl: { balls_pm: number; rv_pm: number; rv100: number }
-    league: { bat_rv100: number; bowl_rv100: number }; teams: { team: string; bat: number; bowl: number }[] }
-  matches: RRMatch[]
-  squad: SquadPlayer[]
-  /** players in the IPL 2026 squad who were not in RR's 2025 squad */
-  joined: { id: number; name: string; from_team: string | null; from_season: number | null; returning: boolean; ipl_seasons: number }[]
-  gaps: Gap[]
-  recommendations: Recommendation[]
-  /** known: every franchise has announced; announced: the franchises whose retentions are in */
-  pool: { known: boolean; updated: string | null; announced: string[] }
-  /** IPL squad rules (25 players, 8 overseas) against RR's retentions */
-  slots: { squad_max: number; overseas_max: number; retained: number; retained_overseas: number; open: number; open_overseas: number } | null
-  /** how many retained players fill each role */
-  squad_need: Record<'batter' | 'keeper' | 'allrounder' | 'bowler', number>
-  /** RR's retained players for 2027, with a role worked out from their matches since 2024 */
-  retained_squad: RetainedPlayer[]
-  provenance: Provenance
+  teams: Record<string, TeamSeason>
+  league: { matches: number; balls: number }
+}
+export interface TeamsData { seasons: number[]; by_season: Record<string, Season> }
+
+/* ----------------------------------------------------------------- matches */
+export interface MatchIndexRow {
+  id: number; date: string; comp: string; stage: string; teams: [string, string]; winner: string | null; result: string
+  knockout: boolean; score: string; max_li: number; pressure: number; drama: number
+}
+/** [innings, "over.ball", WP of the side batting first, stakes, pressure flag, outcome, striker idx, bowler idx] */
+export type BallRow = [number, string, number, number, number, string, number, number]
+export interface MatchDetail {
+  id: number; date: string; comp: string; stage: string; teams: [string, string]; winner: string | null; result: string
+  venue_country: string | null; knockout: boolean; target: number | null
+  innings: { team: string; runs: number; wkts: number; balls: number; pressure: number }[]
+  people: string[]
+  balls: BallRow[]
+  batting: { name: string; team: string; r: number; b: number; rv: number; wpa: number }[]
+  bowling: { name: string; team: string; r: number; b: number; w: number; rv: number; wpa: number }[]
+  swings: { inn: number; over: string; striker: string; bowler: string; outcome: string; wpa: number; bat_team: string }[]
 }
 
-export interface Provenance {
-  files: { file: string; use: string; rows: number | null }[]
-  comp_id: number
-  match_ids: number[]
-  league_balls: number
-  league_matches: number
-  reference: { name: string; url: string; accessed: string }
-  checks: { item: string; public: string; ours: string; match: boolean }[]
-  checks_passed: number
+/* ----------------------------------------------------------------- model lab */
+export interface ModelMetrics { auc: number; brier: number; logloss: number; ece: number }
+export type CalBin = { pred: number; actual: number; n: number }
+export interface ModelLab {
+  wp_comparison: {
+    candidates: string[]
+    sample_matches: number
+    innings: Record<'1' | '2', {
+      n_balls: number; n_matches: number; holdout_season: number; holdout_balls: number
+      cv: Record<string, ModelMetrics>; holdout: Record<string, ModelMetrics>
+      calibration: Record<string, CalBin[]>
+      importance: { feature: string; importance: number }[]
+    }>
+    curves: { by_wickets: { wkts: number; points: [number, number][] }[]; by_need: { need: number; points: [number, number][] }[] }
+  } | null
+  tuning: {
+    grid: { pctl: number[]; K: number[]; step: number[] }
+    rows: { role: Role; pctl: number; K: number; step: number; n: number; r: number }[]
+    production: { pctl: number; K: number; step: number; bat: number; bowl: number; mean: number }
+    best: { pctl: number; K: number; step: number; bat: number; bowl: number; mean: number }
+  } | null
+  next_season: Record<Role, {
+    n: number; train_years: number[]
+    corr: { gbm: number; rating: number; normal: number; last: number }
+    importance: { feature: string; drop: number }[]
+  }> | null
+  archetypes: Record<Role, {
+    k: number; silhouette: Record<string, number>; explained: number[]; features: string[]
+    clusters: { id: number; name: string; size: number; centroid: Record<string, number> }[]
+  }>
+  re_surface: { season: number; competition: string; rows: [number, number, number][] }
+  stability: Record<Role, { name: string; rank: number; p_top10: number; lo: number; hi: number; rating: number; rating_lo: number; rating_hi: number }[]>
+  split_half: Record<Role, Record<string, number>>
+  forward: Record<Role, { n: number; rating: number; normal: number; lift: number; wpa100: number }>
+  dataset: { balls: number; train_matches: number }
 }

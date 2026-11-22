@@ -23,10 +23,10 @@ export default function PrivacyPage() {
         </p>
         <h2>The data shown</h2>
         <p>
-          Player statistics come from public match records supplied in the SupeRR Selector Season 2 data pack. They describe
+          Player statistics come from Cricsheet’s open ball-by-ball match records. They describe
           on-field performance only.
         </p>
-        <p className="text-[13.5px] text-ink-3">Last updated 16 November 2026.</p>
+        <p className="text-[13.5px] text-ink-3">Last updated 22 November 2026.</p>
       </div>
     </article>
   )

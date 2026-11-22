@@ -1,5 +1,4 @@
-import { iplCode } from './format'
-import type { Player, Role } from './types'
+import type { Role } from './types'
 
 /**
  * Every statistic on the dashboard, named once in plain words. Tables, charts and the
@@ -34,7 +33,7 @@ export const TERMS = {
   },
   lift: {
     label: 'Lift',
-    def: 'Pressure rating minus usual level. Positive means the player gets better when it matters; negative means he dips. Players who dip are never recommended.',
+    def: 'Pressure rating minus usual level. Positive means the player gets better when it matters; negative means he dips.',
   },
   winImpact: {
     label: 'Win impact',
@@ -47,7 +46,7 @@ export const TERMS = {
   },
   confidence: {
     label: 'Top-10 confidence',
-    def: 'I re-ran the whole ranking 400 times with the matches reshuffled. This is how often the player stayed in the top 10. 50% or more is a safe pick; under 50% is a close call. It can differ from the rank order: a long record is steadier than a short one with a similar rating.',
+    def: 'The whole ranking re-run 400 times on matches resampled with replacement (a bootstrap). This is how often the player stayed in the top 10. It can differ from the rank order: a long record is steadier than a short one with a similar rating.',
   },
   rankRange: {
     label: 'Likely rank range',
@@ -55,15 +54,23 @@ export const TERMS = {
   },
   rank: {
     label: 'Rank',
-    def: 'Players RR can buy at the 2027 auction, by pressure rating. Out: RR’s squad, other teams’ retentions, retired, banned and Pakistani players, anyone with no top-level cricket in 2026, and anyone who dips under pressure. Each above-average Indian gets a top-10 place (up to 5; RR have 3 overseas places left). At most one Bangladeshi player per list.',
+    def: 'Every player who clears the evidence bar, ordered by pressure rating alone.',
   },
   qualified: {
     label: 'Qualified',
-    def: '50+ pressure balls in 4+ matches (a match counts with 6+ pressure balls), 20+ of them in 2025–26. A knockout first-innings ball counts half. Indian players need a third (17 balls, 2 matches, 7 recent), as the data pack has no domestic cricket.',
+    def: '50+ pressure balls in 4+ matches (a match counts with 6+ pressure balls), 20+ of them in 2025–26. A knockout first-innings ball counts half.',
   },
-  emerging: {
-    label: 'Emerging',
-    def: 'Under 26 at the start of IPL 2027 (born on or after 1 April 2001), from public birth dates. A label only: the ranking never uses age.',
+  newFace: {
+    label: 'New face',
+    def: 'First seen in top-level cricket (IPL or a full-member T20I) in 2024 or later. A label only: the ranking never uses it.',
+  },
+  archetype: {
+    label: 'Archetype',
+    def: 'Playing style found by k-means clustering on when the player is used (powerplay, middle, death), how he scores or concedes, and his usual level and lift. Players with 300+ balls.',
+  },
+  interval: {
+    label: '90% interval',
+    def: 'The range the rating falls in for 9 of every 10 bootstrap re-runs. A wide interval means a short or uneven record.',
   },
   rate: {
     label: 'Strike rate',
@@ -76,7 +83,7 @@ export const TERMS = {
   },
   seasonRuns: {
     label: 'Runs added',
-    def: 'Runs above an average IPL 2026 player in the same situations, added up over the season. For bowlers this is runs saved.',
+    def: 'Runs above an average IPL player that season in the same situations, added up. For bowlers this is runs saved.',
   },
   phase: {
     label: 'Phase',
@@ -107,35 +114,3 @@ export function betterThan(z: number) {
   const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))))
   return Math.min(99, Math.max(1, Math.round(100 * (z > 0 ? 1 - p : p))))
 }
-
-/** Why a qualified player is outside my ranking: short form for tables, long form for profiles. */
-export const EXCLUDED_NOTE = {
-  rr: 'Already at RR',
-  pakistan: 'Can’t enter the IPL auction',
-  retained: 'Retained by their team',
-  retired: 'Retired from the IPL',
-  unavailable: 'Can’t play IPL 2027',
-  inactive: 'Not active in 2026',
-  dips: 'Dips under pressure',
-} as const
-export const EXCLUDED_LONG = {
-  rr: 'Already in the Rajasthan Royals squad, so left out of my ranking of players to target.',
-  pakistan: 'Pakistani players cannot register for the IPL auction, so left out of my ranking.',
-  retained: 'Retained by their IPL team for 2027, so not in the auction and left out of my ranking.',
-  retired: 'Retired from the IPL, so not available and left out of my ranking.',
-  unavailable: 'Cannot play IPL 2027 (banned from the IPL for withdrawing from a season), so left out of my ranking.',
-  inactive: 'No top-level cricket in 2026 (IPL or full-member T20I), so not a current pick for the 2027 auction and left out of my ranking.',
-  dips: 'Worse under pressure than usual (negative lift), so not recommended as a pressure pick, however good the usual level is.',
-} as const
-
-type Excludable = Pick<Player, 'excluded' | 'retained_by'>
-/** Short reason, naming the franchise for a retained player ("Retained by CSK"). */
-export const excludedNote = (p: Excludable) =>
-  p.excluded === 'retained' && p.retained_by ? `Retained by ${iplCode(p.retained_by)}` : p.excluded ? EXCLUDED_NOTE[p.excluded] : ''
-/** Long reason for profiles. */
-export const excludedLong = (p: Excludable) =>
-  p.excluded === 'retained' && p.retained_by
-    ? `Retained by ${p.retained_by} for IPL 2027, so not in the auction and left out of my ranking.`
-    : p.excluded
-      ? EXCLUDED_LONG[p.excluded]
-      : ''

@@ -28,8 +28,8 @@ export function EndgameTable({ e }: { e: Summary['wp_model']['endgame'] }) {
                 <TableCell className="py-2.5 pl-5">{r.situation}</TableCell>
                 <TableCell className="num text-right text-ink-2">{r.n}</TableCell>
                 <TableCell className="num text-right font-semibold">{fmt.pct(r.actual)}</TableCell>
-                <TableCell className={cn('num text-right', !tie && gOld < gNew && 'font-semibold text-pink-ink')}>{fmt.pct(r.old, r.old < 0.01 ? 1 : 0)}</TableCell>
-                <TableCell className={cn('num pr-5 text-right', !tie && gNew < gOld && 'font-semibold text-pink-ink')}>{fmt.pct(r.new, r.new < 0.01 ? 1 : 0)}</TableCell>
+                <TableCell className={cn('num text-right', !tie && gOld < gNew && 'font-semibold text-signal-ink')}>{fmt.pct(r.old, r.old < 0.01 ? 1 : 0)}</TableCell>
+                <TableCell className={cn('num pr-5 text-right', !tie && gNew < gOld && 'font-semibold text-signal-ink')}>{fmt.pct(r.new, r.new < 0.01 ? 1 : 0)}</TableCell>
               </TableRow>
             )
           })}

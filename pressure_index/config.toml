@@ -1,0 +1,38 @@
+# Pressure Index configuration. Every number the method depends on lives here.
+# The four [model] settings were chosen with walk-forward backtests (see `python -m pressure_index tune`).
+
+[data]
+first_season = 2022
+last_season = 2026
+# Ratings use top-level cricket only: the IPL and T20Is between two ICC full members.
+full_members = [
+  "India", "Pakistan", "Australia", "England", "New Zealand", "South Africa",
+  "West Indies", "Sri Lanka", "Bangladesh", "Afghanistan", "Ireland", "Zimbabwe",
+]
+# Matches cut below 10 overs a side are left out of pressure (a 5-over game is a different sport).
+min_match_balls = 60
+
+[model]
+pressure_pctl = 0.80        # 1. a pressure ball: top 20% of balls by stakes, plus every knockout ball
+K = 200                     # 2. shrinkage: a pressure record counts half at 200 recency-weighted balls
+recency_step = 0.20         # 3. each season back counts 20% less (latest season = 1.0)
+ko_first_innings = 0.5      # a knockout first-innings pressure ball counts half
+match_min_balls = 6         # a match counts as a pressure appearance with 6+ pressure balls
+
+[eligibility]               # 4. evidence needed to be ranked
+min_pressure_balls = 50
+min_pressure_matches = 4
+recent_from = 2025          # ... with at least `min_recent_balls` of them from this season on
+min_recent_balls = 20
+rising_born_from = "2001-01-01"   # "rising" label: under 26 on 1 January 2027
+
+[endgame]                   # exact final-over chase model
+balls = 6
+fit_balls = 12
+max_need = 60
+prior = 150
+
+[evaluation]
+n_boot = 400                # bootstrap resamples (env N_BOOT overrides)
+seed = 27
+cv_folds = 5

@@ -55,7 +55,7 @@ export function MomentsTable({ moments }: { moments: Summary['moments'] }) {
                 {mo.striker} v {mo.bowler}
               </TableCell>
               <TableCell className="num text-right">{fmt.pct(mo.wp)}</TableCell>
-              <TableCell className="display num pr-5 text-right text-[1.4rem] text-pink" title="Stakes compared with a typical ball">
+              <TableCell className="display num pr-5 text-right text-[1.4rem] text-signal-ink" title="Stakes compared with a typical ball">
                 {mo.li.toFixed(0)}×
               </TableCell>
             </TableRow>

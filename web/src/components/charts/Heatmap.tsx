@@ -9,7 +9,7 @@ import { useZoom } from './Zoom'
 
 /**
  * Chase pressure map: overs left (x, counting down) by runs needed (y), shaded by
- * Leverage Index for a chosen number of wickets in hand. One hue (pink), light to dark,
+ * Leverage Index for a chosen number of wickets in hand. One hue (orange), light to dark,
  * expressed as opacity over the surface so it stays correct in both themes.
  */
 export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; wkts: number; maxNeed?: number }) {
@@ -36,7 +36,7 @@ export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; w
             y={y(need)}
             width={x.bandwidth()}
             height={y.bandwidth()}
-            fill="var(--pink)"
+            fill="var(--signal)"
             fillOpacity={op(li)}
             onPointerEnter={(e) => {
               const rect = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect()
@@ -86,7 +86,7 @@ export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; w
           {legendStops.map((s, i) => (
             <g key={s} transform={`translate(0 ${18 + i * 22})`}>
               <rect width={14} height={18} fill="var(--surface-2)" />
-              <rect width={14} height={18} fill="var(--pink)" fillOpacity={op(s)} />
+              <rect width={14} height={18} fill="var(--signal)" fillOpacity={op(s)} />
               <text x={20} y={9} dy="0.32em" {...AXIS.tick} className="num">
                 {s === 4 ? '4+' : s}
               </text>

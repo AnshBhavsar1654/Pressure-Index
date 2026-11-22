@@ -17,11 +17,12 @@ export default function PlayersPage() {
   const map = new Map<number, DirRow>()
   for (const role of ['bat', 'bowl'] as const) {
     for (const p of getRole(role).players) {
-      const row = map.get(p.id) ?? { id: p.id, name: p.name, country: p.country, team: p.ipl_team, retained: p.retained_by, kind: 'Batter', balls: 0 }
+      const row = map.get(p.id) ?? { id: p.id, name: p.name, country: p.country, team: p.ipl_team, active: p.active, kind: 'Batter' as DirRow['kind'], balls: 0 }
       row[role] = line(p)
       row.balls += p.p_balls
       row.country ??= p.country
       row.team ??= p.ipl_team
+      row.active ||= p.active
       map.set(p.id, row)
     }
   }
@@ -39,8 +40,8 @@ export default function PlayersPage() {
         title="All players"
         summary={
           <>
-            All {rows.length} players who batted or bowled in top-level cricket since 2022, each with a profile. {ranked} make my
-            rankings of players RR can sign.
+            All {rows.length} players who batted or bowled in top-level cricket since 2022, each with a profile. {ranked} clear the
+            evidence bar and are ranked.
           </>
         }
       />

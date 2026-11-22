@@ -7,19 +7,19 @@ import { ChartFrame, Legend } from '@/components/charts/core'
 import { LineChart } from '@/components/charts/LineChart'
 import { Flag } from '@/components/Flag'
 import { BallIcon, BatIcon } from '@/components/icons'
-import { PlayerAvatar, RetainedMark } from '@/components/kit'
+import { PlayerAvatar } from '@/components/kit'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { fmt } from '@/lib/format'
-import { betterThan, excludedLong, term, winPts } from '@/lib/terms'
+import { betterThan, term, winPts } from '@/lib/terms'
 import { COMPONENT_LABEL, rescore, type ComponentKey, type Player, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 const MAX = 3
-const COLORS = ['var(--pink)', 'var(--blue)', 'var(--gold)']
+const COLORS = ['var(--signal)', 'var(--data)', 'var(--hi)']
 const KEYS = Object.keys(COMPONENT_LABEL) as ComponentKey[]
 
 type Row = {
@@ -78,10 +78,10 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
 
   const pool = pools[role]
   const chosen = useMemo(() => ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Player => !!p), [ids, pool])
-  const qualified = useMemo(() => pool.filter((p) => p.merit_rank != null), [pool])
+  const qualified = useMemo(() => pool.filter((p) => p.rank != null), [pool])
   // evidence as z-scores against the qualified pool, adding the player if outside it
   const zs = useMemo(
-    () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.merit_rank != null ? qualified : [...qualified, p]).find((x) => x.id === p.id)!])),
+    () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.rank != null ? qualified : [...qualified, p]).find((x) => x.id === p.id)!])),
     [chosen, qualified],
   )
 
@@ -131,7 +131,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
       <Card>
         <CardHeader>
           <CardTitle>Choose who to compare</CardTitle>
-          <CardDescription>Every player with a profile is available, including those outside my ranking.</CardDescription>
+          <CardDescription>Every player with a profile is available, including those below the evidence bar.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -141,7 +141,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
                   key={r}
                   onClick={() => r !== role && switchRole(r)}
                   aria-pressed={role === r}
-                  className={cn('flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px]', role === r ? 'bg-pink text-white' : 'text-ink-2 hover:text-foreground')}
+                  className={cn('flex h-8 items-center gap-1.5 rounded-md px-3 text-[13px]', role === r ? 'bg-signal text-white' : 'text-ink-2 hover:text-foreground')}
                 >
                   {r === 'bat' ? <BatIcon size={16} /> : <BallIcon size={16} />}
                   {r === 'bat' ? 'Batters' : 'Bowlers'}
@@ -165,7 +165,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
                   {suggestions.map((p) => (
                     <li key={p.id}>
                       <button onClick={() => add(p.id)} className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-panel-2">
-                        <PlayerAvatar name={p.name} rr={p.ipl_team === 'Rajasthan Royals'} size={28} />
+                        <PlayerAvatar name={p.name} size={28} />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-[14px] font-medium">{p.name}</span>
                           <span className="block text-[12px] text-ink-3">
@@ -197,13 +197,12 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
                 <XIcon size={16} />
               </button>
               <div className="flex items-center gap-3 pr-7">
-                <PlayerAvatar name={p.name} rr={p.ipl_team === 'Rajasthan Royals'} size={48} />
+                <PlayerAvatar name={p.name} highlight={p.rank != null && p.rank <= 10} size={48} />
                 <div className="min-w-0">
                   <h2 className="display flex items-center gap-2 text-[1.6rem]">
                     <span className="truncate">{p.name}</span>
-                    {p.retained_by && <RetainedMark team={p.retained_by} size={20} />}
                   </h2>
-                  <span className="text-[12.5px] text-ink-3">{role === 'bat' ? p.hand : p.bowl_type}</span>
+                  <span className="text-[12.5px] text-ink-3">{p.archetype?.name ?? '–'}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -213,8 +212,8 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
               </div>
               <div className="flex items-end justify-between">
                 <span>
-                  <span className="block text-[12.5px] text-ink-3">My rank</span>
-                  <span className="display num text-[2rem] text-pink">{p.rank ?? '–'}</span>
+                  <span className="block text-[12.5px] text-ink-3">Rank</span>
+                  <span className="display num text-[2rem] text-signal-ink">{p.rank ?? '–'}</span>
                 </span>
                 <Button asChild variant="outline" size="sm" className="rounded-md">
                   <Link href={`/players/${role}/${p.id}/`}>Full profile</Link>
@@ -222,7 +221,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
               </div>
               {p.rank == null && (
                 <p className="text-[12px] leading-snug text-ink-3">
-                  {p.excluded ? excludedLong(p) : 'Not enough pressure balls to be ranked, so these figures rest on a small sample.'}
+                  Not enough pressure balls to be ranked, so these figures rest on a small sample.
                 </p>
               )}
             </section>
@@ -235,7 +234,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
           <Card className="gap-0 pb-0">
             <CardHeader className="border-b pb-4">
               <CardTitle>Side by side</CardTitle>
-              <CardDescription>The best figure in each row is marked in pink. Volume rows have no winner.</CardDescription>
+              <CardDescription>The best figure in each row is marked in orange. Volume rows have no winner.</CardDescription>
             </CardHeader>
             <Table className="min-w-[560px] text-[14px]">
               <TableHeader>
@@ -260,7 +259,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
                         {r.label}
                       </TableCell>
                       {vals.map((v, i) => (
-                        <TableCell key={chosen[i].id} className={cn('num text-right', i === vals.length - 1 && 'pr-5', best != null && v === best ? 'font-semibold text-pink-ink' : 'text-ink')}>
+                        <TableCell key={chosen[i].id} className={cn('num text-right', i === vals.length - 1 && 'pr-5', best != null && v === best ? 'font-semibold text-signal-ink' : 'text-ink')}>
                           {r.fmt(v)}
                         </TableCell>
                       ))}
@@ -339,7 +338,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
                     <TableRow key={ph}>
                       <TableCell className="py-2.5 pl-5 text-ink-2">{ph === 'Middle' ? 'Middle overs' : ph}</TableCell>
                       {cells.map((c, i) => (
-                        <TableCell key={chosen[i].id} className={cn('num text-right', i === cells.length - 1 && 'pr-5', best != null && c?.rv100 === best && 'font-semibold text-pink-ink')}>
+                        <TableCell key={chosen[i].id} className={cn('num text-right', i === cells.length - 1 && 'pr-5', best != null && c?.rv100 === best && 'font-semibold text-signal-ink')}>
                           {fmt.signed(c?.rv100)}
                           <span className="text-[12px] text-ink-3"> · {c?.balls ?? 0} balls</span>
                         </TableCell>

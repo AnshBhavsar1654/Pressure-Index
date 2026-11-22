@@ -1,0 +1,186 @@
+{
+ "1": {
+  "auc": 0.744,
+  "brier": 0.2044,
+  "logloss": 0.5918,
+  "n_balls": 335923,
+  "n_matches": 2751,
+  "calibration": [
+   {
+    "pred": 0.053,
+    "actual": 0.042,
+    "n": 15214
+   },
+   {
+    "pred": 0.152,
+    "actual": 0.182,
+    "n": 21608
+   },
+   {
+    "pred": 0.252,
+    "actual": 0.262,
+    "n": 27814
+   },
+   {
+    "pred": 0.353,
+    "actual": 0.342,
+    "n": 39968
+   },
+   {
+    "pred": 0.454,
+    "actual": 0.44,
+    "n": 52173
+   },
+   {
+    "pred": 0.545,
+    "actual": 0.545,
+    "n": 71319
+   },
+   {
+    "pred": 0.647,
+    "actual": 0.668,
+    "n": 46887
+   },
+   {
+    "pred": 0.747,
+    "actual": 0.742,
+    "n": 34149
+   },
+   {
+    "pred": 0.844,
+    "actual": 0.831,
+    "n": 20292
+   },
+   {
+    "pred": 0.932,
+    "actual": 0.934,
+    "n": 6499
+   }
+  ],
+  "coef": {
+   "log(projected / par)": 5.796,
+   "x time left": 0.399,
+   "squared": 0.506,
+   "time left": 0.201,
+   "wickets in hand": -0.241,
+   "IPL": -0.019
+  }
+ },
+ "2": {
+  "auc": 0.919,
+  "brier": 0.1151,
+  "logloss": 0.3548,
+  "n_balls": 291474,
+  "n_matches": 2750,
+  "calibration": [
+   {
+    "pred": 0.028,
+    "actual": 0.028,
+    "n": 74119
+   },
+   {
+    "pred": 0.148,
+    "actual": 0.152,
+    "n": 26133
+   },
+   {
+    "pred": 0.249,
+    "actual": 0.245,
+    "n": 22713
+   },
+   {
+    "pred": 0.349,
+    "actual": 0.341,
+    "n": 19389
+   },
+   {
+    "pred": 0.45,
+    "actual": 0.454,
+    "n": 17035
+   },
+   {
+    "pred": 0.55,
+    "actual": 0.555,
+    "n": 16345
+   },
+   {
+    "pred": 0.65,
+    "actual": 0.669,
+    "n": 16172
+   },
+   {
+    "pred": 0.751,
+    "actual": 0.756,
+    "n": 18336
+   },
+   {
+    "pred": 0.852,
+    "actual": 0.828,
+    "n": 20934
+   },
+   {
+    "pred": 0.973,
+    "actual": 0.973,
+    "n": 60298
+   }
+  ],
+  "coef": {
+   "log(need / resources)": -5.282,
+   "x time left": -0.337,
+   "squared": -0.218,
+   "time left": -0.16,
+   "wickets in hand": -0.011,
+   "required rate": -1.579,
+   "IPL": 0.153
+  }
+ },
+ "endgame": {
+  "balls": 6718,
+  "brier_old": 0.0442,
+  "brier_new": 0.0445,
+  "rows": [
+   {
+    "situation": "Last ball, 2 or 3 needed",
+    "n": 46,
+    "actual": 0.565,
+    "old": 0.3,
+    "new": 0.363
+   },
+   {
+    "situation": "Last ball, a boundary needed (4 to 6)",
+    "n": 64,
+    "actual": 0.188,
+    "old": 0.028,
+    "new": 0.125
+   },
+   {
+    "situation": "Last 2 balls, 7 to 12 needed",
+    "n": 122,
+    "actual": 0.098,
+    "old": 0.014,
+    "new": 0.042
+   },
+   {
+    "situation": "Last 3 balls, 7 to 12 needed",
+    "n": 137,
+    "actual": 0.19,
+    "old": 0.101,
+    "new": 0.141
+   },
+   {
+    "situation": "Last over, 6 to 10 needed",
+    "n": 154,
+    "actual": 0.753,
+    "old": 0.767,
+    "new": 0.654
+   },
+   {
+    "situation": "Last over, 11 to 16 needed",
+    "n": 160,
+    "actual": 0.269,
+    "old": 0.263,
+    "new": 0.225
+   }
+  ]
+ }
+}

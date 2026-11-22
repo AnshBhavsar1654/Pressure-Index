@@ -9,8 +9,8 @@ import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 import { useZoom } from './Zoom'
 
 /**
- * One bar per match with pressure exposure: run value above (pink) or below (blue)
- * expectation. The rhythm of pink vs blue is the consistency story.
+ * One bar per match with pressure exposure: run value above (orange) or below (teal)
+ * expectation. The rhythm of orange vs teal is the consistency story.
  */
 export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'bat' | 'bowl' }) {
   const [ref, width] = useWidth<HTMLDivElement>()
@@ -63,7 +63,7 @@ export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'b
               width={x.bandwidth()}
               height={h}
               rx={Math.min(2, x.bandwidth() / 2)}
-              fill={pos ? 'var(--pink)' : 'var(--blue)'}
+              fill={pos ? 'var(--signal)' : 'var(--data)'}
               onPointerEnter={(e) => {
                 const rect = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect()
                 setTip({
@@ -106,8 +106,8 @@ export function RankRanges({ players, n = 15 }: { players: ScoredPlayer[]; n?: n
   return (
     <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label="Bootstrap rank intervals">
-        <rect x={x(1)} y={m.t - 6} width={x(10.5) - x(1)} height={rows.length * rowH + 4} fill="var(--pink-soft)" opacity={0.5} />
-        <text x={x(10.5) - 4} y={height - 2} textAnchor="end" {...AXIS.label} fill="var(--pink)" fontWeight={600}>
+        <rect x={x(1)} y={m.t - 6} width={x(10.5) - x(1)} height={rows.length * rowH + 4} fill="var(--signal-soft)" opacity={0.5} />
+        <text x={x(10.5) - 4} y={height - 2} textAnchor="end" {...AXIS.label} fill="var(--signal)" fontWeight={600}>
           top-10 zone
         </text>
         {[1, 10, 20, 30, 40, 50].filter((t) => t <= maxR).map((t) => (
@@ -147,8 +147,8 @@ export function RankRanges({ players, n = 15 }: { players: ScoredPlayer[]; n?: n
                 </tspan>
                 {p.name.length > 17 ? p.name.split(' ').slice(-1)[0] : p.name}
               </text>
-              <line x1={x(p.boot!.rank_lo)} x2={x(p.boot!.rank_hi)} y1={cy} y2={cy} stroke="var(--blue)" strokeWidth={2} strokeLinecap="round" />
-              <circle cx={x(p.boot!.rank_med)} cy={cy} r={5} fill="var(--pink)" stroke="var(--surface)" strokeWidth={2} />
+              <line x1={x(p.boot!.rank_lo)} x2={x(p.boot!.rank_hi)} y1={cy} y2={cy} stroke="var(--data)" strokeWidth={2} strokeLinecap="round" />
+              <circle cx={x(p.boot!.rank_med)} cy={cy} r={5} fill="var(--signal)" stroke="var(--surface)" strokeWidth={2} />
             </g>
           )
         })}
@@ -175,7 +175,7 @@ export function ComponentBars({ z, beats, labels }: { z: Record<string, number>;
               <div
                 className="absolute top-0 h-3 rounded-[2px]"
                 style={{
-                  background: v >= 0 ? 'var(--pink)' : 'var(--blue)',
+                  background: v >= 0 ? 'var(--signal)' : 'var(--data)',
                   left: v >= 0 ? '50%' : `${50 - pct}%`,
                   width: `${pct}%`,
                 }}
@@ -223,7 +223,7 @@ export function Calibration({ bins }: { bins: { pred: number; actual: number; n:
         ))}
         <line x1={m.l} y1={yS(0)} x2={m.l + s(1)} y2={yS(1)} stroke="var(--ink-3)" />
         {bins.map((b) => (
-          <circle key={b.pred} cx={m.l + s(b.pred)} cy={yS(b.actual)} r={Math.max(3, Math.min(8, Math.sqrt(b.n) / 18))} fill="var(--pink)" stroke="var(--surface)" strokeWidth={1.5} />
+          <circle key={b.pred} cx={m.l + s(b.pred)} cy={yS(b.actual)} r={Math.max(3, Math.min(8, Math.sqrt(b.n) / 18))} fill="var(--signal)" stroke="var(--surface)" strokeWidth={1.5} />
         ))}
         <text x={m.l + s(0.5)} y={size - 4} textAnchor="middle" {...AXIS.label}>
           Predicted win % (out-of-fold)

@@ -32,7 +32,7 @@ export function Moments({ moments, role }: { moments: Moment[]; role: Role }) {
                   {m.comp}, {fmt.date(m.date)}
                 </div>
               </div>
-              <Tag tone={m.won ? 'pink' : 'neutral'}>{m.won ? 'Won' : 'Lost'}</Tag>
+              <Tag tone={m.won ? 'signal' : 'neutral'}>{m.won ? 'Won' : 'Lost'}</Tag>
             </div>
             <p className="text-[14px] leading-snug text-ink">{momentLine(m, role)}</p>
             <div className="mt-auto flex items-baseline gap-2">

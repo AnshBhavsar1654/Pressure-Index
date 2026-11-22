@@ -1,7 +1,6 @@
-import { AirplaneTiltIcon, InfoIcon } from '@phosphor-icons/react/dist/ssr'
+import { InfoIcon } from '@phosphor-icons/react/dist/ssr'
 import type { ReactNode } from 'react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 
 /** Page title with a one-sentence summary underneath; optional content on the right. */
@@ -32,7 +31,7 @@ export function SectionHead({ title, children, id, action }: { title: string; ch
 /** Short points instead of a paragraph: easier to scan. */
 export function Bullets({ items, className }: { items: ReactNode[]; className?: string }) {
   return (
-    <ul className={cn('flex flex-col gap-1.5 pl-5 text-[14.5px] leading-snug text-ink-2 marker:text-pink [&_b]:text-ink', className)} style={{ listStyle: 'disc' }}>
+    <ul className={cn('flex flex-col gap-1.5 pl-5 text-[14.5px] leading-snug text-ink-2 marker:text-signal-ink [&_b]:text-ink', className)} style={{ listStyle: 'disc' }}>
       {items.filter(Boolean).map((it, i) => (
         <li key={i}>{it}</li>
       ))}
@@ -40,7 +39,7 @@ export function Bullets({ items, className }: { items: ReactNode[]; className?: 
   )
 }
 
-const TONE = { ink: 'text-foreground', pink: 'text-pink', blue: 'text-blue', gold: 'text-gold', white: 'text-white' }
+const TONE = { ink: 'text-foreground', signal: 'text-signal-ink', data: 'text-data-ink', hi: 'text-ink', white: 'text-white' }
 
 export function Stat({
   label,
@@ -64,14 +63,14 @@ export function Stat({
   )
 }
 
-/** Initials in a kit-colour ring: there are no player photos in the data, so identity is typographic. */
-export function PlayerAvatar({ name, rr = false, size = 40, className }: { name: string; rr?: boolean; size?: number; className?: string }) {
+/** Initials in a thin ring: there are no player photos in the data, so identity is typographic. */
+export function PlayerAvatar({ name, highlight = false, size = 40, className }: { name: string; highlight?: boolean; size?: number; className?: string }) {
   const parts = name.replace(/[^A-Za-z ]/g, '').split(' ').filter(Boolean)
   const initials = (parts.length > 1 ? parts[0][0] + parts[parts.length - 1][0] : parts[0]?.slice(0, 2) ?? '?').toUpperCase()
   return (
     <span
       aria-hidden
-      className={cn('grid shrink-0 place-items-center rounded-full p-[2px]', rr ? 'bg-pink' : 'bg-blue/55', className)}
+      className={cn('grid shrink-0 place-items-center rounded-full p-[2px]', highlight ? 'bg-signal' : 'bg-line-strong', className)}
       style={{ width: size, height: size }}
     >
       <span className="display grid size-full place-items-center rounded-full bg-panel-2 text-ink" style={{ fontSize: size * 0.4 }}>
@@ -81,14 +80,13 @@ export function PlayerAvatar({ name, rr = false, size = 40, className }: { name:
   )
 }
 
-/** Ribbon carrying a rank number, after the numbered banner on a team sheet. */
+/** Rank in a mono numeral with a signal-coloured rule: a leaderboard position, not a trophy. */
 export function RankRibbon({ rank, className }: { rank: number | string; className?: string }) {
   return (
-    <span className={cn('relative grid w-16 place-items-center pb-3 pt-2 text-white', className)} aria-label={`Rank ${rank}`}>
-      <svg viewBox="0 0 64 84" className="absolute inset-0 size-full" preserveAspectRatio="none" aria-hidden>
-        <path d="M0 0 H64 V84 L32 68 L0 84 Z" fill="#f2bd45" />
-      </svg>
-      <span className="display num relative text-[2.3rem] text-[#3a2600]">{rank}</span>
+    <span className={cn('flex w-16 flex-col items-center gap-1.5 pt-1', className)} aria-label={`Rank ${rank}`}>
+      <span className="eyebrow">rank</span>
+      <span className="display num text-[2.4rem] leading-none text-foreground">{rank}</span>
+      <span className="h-[3px] w-8 rounded-full bg-signal" />
     </span>
   )
 }
@@ -96,7 +94,7 @@ export function RankRibbon({ rank, className }: { rank: number | string; classNa
 export function Note({ title, children, className }: { title: string; children: ReactNode; className?: string }) {
   return (
     <Alert className={cn('rounded-lg border-line bg-panel-2', className)}>
-      <InfoIcon weight="fill" className="text-blue" />
+      <InfoIcon weight="fill" className="text-data-ink" />
       <AlertTitle className="font-semibold">{title}</AlertTitle>
       <AlertDescription className="text-ink-2 [&_b]:text-foreground">{children}</AlertDescription>
     </Alert>
@@ -104,8 +102,8 @@ export function Note({ title, children, className }: { title: string; children: 
 }
 
 /** Thin meter for shares such as "stays in the top 10". */
-export function Meter({ value, tone = 'blue', className }: { value: number; tone?: 'blue' | 'pink' | 'gold'; className?: string }) {
-  const bg = { blue: 'bg-blue', pink: 'bg-pink', gold: 'bg-gold' }[tone]
+export function Meter({ value, tone = 'data', className }: { value: number; tone?: 'data' | 'signal' | 'hi'; className?: string }) {
+  const bg = { data: 'bg-data', signal: 'bg-signal', hi: 'bg-hi' }[tone]
   return (
     <span className={cn('block h-1.5 overflow-hidden rounded-full bg-panel-2', className)} role="presentation">
       <span className={cn('block h-full rounded-full', bg)} style={{ width: `${Math.max(3, Math.min(100, value * 100))}%` }} />
@@ -125,47 +123,12 @@ export function ordinal(n: number) {
 
 const TAG = {
   neutral: 'bg-panel-2 text-ink-2 border-line',
-  pink: 'bg-pink-soft text-pink-ink border-transparent',
-  blue: 'bg-blue-soft text-blue border-transparent',
-  gold: 'bg-gold-soft text-gold border-transparent',
+  signal: 'bg-signal-soft text-signal-ink border-transparent',
+  data: 'bg-data-soft text-data-ink border-transparent',
+  hi: 'bg-hi-soft text-ink border-transparent',
 }
 
 /** Small coloured label for nationality, status and similar facts. */
 export function Tag({ children, tone = 'neutral' }: { children: ReactNode; tone?: keyof typeof TAG }) {
   return <span className={cn('inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11.5px] font-medium', TAG[tone])}>{children}</span>
-}
-
-/** Retained marker: a small "R", naming the franchise on hover and to screen readers. */
-export function RetainedMark({ team, size = 18 }: { team?: string | null; size?: number }) {
-  const label = team ? `Retained by ${team} for IPL 2027` : 'Retained for IPL 2027'
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          role="img"
-          aria-label={label}
-          style={{ width: size, height: size, fontSize: Math.round(size * 0.62) }}
-          className="inline-grid shrink-0 place-items-center rounded-full bg-gold-soft font-bold leading-none text-gold ring-1 ring-gold/40"
-        >
-          R
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  )
-}
-
-/** Overseas player marker: an aeroplane, explained on hover and to screen readers. */
-export function OverseasMark({ country, size = 15 }: { country?: string | null; size?: number }) {
-  const label = country ? `Overseas player, ${country}` : 'Overseas player'
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span role="img" aria-label={label} className="inline-grid shrink-0 place-items-center rounded-full bg-blue-soft p-1 text-blue">
-          <AirplaneTiltIcon size={size} weight="fill" />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{label}</TooltipContent>
-    </Tooltip>
-  )
 }

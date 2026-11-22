@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Big_Shoulders, Outfit } from 'next/font/google'
+import { Fira_Code, Fira_Sans } from 'next/font/google'
 import Link from 'next/link'
 import Script from 'next/script'
 import { Sidebar } from '@/components/shell/Sidebar'
@@ -9,21 +9,13 @@ import { getRole } from '@/lib/data'
 import { cn } from '@/lib/utils'
 import './globals.css'
 
-// Next.js ships no fallback metrics for Big Shoulders, so skip the generated
-// fallback (that caused the build warning) and name a condensed system stack.
-const display = Big_Shoulders({
-  subsets: ['latin'],
-  variable: '--font-display-face',
-  weight: ['700', '800', '900'],
-  adjustFontFallback: false,
-  fallback: ['Arial Narrow', 'Roboto Condensed', 'sans-serif'],
-})
-const body = Outfit({ subsets: ['latin'], variable: '--font-body' })
+const body = Fira_Sans({ subsets: ['latin'], variable: '--font-body', weight: ['400', '500', '600', '700'] })
+const mono = Fira_Code({ subsets: ['latin'], variable: '--font-mono-face', weight: ['400', '500', '600'] })
 
 export const metadata: Metadata = {
   title: { default: 'Pressure Index', template: '%s | Pressure Index' },
   description:
-    'Who delivers when the match is on the line? Pressure-adjusted ratings of IPL and T20I players, and an IPL 2027 auction plan for Rajasthan Royals.',
+    'Who performs when the match is on the line? Win-probability and run-expectancy models over 600k+ IPL and T20I deliveries, pressure-adjusted player ratings, and an interactive analytics dashboard.',
 }
 
 // Dark is the home theme; a stored "light" choice is applied before paint.
@@ -35,7 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     getRole(role).players.map((p) => ({ id: p.id, name: p.name, role, rank: p.rank, ipl: p.ipl_team, country: p.country })),
   )
   return (
-    <html lang="en" className={cn('dark', display.variable, body.variable)} suppressHydrationWarning>
+    <html lang="en" className={cn('dark', body.variable, mono.variable)} suppressHydrationWarning>
       <body className="min-h-dvh font-sans">
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <TooltipProvider delayDuration={150}>
@@ -55,20 +47,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pb-6 pt-5 text-[13px] text-ink-3">
                 <div className="flex flex-col gap-1">
                   <span>
-                    Submitted by <b className="font-semibold text-ink-2">Ansh Bhavsar</b>:{' '}
-                    <a href="mailto:anshbhavsar164@gmail.com" className="hover:text-foreground hover:underline">
-                      anshbhavsar164@gmail.com
-                    </a>
-                    ,{' '}
-                    <a href="tel:+919979306408" className="hover:text-foreground hover:underline">
-                      +91 99793 06408
+                    Built by <b className="font-semibold text-ink-2">Ansh Bhavsar</b> ·{' '}
+                    <a href="https://github.com/AnshBhavsar1654" className="hover:text-foreground hover:underline">
+                      GitHub
                     </a>
                   </span>
-                  <span>Independent entry to SupeRR Selector Season 2. Not affiliated with Rajasthan Royals or the IPL.</span>
+                  <span>
+                    Ball-by-ball data from{' '}
+                    <a href="https://cricsheet.org" className="hover:text-foreground hover:underline">
+                      Cricsheet
+                    </a>{' '}
+                    (Open Data Commons Attribution). An independent project, not affiliated with the IPL, the ICC or any team.
+                  </span>
                 </div>
                 <nav aria-label="Legal" className="flex gap-5">
                   <Link href="/method/" className="hover:text-foreground">
-                    How it works
+                    Methodology
                   </Link>
                   <Link href="/privacy/" className="hover:text-foreground">
                     Privacy

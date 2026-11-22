@@ -3,16 +3,15 @@ import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
-import { PlayerAvatar, RankRibbon, RetainedMark, signed } from '@/components/kit'
+import { PlayerAvatar, RankRibbon, signed } from '@/components/kit'
 import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Term } from '@/components/Term'
+import { NewFaceTag, Term } from '@/components/Term'
 import { getQualified, getRole } from '@/lib/data'
-import { excludedLong } from '@/lib/terms'
 import { fmt } from '@/lib/format'
 import { rescore, type Player, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -35,7 +34,7 @@ function find(role: Role, id: string) {
 /** Evidence as z-scores against the default pool (the player is added if outside it). */
 function zFor(role: Role, p: Player) {
   const pool = getQualified(role)
-  const scored = rescore(p.merit_rank != null ? pool : [...pool, p])
+  const scored = rescore(p.rank != null ? pool : [...pool, p])
   const me = scored.find((x) => x.id === p.id)!
   return { z: me.z, beats: me.beats }
 }
@@ -72,7 +71,6 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
   const { p, prev, next, total, bar } = find(role, id)
   if (!p) notFound()
   const isBat = role === 'bat'
-  const rr = p.ipl_team === 'Rajasthan Royals'
   const rows: [string, string, string, boolean | null][] = isBat
     ? [
         ['Strike rate', fmt.dec(p.press.sr), fmt.dec(p.norm.sr), cmp(p.press.sr, p.norm.sr, 1)],
@@ -134,53 +132,55 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
         </span>
       </nav>
 
-      <section className={cn('panel jersey grid gap-6 p-6 sm:p-7 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]', !rr && 'jersey-royal')}>
+      <section className="panel grid-hero grid gap-6 p-6 sm:p-7 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="flex flex-col gap-5">
           <div className="flex items-start gap-4">
-            <RankRibbon rank={p.rank ?? '–'} className="-mt-7 shrink-0" />
+            <RankRibbon rank={p.rank ?? '–'} className="shrink-0" />
             <div className="flex min-w-0 items-center gap-4">
-              <PlayerAvatar name={p.name} rr size={76} className="bg-white/85" />
+              <PlayerAvatar name={p.name} highlight={p.rank != null && p.rank <= 10} size={72} />
               <div className="min-w-0">
-                <h1 className="display flex items-center gap-3 text-[2.6rem] text-white sm:text-[3.2rem]">
+                <h1 className="display flex flex-wrap items-center gap-3 text-[2.3rem] sm:text-[2.8rem]">
                   {p.name}
-                  {p.retained_by && <RetainedMark team={p.retained_by} size={30} />}
+                  {p.new_face && <NewFaceTag />}
                 </h1>
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {p.country && (
-                    <Badge className="rounded-lg bg-black/25 pl-1 text-white">
+                    <Badge variant="outline" className="rounded-md pl-1 text-ink-2">
                       <Flag country={p.country} size={18} />
                       {p.country}
                     </Badge>
                   )}
                   {p.ipl_team && (
-                    <Badge className="rounded-lg bg-black/25 pl-0.5 text-white">
+                    <Badge variant="outline" className="rounded-md pl-0.5 text-ink-2">
                       <TeamBadge team={p.ipl_team} size={18} />
                       IPL {p.ipl_season}
                     </Badge>
                   )}
-                  <Badge className="rounded-lg bg-black/25 text-white">{isBat ? p.hand : p.bowl_type}</Badge>
+                  {p.archetype && (
+                    <Badge variant="outline" className="rounded-md text-ink-2">
+                      <Term k="archetype">{p.archetype.name}</Term>
+                    </Badge>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-          <ul className="flex max-w-[62ch] flex-col gap-1 pl-5 text-[14.5px] leading-snug text-white/85 marker:text-white/60" style={{ listStyle: 'disc' }}>
+          <ul className="flex max-w-[62ch] flex-col gap-1 pl-5 text-[14.5px] leading-snug text-ink-2 marker:text-signal" style={{ listStyle: 'disc' }}>
             {story(p, role).map((line) => (
               <li key={line}>{line}</li>
             ))}
           </ul>
-          <p className="text-[13px] text-white/65">
+          <p className="text-[13px] text-ink-3">
             {p.rank != null
-              ? `Ranked ${p.rank} of the ${total} qualified ${isBat ? 'batters' : 'bowlers'} RR could sign.`
-              : p.excluded
-                ? `${excludedLong(p)}${p.merit_rank != null ? ` On the numbers alone, they would rank ${p.merit_rank} of ${bar.n_eligible} qualified ${isBat ? 'batters' : 'bowlers'}.` : ''}`
-                : `Fewer than ${bar.min_pressure_balls} pressure balls across ${bar.min_pressure_matches} matches, so not enough evidence to rank them yet. Treat these numbers as an early read.`}
+              ? `Ranked ${p.rank} of the ${total} qualified ${isBat ? 'batters' : 'bowlers'}${p.boot?.rating_lo != null ? `; 90% bootstrap interval for the rating ${signed(p.boot.rating_lo)} to ${signed(p.boot.rating_hi)}` : ''}.`
+              : `Fewer than ${bar.min_pressure_balls} pressure balls across ${bar.min_pressure_matches} matches, so not enough evidence to rank them yet. Treat these numbers as an early read.`}
           </p>
         </div>
         <dl className="grid grid-cols-2 gap-2.5 self-end sm:grid-cols-3">
           {bannerStats.map(([k, v], i) => (
-            <div key={i} className="rounded-lg bg-black/20 px-4 py-3">
-              <dt className="text-[12.5px] text-white/70">{k}</dt>
-              <dd className="display num mt-1 text-[2rem] text-white">{v}</dd>
+            <div key={i} className="rounded-lg border border-line bg-panel-2 px-4 py-3">
+              <dt className="text-[12.5px] text-ink-3">{k}</dt>
+              <dd className="display num mt-1 text-[1.75rem]">{v}</dd>
             </div>
           ))}
         </dl>
@@ -189,7 +189,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
       <Card className="gap-0 pb-0">
         <CardHeader className="border-b pb-4">
           <CardTitle>Pressure moments against normal moments</CardTitle>
-          <CardDescription>Raw numbers, no adjustment. Pink marks the better column.</CardDescription>
+          <CardDescription>Raw numbers, no adjustment. Orange marks the better column.</CardDescription>
         </CardHeader>
         <Table className="min-w-[520px] text-[14px]">
           <TableHeader>
@@ -203,8 +203,8 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
             {rows.map(([label, a, b, better]) => (
               <TableRow key={label}>
                 <TableCell className="py-2.5 pl-5 text-ink-2">{label}</TableCell>
-                <TableCell className={cn('num text-right font-semibold', better === true && 'text-pink-ink')}>{a}</TableCell>
-                <TableCell className={cn('num pr-5 text-right', better === false ? 'font-semibold text-pink-ink' : 'text-ink-2')}>{b}</TableCell>
+                <TableCell className={cn('num text-right font-semibold', better === true && 'text-signal-ink')}>{a}</TableCell>
+                <TableCell className={cn('num pr-5 text-right', better === false ? 'font-semibold text-signal-ink' : 'text-ink-2')}>{b}</TableCell>
               </TableRow>
             ))}
           </TableBody>

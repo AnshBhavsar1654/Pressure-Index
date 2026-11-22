@@ -46,7 +46,7 @@ export function LiHistogram({
               width={bw}
               height={Math.max(0, height - m.b - y(b.n))}
               rx={1.5}
-              fill={press ? 'var(--pink)' : 'var(--blue)'}
+              fill={press ? 'var(--signal)' : 'var(--data)'}
               fillOpacity={press ? 0.95 : 0.55}
               onPointerEnter={(e) => {
                 const rect = (e.currentTarget.ownerSVGElement as SVGSVGElement).getBoundingClientRect()
@@ -102,7 +102,7 @@ export function PhaseBars({
   const yMax = Math.ceil(Math.max(40, ...rows.map((r) => r.pressure_share)) / 10) * 10
   const ticks = Array.from({ length: yMax / 10 + 1 }, (_, i) => i * 10)
   const y = scaleLinear().domain([0, yMax]).range([height - m.b, m.t])
-  const color = (inn: number) => (inn === 1 ? 'var(--blue)' : 'var(--pink)')
+  const color = (inn: number) => (inn === 1 ? 'var(--data)' : 'var(--signal)')
   return (
     <div ref={ref} className="relative w-full min-w-0 overflow-x-clip">
       <svg width={width} height={height} role="img" aria-label="Share of high-pressure deliveries by phase">

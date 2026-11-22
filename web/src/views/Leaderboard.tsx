@@ -4,10 +4,10 @@ import { ArrowCounterClockwiseIcon, MagnifyingGlassIcon } from '@phosphor-icons/
 import { useRouter } from 'next/navigation'
 import { useDeferredValue, useMemo, useState, type ReactNode } from 'react'
 import { ChartFrame, Legend } from '@/components/charts/core'
-import { NAT_OPTIONS, natMatch, Pick, Segmented, type Nat } from '@/components/filters'
+import { Pick, Segmented } from '@/components/filters'
 import { PressureScatter } from '@/components/charts/Scatter'
-import { Meter, PlayerAvatar, RetainedMark } from '@/components/kit'
-import { EmergingTag } from '@/components/Term'
+import { Meter, PlayerAvatar } from '@/components/kit'
+import { NewFaceTag } from '@/components/Term'
 import { Button } from '@/components/ui/button'
 import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -17,8 +17,8 @@ import { Flag } from '@/components/Flag'
 import { TeamBadge } from '@/components/TeamBadge'
 import { fmt } from '@/lib/format'
 import { Term } from '@/components/Term'
-import { excludedNote, winPts } from '@/lib/terms'
-import { INDIAN_BAR, rescore, type Player, type Role, type ScoredPlayer } from '@/lib/types'
+import { winPts } from '@/lib/terms'
+import { rescore, type Player, type Role, type ScoredPlayer } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 type SortKey = 'liveRank' | 'p_rv100' | 'n_rv100' | 'delta100' | 'wpa100' | 'cons' | 'p_balls' | 'p_top10' | 'trad'
@@ -43,41 +43,33 @@ export function Leaderboard({
   const dMatches = useDeferredValue(minMatches)
   // who qualifies: everyone at or above the chosen bar is rated against each other
   const raw = useMemo(
-    // Indian players need a third of the evidence: the data pack has no domestic cricket, only their IPL games
-    () => all.filter((p) => {
-      const f = p.indian ? INDIAN_BAR : 1
-      const need = (x: number) => Math.ceil(x * f - 1e-9)
-      // counted as the pipeline counts them: a knockout first-innings ball is half a ball of evidence
-      return p.p_eff >= need(dBalls) && p.p_matches >= need(dMatches) && p.r_eff >= need(bar.recentBalls)
-    }),
+    // counted as the pipeline counts them: a knockout first-innings ball is half a ball of evidence
+    () => all.filter((p) => p.p_eff >= dBalls && p.p_matches >= dMatches && p.r_eff >= bar.recentBalls),
     [all, dBalls, dMatches, bar.recentBalls],
   )
   const barChanged = minBalls !== bar.balls || minMatches !== bar.matches
   const [q, setQ] = useState('')
-  const [nat, setNat] = useState<Nat>('all')
   const [team, setTeam] = useState('all')
   const [country, setCountry] = useState('all')
-  const [who, setWho] = useState<'signable' | 'all'>('signable')
+  const [who, setWho] = useState<'all' | 'active' | 'rises' | 'new'>('all')
   const teams = useMemo(() => [...new Set(all.map((p) => p.ipl_team).filter((t): t is string => !!t))].sort(), [all])
   const countries = useMemo(() => [...new Set(all.map((p) => p.country).filter((t): t is string => !!t))].sort(), [all])
   const [sort, setSort] = useState<{ key: SortKey; dir: 1 | -1 }>({ key: 'liveRank', dir: 1 })
   const players = useMemo(() => rescore(raw), [raw])
   const top10 = useMemo(() => new Set(players.filter((p) => p.liveRank != null && p.liveRank <= 10).map((p) => p.id)), [players])
-  const signable = players.filter((p) => p.liveRank != null).length
   const noun = role === 'bat' ? 'batters' : 'bowlers'
   const open = (id: number) => router.push(`/players/${role}/${id}/`)
 
   const rows = useMemo(() => {
     const term = q.trim().toLowerCase()
     const val = (p: ScoredPlayer): number =>
-      // rank order follows the rating, so players RR cannot recommend sit where their rating puts them
       sort.key === 'liveRank' ? -p.liveScore : sort.key === 'p_top10' ? (p.boot?.p_top10 ?? -1) : sort.key === 'trad' ? ((role === 'bat' ? p.press.sr : p.press.econ) ?? 0) : ((p[sort.key] as number | null) ?? -1)
     return players
       .filter((p) => !term || [p.name, p.country ?? '', p.ipl_team ?? ''].some((s) => s.toLowerCase().includes(term)))
-      .filter((p) => natMatch(nat, p.country) && (team === 'all' || p.ipl_team === team) && (country === 'all' || p.country === country))
-      .filter((p) => who === 'all' || p.liveRank != null)
+      .filter((p) => (team === 'all' || p.ipl_team === team) && (country === 'all' || p.country === country))
+      .filter((p) => who === 'all' || (who === 'active' ? p.active : who === 'rises' ? p.delta100 >= 0 : p.new_face))
       .toSorted((a, b) => (val(a) - val(b)) * sort.dir)
-  }, [players, q, sort, role, nat, team, country, who])
+  }, [players, q, sort, role, team, country, who])
 
   const head = (key: SortKey, label: ReactNode, left = false) => (
     <TableHead className={cn('h-11 text-[12.5px] font-medium text-ink-3', !left && 'text-right')} aria-sort={sort.key === key ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
@@ -97,8 +89,8 @@ export function Leaderboard({
         <CardHeader>
           <CardTitle>Who qualifies</CardTitle>
           <CardDescription>
-            Default: {bar.balls}+ pressure balls in {bar.matches}+ matches, {bar.recentBalls}+ in 2025–26 (a third for Indian players).
-            Move the bar to see how the list changes.
+            Default: {bar.balls}+ pressure balls in {bar.matches}+ matches, {bar.recentBalls}+ of them in 2025–26. Move the bar and the
+            ranking, the scatter and every percentile re-compute in the browser.
           </CardDescription>
           <CardAction>
             <Button
@@ -121,7 +113,7 @@ export function Leaderboard({
               <span id="min-balls" className="text-[14px] font-semibold">
                 Minimum pressure balls
               </span>
-              <span className="display num text-[1.6rem] text-pink">{minBalls}</span>
+              <span className="display num text-[1.6rem] text-signal-ink">{minBalls}</span>
             </div>
             <Slider aria-labelledby="min-balls" min={bar.minBalls} max={300} step={10} value={[minBalls]} onValueChange={([v]) => setMinBalls(v)} />
             <span className="flex justify-between text-[12px] text-ink-3">
@@ -134,7 +126,7 @@ export function Leaderboard({
               <span id="min-matches" className="text-[14px] font-semibold">
                 Minimum matches with pressure balls
               </span>
-              <span className="display num text-[1.6rem] text-pink">{minMatches}</span>
+              <span className="display num text-[1.6rem] text-signal-ink">{minMatches}</span>
             </div>
             <Slider aria-labelledby="min-matches" min={bar.minMatches} max={25} step={1} value={[minMatches]} onValueChange={([v]) => setMinMatches(v)} />
             <span className="flex justify-between text-[12px] text-ink-3">
@@ -157,7 +149,7 @@ export function Leaderboard({
         legend={
           <Legend
             items={[
-              { label: 'Current top 10', color: 'var(--pink)' },
+              { label: 'Current top 10', color: 'var(--signal)' },
               { label: `Other ${noun}`, color: 'var(--neutral-mark)' },
             ]}
           />
@@ -170,9 +162,7 @@ export function Leaderboard({
       <Card className="gap-0 pb-0">
         <CardHeader className="border-b pb-4">
           <CardTitle>
-            {who === 'signable' && rows.length === signable
-              ? `All ${signable} qualified ${noun} RR can sign`
-              : `${rows.length} of ${who === 'signable' ? signable : players.length} ${noun}`}
+            {rows.length === players.length ? `All ${players.length} qualified ${noun}` : `${rows.length} of ${players.length} qualified ${noun}`}
           </CardTitle>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <label className="relative block">
@@ -184,15 +174,16 @@ export function Leaderboard({
               value={who}
               onChange={setWho}
               options={[
-                { value: 'signable', label: 'Players RR can sign' },
                 { value: 'all', label: 'Everyone' },
+                { value: 'active', label: 'Active in 2026' },
+                { value: 'rises', label: 'Rises under pressure' },
+                { value: 'new', label: 'New faces' },
               ]}
             />
-            <Segmented label="Nationality" value={nat} onChange={setNat} options={NAT_OPTIONS} />
             <Pick label="IPL team" value={team} onChange={setTeam} options={teams} allLabel="All IPL teams" />
             <Pick label="Country" value={country} onChange={setCountry} options={countries} allLabel="All countries" />
-            {(q || nat !== 'all' || team !== 'all' || country !== 'all') && (
-              <Button variant="ghost" className="rounded-lg" onClick={() => { setQ(''); setNat('all'); setTeam('all'); setCountry('all') }}>
+            {(q || who !== 'all' || team !== 'all' || country !== 'all') && (
+              <Button variant="ghost" className="rounded-lg" onClick={() => { setQ(''); setWho('all'); setTeam('all'); setCountry('all') }}>
                 Clear filters
               </Button>
             )}
@@ -218,28 +209,21 @@ export function Leaderboard({
             {rows.map((p) => (
               <TableRow key={p.id} onClick={() => open(p.id)} className="cursor-pointer border-line">
                 <TableCell className="py-2.5 pl-5">
-                  {p.liveRank != null ? (
-                    <>
-                      <span className={cn('display num text-[1.4rem]', top10.has(p.id) ? 'text-pink' : 'text-ink-3')}>{p.liveRank}</span>
-                      {p.rank != null && p.liveRank !== p.rank && <span className="num ml-1.5 text-[11.5px] text-ink-3">was {p.rank}</span>}
-                    </>
-                  ) : (
-                    <span className="block max-w-[7rem] text-[11.5px] leading-tight text-ink-3">{p.excluded ? excludedNote(p) : '–'}</span>
-                  )}
+                  <span className={cn('num text-[15px] font-semibold', top10.has(p.id) ? 'text-signal-ink' : 'text-ink-3')}>{p.liveRank}</span>
+                  {p.rank != null && p.liveRank !== p.rank && <span className="num ml-1.5 text-[11.5px] text-ink-3">was {p.rank}</span>}
                 </TableCell>
                 <TableCell className="py-2.5">
                   <span className="flex items-center gap-3">
-                    <PlayerAvatar name={p.name} rr={p.ipl_team === 'Rajasthan Royals'} size={34} />
+                    <PlayerAvatar name={p.name} highlight={top10.has(p.id)} size={34} />
                     <span>
                       <span className="flex items-center gap-1.5">
                         <a href={`/players/${role}/${p.id}/`} onClick={(e) => e.stopPropagation()} className="font-medium hover:underline">
                           {p.name}
                         </a>
-                        {p.retained_by && <RetainedMark team={p.retained_by} size={17} />}
-                        {p.emerging && <EmergingTag />}
+                        {p.new_face && <NewFaceTag />}
                       </span>
                       <span className="block text-[12px] text-ink-3">
-                        {role === 'bowl' ? p.bowl_type : p.hand === 'LHB' ? 'Left-handed' : p.hand === 'RHB' ? 'Right-handed' : p.hand}
+                        {p.archetype?.name ?? (p.active ? 'Active' : `Last seen ${p.ipl_season ?? ''}`)}
                       </span>
                     </span>
                   </span>
@@ -255,9 +239,16 @@ export function Leaderboard({
                   {role === 'bat' ? fmt.dec(p.press.sr, 0) : fmt.dec(p.press.econ, 2)}
                   <span className="text-ink-3"> / {role === 'bat' ? fmt.dec(p.norm.sr, 0) : fmt.dec(p.norm.econ, 2)}</span>
                 </TableCell>
-                <TableCell className="num text-right font-semibold">{fmt.signed(p.p_rv100)}</TableCell>
+                <TableCell className="num text-right">
+                  <span className="font-semibold">{fmt.signed(p.p_rv100)}</span>
+                  {p.boot?.rating_lo != null && (
+                    <span className="block text-[11px] text-ink-3" title="90% bootstrap interval">
+                      {fmt.signed(p.boot.rating_lo, 0)} to {fmt.signed(p.boot.rating_hi, 0)}
+                    </span>
+                  )}
+                </TableCell>
                 <TableCell className="num text-right text-ink-2">{fmt.signed(p.n_rv100)}</TableCell>
-                <TableCell className={cn('num text-right', p.delta100 >= 0 ? 'text-pink-ink' : 'text-blue')}>{fmt.signed(p.delta100)}</TableCell>
+                <TableCell className={cn('num text-right', p.delta100 >= 0 ? 'text-signal-ink' : 'text-data-ink')}>{fmt.signed(p.delta100)}</TableCell>
                 <TableCell className="num text-right">{winPts(p.wpa100)}</TableCell>
                 <TableCell className="num text-right">{fmt.pct(p.cons)}</TableCell>
                 <TableCell className="pr-5">

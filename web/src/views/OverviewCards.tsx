@@ -16,66 +16,65 @@ export type Lite = {
   rank: number
   team: string | null
   country: string | null
-  rr: boolean
   p_rv100: number
   p_balls: number
   stay: number
   rate: number | null
 }
 
-/** The number one batter or bowler, as a team-sheet card. */
+/** The number one batter or bowler. */
 export function Spotlight({ bat, bowl }: { bat: Lite; bowl: Lite }) {
   const [role, setRole] = useState<'bat' | 'bowl'>('bat')
   const p = role === 'bat' ? bat : bowl
   return (
-    <section className="panel jersey jersey-royal relative flex h-full min-h-[340px] flex-col p-5" aria-label="Top rated player">
+    <section className="panel grid-hero relative flex h-full min-h-[340px] flex-col p-5" aria-label="Top rated player">
       <div className="flex items-start justify-between gap-3">
-        <RankRibbon rank={1} className="-mt-5" />
+        <RankRibbon rank={1} />
         <ToggleGroup
           type="single"
           value={role}
           onValueChange={(v) => v && setRole(v as 'bat' | 'bowl')}
-          className="rounded-lg bg-black/25 p-1"
+          className="rounded-lg border border-line bg-panel-2 p-1"
           aria-label="Choose batter or bowler"
         >
-          <ToggleGroupItem value="bat" className="rounded-lg px-3 text-white/80 data-[state=on]:bg-white data-[state=on]:text-royal">
+          <ToggleGroupItem value="bat" className="rounded-md px-3 text-ink-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
             Batter
           </ToggleGroupItem>
-          <ToggleGroupItem value="bowl" className="rounded-lg px-3 text-white/80 data-[state=on]:bg-white data-[state=on]:text-royal">
+          <ToggleGroupItem value="bowl" className="rounded-md px-3 text-ink-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
             Bowler
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
       <div className="mt-auto flex flex-col gap-4 pt-6">
         <div className="flex items-center gap-4">
-          <PlayerAvatar name={p.name} rr size={68} className="bg-white/85" />
+          <PlayerAvatar name={p.name} highlight size={68} />
           <div className="min-w-0">
-            <div className="display text-[2rem] text-white">{p.name}</div>
-            <div className="mt-1 flex items-center gap-2 text-[13.5px] text-white/75">
+            <div className="display text-[1.85rem]">{p.name}</div>
+            <div className="mt-1.5 flex items-center gap-2 text-[13.5px] text-ink-3">
               <TeamBadge team={p.team} size={24} />
               <Flag country={p.country} size={22} />
             </div>
           </div>
         </div>
         <dl className="grid grid-cols-3 gap-2">
-          <div className="rounded-xl bg-black/25 px-3 py-2.5">
-            <dt className="text-[12px] text-white/70">{role === 'bat' ? 'Strike rate' : 'Economy'}</dt>
-            <dd className="display num text-[1.7rem] text-white">{role === 'bat' ? fmt.dec(p.rate, 0) : fmt.dec(p.rate, 2)}</dd>
+          <div className="rounded-lg border border-line bg-panel-2 px-3 py-2.5">
+            <dt className="text-[12px] text-ink-3">{role === 'bat' ? 'Strike rate' : 'Economy'}</dt>
+            <dd className="display num text-[1.5rem]">{role === 'bat' ? fmt.dec(p.rate, 0) : fmt.dec(p.rate, 2)}</dd>
           </div>
-          <div className="rounded-xl bg-black/25 px-3 py-2.5">
-            <dt className="text-[12px] text-white/70">
+          <div className="rounded-lg border border-line bg-panel-2 px-3 py-2.5">
+            <dt className="text-[12px] text-ink-3">
               <Term k="underPressure" role={role}>{role === 'bat' ? 'Runs added' : 'Runs saved'}</Term>
             </dt>
-            <dd className="display num text-[1.7rem] text-white">{signed(p.p_rv100)}</dd>
+            <dd className="display num text-[1.5rem]">{signed(p.p_rv100)}</dd>
           </div>
-          <div className="rounded-xl bg-black/25 px-3 py-2.5">
-            <dt className="text-[12px] text-white/70">
+          <div className="rounded-lg border border-line bg-panel-2 px-3 py-2.5">
+            <dt className="text-[12px] text-ink-3">
               <Term k="confidence">Top-10 confidence</Term>
             </dt>
-            <dd className="display num text-[1.7rem] text-white">{fmt.pct(p.stay)}</dd>
+            <dd className="display num text-[1.5rem]">{fmt.pct(p.stay)}</dd>
           </div>
         </dl>
-        <Link href={`/players/${role}/${p.id}/`} className="text-[13.5px] font-semibold text-white underline-offset-4 hover:underline">
+        <Link href={`/players/${role}/${p.id}/`} className="text-[13.5px] font-semibold text-signal-ink underline-offset-4 hover:underline">
           Open {p.name.split(' ').slice(-1)[0]}’s profile
         </Link>
       </div>
@@ -87,8 +86,8 @@ function Row({ p, role }: { p: Lite; role: 'bat' | 'bowl' }) {
   return (
     <li>
       <Link href={`/players/${role}/${p.id}/`} className="flex min-h-14 items-center gap-3 rounded-xl px-2 py-1.5 transition-colors hover:bg-panel-2">
-        <span className={`display num w-6 text-center text-[1.3rem] ${p.rank <= 3 ? 'text-pink' : 'text-ink-3'}`}>{p.rank}</span>
-        <PlayerAvatar name={p.name} rr={p.rr} size={38} />
+        <span className={`num w-6 text-center text-[14px] font-semibold ${p.rank <= 3 ? 'text-signal-ink' : 'text-ink-3'}`}>{p.rank}</span>
+        <PlayerAvatar name={p.name} size={38} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-[14.5px] font-medium">{p.name}</span>
         </span>
@@ -105,13 +104,13 @@ function Row({ p, role }: { p: Lite; role: 'bat' | 'bowl' }) {
   )
 }
 
-/** Ranked list styled after a team roster, batters and bowlers on tabs. */
+/** Ranked list, batters and bowlers on tabs. */
 export function TopTen({ bat, bowl }: { bat: Lite[]; bowl: Lite[] }) {
   return (
     <section className="panel flex h-full flex-col p-4" aria-label="Top 10 under pressure">
       <Tabs defaultValue="bat" className="flex h-full flex-col gap-3">
         <div className="flex items-center justify-between gap-2 px-1">
-          <h2 className="display text-[1.5rem]">My top 10</h2>
+          <h2 className="display text-[1.3rem]">Top 10 under pressure</h2>
           <TabsList className="rounded-lg">
             <TabsTrigger value="bat" className="rounded-lg px-3">
               Batters
@@ -132,7 +131,7 @@ export function TopTen({ bat, bowl }: { bat: Lite[]; bowl: Lite[] }) {
                 <Row key={p.id} p={p} role={role} />
               ))}
             </ol>
-            <Link href={`/rankings/${role}/`} className="mt-2 block rounded-xl border border-line py-2.5 text-center text-[13.5px] font-semibold text-pink-ink hover:bg-panel-2">
+            <Link href={`/rankings/${role}/`} className="mt-2 block rounded-xl border border-line py-2.5 text-center text-[13.5px] font-semibold text-signal-ink hover:bg-panel-2">
               All {role === 'bat' ? 'batters' : 'bowlers'}
             </Link>
           </TabsContent>

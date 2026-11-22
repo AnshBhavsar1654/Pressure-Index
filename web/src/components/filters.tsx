@@ -1,6 +1,5 @@
 'use client'
 
-import { AirplaneTiltIcon } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
@@ -32,7 +31,7 @@ export function Segmented<T extends string>({
         <ToggleGroupItem
           key={o.value}
           value={o.value}
-          className="h-8 rounded-md px-3 text-[13px] text-ink-2 data-[state=on]:bg-pink data-[state=on]:text-white"
+          className="h-8 rounded-md px-3 text-[13px] text-ink-2 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
         >
           {o.label}
         </ToggleGroupItem>
@@ -75,21 +74,3 @@ export function Pick({
     </Select>
   )
 }
-
-export type Nat = 'all' | 'india' | 'overseas'
-export const NAT_OPTIONS: { value: Nat; label: ReactNode }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'india', label: 'Indian' },
-  {
-    value: 'overseas',
-    label: (
-      <span className="flex items-center gap-1.5">
-        <AirplaneTiltIcon weight="fill" aria-hidden />
-        Overseas
-      </span>
-    ),
-  },
-]
-export const isIndian = (country: string | null | undefined) => !country || country.startsWith('India')
-export const natMatch = (nat: Nat, country: string | null | undefined, overseas?: boolean) =>
-  nat === 'all' || (nat === 'india' ? (overseas === undefined ? isIndian(country) : !overseas) : overseas === undefined ? !isIndian(country) : overseas)

@@ -11,10 +11,10 @@ export function ProfileCharts({ p, role }: { p: Player; role: Role }) {
     {
       key: 'p',
       label: 'Pressure moments',
-      color: 'var(--pink)',
+      color: 'var(--signal)',
       points: p.seasons.filter((s) => s.p_balls >= 1 && s.p_rv100 != null).map((s) => ({ x: s.season, y: s.p_rv100, n: s.p_balls })),
     },
-    { key: 'n', label: 'Normal moments', color: 'var(--blue)', points: p.seasons.map((s) => ({ x: s.season, y: s.n_rv100 })) },
+    { key: 'n', label: 'Normal moments', color: 'var(--data)', points: p.seasons.map((s) => ({ x: s.season, y: s.n_rv100 })) },
   ]
   return (
     <div className="flex flex-col gap-6">
@@ -38,12 +38,12 @@ export function ProfileCharts({ p, role }: { p: Player; role: Role }) {
       </div>
       <ChartFrame
         title="Every match with pressure moments"
-        subtitle="One bar per match, oldest to newest: how many percentage points this player’s pressure balls added to (pink) or took from (blue) the team’s chance of winning. A tall pink bar is a match won under pressure; a long run of pink is what consistency looks like. Hover for the runs too."
+        subtitle="One bar per match, oldest to newest: how many percentage points this player’s pressure balls added to (orange) or took from (teal) the team’s chance of winning. A tall orange bar is a match won under pressure; a long run of orange is what consistency looks like. Hover for the runs too."
         legend={
           <Legend
             items={[
-              { label: 'Above average', color: 'var(--pink)' },
-              { label: 'Below average', color: 'var(--blue)' },
+              { label: 'Above average', color: 'var(--signal)' },
+              { label: 'Below average', color: 'var(--data)' },
             ]}
           />
         }

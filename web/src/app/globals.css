@@ -5,35 +5,36 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ---------------------------------------------------------------------------
-   Pressure Index, RR edition.
-   Dark graphite is the home theme, with the kit colours kept for data and accents.
-   Jersey pink = pressure and "you are here"; sleeve royal = data;
-   crown gold = recommended auction targets. Light theme is a stepped variant.
+   Pressure Index: "Instrument" theme.
+   A blue-black slate canvas with two data hues, validated as a pair for colour-vision
+   deficiency in both modes: signal orange = pressure / the thing to look at;
+   data teal = the measured series. Every other mark is neutral slate.
+   Separate *-ink steps carry text at >= 4.5:1. Dark is the home theme.
 ---------------------------------------------------------------------------- */
 :root {
-  --radius: 0.625rem;
+  --radius: 0.5rem;
 
   /* light variant */
-  --canvas: #eef0f8;
+  --canvas: #f4f6f8;
   --panel: #ffffff;
-  --panel-2: #f3f5fb;
-  --line: #e0e4f0;
-  --line-strong: #c8cee2;
-  --ink: #0c1338;
-  --ink-2: #4a5379;
-  --ink-3: #747d9f;
-  --pink: #d4157c;
-  --pink-ink: #b00f65;
-  --pink-soft: #fbe2ef;
-  --blue: #3343c4;
-  --blue-soft: #e1e4fb;
-  --gold: #a6780f;
-  --gold-soft: #f8edd1;
-  --neutral-mark: #bcc2d8;
-  --royal: #2b2f8f;
+  --panel-2: #f1f4f7;
+  --line: #e2e7ee;
+  --line-strong: #cbd3de;
+  --ink: #0f172a;
+  --ink-2: #475569;
+  --ink-3: #5f6b7d;
+  --signal: #ea580c;
+  --signal-ink: #c2410c;
+  --signal-soft: #ffedd5;
+  --data: #0d9488;
+  --data-ink: #0f766e;
+  --data-soft: #ccfbf1;
+  --hi: #6d5bd0;
+  --hi-soft: #ede9fe;
+  --neutral-mark: #b8c2cf;
   --rail: #ffffff;
-  --rail-ink: #0c1338;
-  --rail-dim: #6a7396;
+  --rail-ink: #0f172a;
+  --rail-dim: #5f6b7d;
   --surface: var(--panel);
   --surface-2: var(--panel-2);
 
@@ -43,7 +44,7 @@
   --card-foreground: var(--ink);
   --popover: var(--panel);
   --popover-foreground: var(--ink);
-  --primary: var(--pink);
+  --primary: var(--signal-ink);
   --primary-foreground: #ffffff;
   --secondary: var(--panel-2);
   --secondary-foreground: var(--ink);
@@ -51,34 +52,35 @@
   --muted-foreground: var(--ink-3);
   --accent: var(--panel-2);
   --accent-foreground: var(--ink);
-  --destructive: #d23b3b;
+  --destructive: #dc2626;
   --border: var(--line);
   --input: var(--line-strong);
-  --ring: var(--pink);
+  --ring: var(--signal);
 }
 
 .dark {
-  /* warm graphite with a faint plum cast, so the jersey pink is the only saturated colour */
-  --canvas: #0e0c0f;
-  --panel: #171419;
-  --panel-2: #201c23;
-  --line: rgba(255, 232, 244, 0.09);
-  --line-strong: rgba(255, 232, 244, 0.19);
-  --ink: #f5f0f3;
-  --ink-2: #bcb2b9;
-  --ink-3: #8f858d;
-  --pink: #f0368f;
-  --pink-ink: #ff7fbd;
-  --pink-soft: rgba(240, 54, 143, 0.17);
-  --blue: #86a0ee;
-  --blue-soft: rgba(134, 160, 238, 0.16);
-  --gold: #f2c14e;
-  --gold-soft: rgba(242, 193, 78, 0.14);
-  --neutral-mark: #4b4350;
-  --royal: #2b2f8f;
-  --rail: #121014;
-  --rail-ink: #f5f0f3;
-  --rail-dim: #9d929b;
+  --canvas: #0b0f14;
+  --panel: #121821;
+  --panel-2: #18202b;
+  --line: rgba(148, 163, 184, 0.13);
+  --line-strong: rgba(148, 163, 184, 0.26);
+  --ink: #e6edf3;
+  --ink-2: #a9b4c0;
+  --ink-3: #8b97a5;
+  --signal: #e8642a;
+  --signal-ink: #ff9a6b;
+  --signal-soft: rgba(232, 100, 42, 0.16);
+  --data: #12a594;
+  --data-ink: #4fd1c0;
+  --data-soft: rgba(18, 165, 148, 0.16);
+  --hi: #9a8cf0;
+  --hi-soft: rgba(154, 140, 240, 0.15);
+  --neutral-mark: #3a4556;
+  --rail: #0f141b;
+  --rail-ink: #e6edf3;
+  --rail-dim: #8b97a5;
+  --primary: var(--signal);
+  --primary-foreground: #0b0f14;
 }
 
 @theme inline {
@@ -92,14 +94,14 @@
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
-  --color-pink: var(--pink);
-  --color-pink-ink: var(--pink-ink);
-  --color-pink-soft: var(--pink-soft);
-  --color-blue: var(--blue);
-  --color-blue-soft: var(--blue-soft);
-  --color-gold: var(--gold);
-  --color-gold-soft: var(--gold-soft);
-  --color-royal: var(--royal);
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+  --color-signal-soft: var(--signal-soft);
+  --color-data: var(--data);
+  --color-data-soft: var(--data-soft);
+  --color-hi: var(--hi);
+  --color-hi-soft: var(--hi-soft);
+  --color-data-ink: var(--data-ink);
   --color-rail: var(--rail);
   --color-rail-ink: var(--rail-ink);
   --color-rail-dim: var(--rail-dim);
@@ -130,7 +132,8 @@
   --radius-2xl: calc(var(--radius) * 1.5);
 
   --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-display-face), "Arial Narrow", sans-serif;
+  --font-display: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, "SFMono-Regular", monospace;
 }
 
 @layer base {
@@ -149,67 +152,71 @@
   }
 }
 
-/* Condensed display face, after the bold lettering on the RR kit */
+/* Headings: Fira Sans, tight and confident; numbers: Fira Code with tabular figures */
 .display {
   font-family: var(--font-display);
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  line-height: 0.95;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
 }
 .num {
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.display.num {
+  font-weight: 600;
+}
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 /* Surface used by every card: flat colour and a hairline frame, no shadow */
 .panel {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 0.875rem;
+  border-radius: 0.75rem;
 }
 
-/* ---- Jersey motif -----------------------------------------------------------
-   The diamond print from the RR shirt on a flat kit colour: a grid of small
-   rotated squares that thickens towards one corner. Banners only. */
-.jersey,
-.panel.jersey {
+/* Hero banner: a faint measurement grid fading out from the top-left, like a plotting surface */
+.grid-hero {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  color: #fff;
-  background: #d81f7c; /* RR shirt pink */
 }
-.jersey::before {
+.grid-hero::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Crect x='7' y='7' width='8' height='8' fill='white' transform='rotate(45 11 11)'/%3E%3C/svg%3E");
-  background-size: 22px 22px;
-  opacity: 0.16;
-  -webkit-mask-image: linear-gradient(200deg, #000 0%, rgba(0, 0, 0, 0.35) 45%, transparent 75%);
-  mask-image: linear-gradient(200deg, #000 0%, rgba(0, 0, 0, 0.35) 45%, transparent 75%);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 28px 28px;
+  -webkit-mask-image: radial-gradient(120% 90% at 0% 0%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(120% 90% at 0% 0%, #000 0%, transparent 70%);
 }
-.jersey::after {
+.grid-hero::after {
   content: "";
   position: absolute;
-  inset: 0;
   z-index: -1;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='44' height='44'%3E%3Crect x='14' y='14' width='16' height='16' fill='white' transform='rotate(45 22 22)'/%3E%3C/svg%3E");
-  background-size: 44px 44px;
-  opacity: 0.09;
-  -webkit-mask-image: radial-gradient(60% 90% at 100% 100%, #000, transparent 70%);
-  mask-image: radial-gradient(60% 90% at 100% 100%, #000, transparent 70%);
-}
-.jersey-royal,
-.panel.jersey-royal {
-  background: #2b2f8f; /* RR sleeve royal */
+  width: 520px;
+  height: 520px;
+  right: -160px;
+  top: -220px;
+  background: radial-gradient(closest-side, var(--signal-soft), transparent);
 }
 
 input[type="range"] {
-  accent-color: var(--pink);
+  accent-color: var(--signal);
 }
 ::selection {
-  background: var(--pink-soft);
+  background: var(--signal-soft);
 }
 
 /* The one orchestrated motion: the hero win-probability line draws itself once. */
