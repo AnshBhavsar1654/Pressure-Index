@@ -4,7 +4,7 @@
     build      convert to canonical CSVs                                   -> data/processed/
     model      fit run expectancy + win probability, score every ball     -> data/cache/, artifacts/models/
     evaluate   model comparison, tuning sweep, next-season model          -> artifacts/metrics/
-    export     ratings, bootstrap, teams, matches, archetypes              -> web/data/, web/public/matches/
+    export     ratings, bootstrap, teams, similar players, per-player and per-match JSON -> web/data/, web/public/
     all        every stage after download, in order
 """
 from __future__ import annotations

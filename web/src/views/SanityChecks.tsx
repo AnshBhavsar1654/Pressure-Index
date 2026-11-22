@@ -7,12 +7,21 @@ import type { Player, Role } from '@/lib/types'
 import { momentLine } from '@/views/Moments'
 
 type Pools = Record<Role, Player[]>
+/** The named players behind the known-moment cards, with their full match lists (keyed "role:name"). */
+export const SANITY_PLAYERS: [Role, string][] = [
+  ['bat', 'Rinku Singh'],
+  ['bat', 'Jos Buttler'],
+  ['bowl', 'Hardik Pandya'],
+  ['bat', 'Rajat Patidar'],
+  ['bat', 'Ravindra Jadeja'],
+  ['bowl', 'Mohit Sharma'],
+]
 
 const ordinalWord = (n: number) => (n === 1 ? 'first' : n === 2 ? 'second' : n === 3 ? 'third' : `${n}th`)
 const pts = (wpa: number) => `${wpa >= 0 ? '+' : '−'}${Math.abs(wpa * 100).toFixed(0)} pts`
 
-function find(pools: Pools, role: Role, name: string, date: string) {
-  const p = pools[role].find((x) => x.name === name)
+function find(full: Record<string, Player>, role: Role, name: string, date: string) {
+  const p = full[`${role}:${name}`]
   const m = p?.matches.find((x) => x.date === date)
   if (!p || !m) return null
   const mo = p.moments.find((x) => x.id === m.id) ?? null
@@ -22,14 +31,14 @@ function find(pools: Pools, role: Role, name: string, date: string) {
 }
 
 /** Known clutch performances, and the model's verdict on each, so anyone can check it against memory. */
-export function SanityChecks({ pools }: { pools: Pools }) {
-  const rinku = find(pools, 'bat', 'Rinku Singh', '2023-04-09')
-  const kkr = find(pools, 'bat', 'Jos Buttler', '2024-04-16')
-  const rcb = find(pools, 'bat', 'Jos Buttler', '2024-04-06')
-  const hardik = find(pools, 'bowl', 'Hardik Pandya', '2024-06-29')
-  const patidar = find(pools, 'bat', 'Rajat Patidar', '2026-05-26')
-  const jadeja = find(pools, 'bat', 'Ravindra Jadeja', '2023-05-29')
-  const mohit = find(pools, 'bowl', 'Mohit Sharma', '2023-05-29')
+export function SanityChecks({ pools, full }: { pools: Pools; full: Record<string, Player> }) {
+  const rinku = find(full, 'bat', 'Rinku Singh', '2023-04-09')
+  const kkr = find(full, 'bat', 'Jos Buttler', '2024-04-16')
+  const rcb = find(full, 'bat', 'Jos Buttler', '2024-04-06')
+  const hardik = find(full, 'bowl', 'Hardik Pandya', '2024-06-29')
+  const patidar = find(full, 'bat', 'Rajat Patidar', '2026-05-26')
+  const jadeja = find(full, 'bat', 'Ravindra Jadeja', '2023-05-29')
+  const mohit = find(full, 'bowl', 'Mohit Sharma', '2023-05-29')
 
   const cards: { title: string; story: string; verdict: string; href?: string }[] = []
   if (jadeja?.mo)

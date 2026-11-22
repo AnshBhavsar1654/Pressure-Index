@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { NewFaceTag, Term } from '@/components/Term'
-import { getQualified, getRole } from '@/lib/data'
+import { getPlayer, getQualified, getRole } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import { rescore, type Player, type Role } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -20,15 +20,22 @@ import { ProfileCharts } from '@/views/Profile'
 
 type Params = { role: Role; id: string }
 
+// The top 30 per role are prerendered at build time; every other profile renders on its first visit and is then
+// cached for good (the data only changes when the pipeline is rerun and the site redeployed).
+export const dynamicParams = true
+export const revalidate = false
+const PRERENDER = 30
+
 export function generateStaticParams() {
-  return (['bat', 'bowl'] as const).flatMap((role) => getRole(role).players.map((p) => ({ role, id: String(p.id) })))
+  return (['bat', 'bowl'] as const).flatMap((role) => getRole(role).players.filter((p) => p.rank != null && p.rank <= PRERENDER).map((p) => ({ role, id: String(p.id) })))
 }
 
 function find(role: Role, id: string) {
+  if (role !== 'bat' && role !== 'bowl') return { p: null, prev: undefined, next: undefined, total: 0, bar: getRole('bat').eligibility }
   const list = getRole(role).players
   const i = list.findIndex((p) => String(p.id) === id)
   const total = list.filter((p) => p.rank != null).length
-  return { p: list[i], prev: list[i - 1], next: list[i + 1], total, bar: getRole(role).eligibility }
+  return { p: i >= 0 ? getPlayer(role, id) : null, prev: list[i - 1], next: list[i + 1], total, bar: getRole(role).eligibility }
 }
 
 /** Evidence as z-scores against the default pool (the player is added if outside it). */
@@ -156,11 +163,11 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
                       IPL {p.ipl_season}
                     </Badge>
                   )}
-                  {p.archetype && (
-                    <Badge variant="outline" className="rounded-md text-ink-2">
-                      <Term k="archetype">{p.archetype.name}</Term>
+                  {p.style?.traits.slice(0, 3).map((t) => (
+                    <Badge key={t} variant="outline" className="rounded-md text-ink-2">
+                      {t}
                     </Badge>
-                  )}
+                  ))}
                 </div>
               </div>
             </div>
@@ -221,6 +228,35 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
       </Card>
 
       <Moments moments={p.moments} role={role} />
+
+      {p.similar && p.similar.length > 0 && (
+        <Card className="gap-0 pb-0">
+          <CardHeader className="border-b pb-4">
+            <CardTitle>
+              <Term k="similar">Plays most like</Term>
+            </CardTitle>
+            <CardDescription>Nearest neighbours by playing style and pressure profile, with the traits they share.</CardDescription>
+          </CardHeader>
+          <ol className="grid sm:grid-cols-2">
+            {p.similar.slice(0, 6).map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 border-b border-line px-5 py-3 text-[14px]">
+                <span className="min-w-0">
+                  <Link href={`/players/${role}/${s.id}/`} className="font-medium hover:underline">
+                    {s.name}
+                  </Link>
+                  <span className="block truncate text-[12px] text-ink-3">{s.why.join(', ') || 'similar all-round profile'}</span>
+                </span>
+                <span className="num shrink-0 text-[13px] font-semibold">{Math.round(s.sim * 100)}%</span>
+              </li>
+            ))}
+          </ol>
+          <CardContent className="py-3">
+            <Link href={`/similar/?role=${role}&id=${p.id}`} className="text-[13.5px] font-semibold text-signal-ink hover:underline">
+              Explore similar players on the style map
+            </Link>
+          </CardContent>
+        </Card>
+      )}
 
       <ProfileCharts p={{ ...p, ...zFor(role, p) }} role={role} />
     </div>

@@ -15,7 +15,9 @@ REFERENCE = DATA / "reference"            # small hand-checked lookup tables (co
 CACHE = DATA / "cache"                    # ball-level model output (parquet, not committed)
 ARTIFACTS = ROOT / "artifacts"            # metrics, model cards, saved models
 WEB_DATA = ROOT / "web" / "data"          # JSON the dashboard reads
-WEB_MATCHES = ROOT / "web" / "public" / "matches"  # one small JSON per match, fetched on demand
+WEB_PUBLIC = ROOT / "web" / "public"
+WEB_MATCHES = WEB_PUBLIC / "matches"           # one small JSON per match, fetched on demand
+WEB_PLAYERS = WEB_PUBLIC / "data" / "players"  # one JSON per player and role, loaded on demand
 
 CFG = tomllib.loads((PKG / "config.toml").read_text(encoding="utf-8"))
 

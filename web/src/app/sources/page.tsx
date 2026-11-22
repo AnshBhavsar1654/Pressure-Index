@@ -53,7 +53,7 @@ const STAGES: { cmd: string; title: string; out: string; body: ReactNode[] }[] =
     out: 'web/data/*.json · web/public/matches/',
     body: [
       'Ratings with 400-resample bootstrap intervals, split-half and forward tests',
-      'Player archetypes (k-means), team seasons, match explorer files, Model Lab data',
+      'Similar-player recommender (cosine nearest neighbours), team seasons, one JSON per player and per match, Model Lab data',
       'The worked example is asserted against the published rating before it is written',
     ],
   },

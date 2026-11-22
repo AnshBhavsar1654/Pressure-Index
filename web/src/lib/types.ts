@@ -90,8 +90,10 @@ export interface Player {
   active: boolean
   /** first top-level season within the last three */
   new_face: boolean
-  /** unsupervised playing-style cluster and its position on the 2-D map (players with 300+ balls) */
-  archetype: { name: string; x: number; y: number } | null
+  /** position on the 2-D style map and the most distinctive traits (players with 300+ balls) */
+  style: { x: number; y: number; traits: string[] } | null
+  /** nearest neighbours by playing style (full player files only; empty in the slim tables) */
+  similar?: SimilarPlayer[]
   z?: Record<ComponentKey, number>
   /** share of the pool (0-100) this player beats on each piece of evidence */
   beats?: Record<ComponentKey, number>
@@ -104,6 +106,19 @@ export interface Player {
   matches: PlayerMatch[]
   /** biggest pressure performances, largest win-chance swing first */
   moments: Moment[]
+}
+
+export interface SimilarPlayer {
+  id: number
+  name: string
+  /** cosine similarity of the standardised style profiles, 0 to 1 */
+  sim: number
+  /** the distinctive traits the two players share */
+  why: string[]
+}
+
+export interface StylePoint {
+  id: number; name: string; role: Role; x: number; y: number; rating: number; rank: number | null; country: string | null; ipl: string | null
 }
 
 export interface RoleData {
@@ -319,9 +334,9 @@ export interface ModelLab {
     corr: { gbm: number; rating: number; normal: number; last: number }
     importance: { feature: string; drop: number }[]
   }> | null
-  archetypes: Record<Role, {
-    k: number; silhouette: Record<string, number>; explained: number[]; features: string[]
-    clusters: { id: number; name: string; size: number; centroid: Record<string, number> }[]
+  similarity: Record<Role, {
+    n: number; features: string[]; explained: number[]; min_balls: number; mean: Record<string, number>
+    stability: { players: number; k: number; overlap: number; chance: number; lift_over_chance: number }
   }>
   re_surface: { season: number; competition: string; rows: [number, number, number][] }
   stability: Record<Role, { name: string; rank: number; p_top10: number; lo: number; hi: number; rating: number; rating_lo: number; rating_hi: number }[]>

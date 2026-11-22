@@ -1,22 +1,26 @@
 """Export stage: everything the dashboard reads.
 
-    web/data/batters.json, bowlers.json   every top-level player: rating, intervals, evidence, profile data
+    web/data/batters.json, bowlers.json   every top-level player, slim: rating, intervals, evidence (for tables)
+    web/public/data/players/<role>/<id>.json   full profile per player: seasons, phases, matches, similar players
+    web/public/search.json                the search box's player list, fetched when search opens
+    web/data/similarity.json              style-map coordinates for the similar-players finder
     web/data/summary.json                 data coverage, pressure definition, league-level evidence
     web/data/chase_grid.json              WP and stakes over a chase (overs left x runs needed x wickets)
     web/data/example.json                 the top-rated batter's rating rebuilt step by step (checked)
     web/data/teams.json                   every IPL season, every team
     web/data/matches.json                 match explorer index (+ web/public/matches/<id>.json)
-    web/data/model_lab.json               model comparison, tuning, next-season model, archetypes, RE surface
+    web/data/model_lab.json               model comparison, tuning, next-season model, similarity, RE surface
 """
 from __future__ import annotations
 
 import json
+import shutil
 
 import numpy as np
 import pandas as pd
 
-from pressure_index.analysis import archetypes, teams
-from pressure_index.config import ARTIFACTS, CFG, LAST, REFERENCE, SOURCE, WEB_DATA, log, season_weights
+from pressure_index.analysis import similarity, teams
+from pressure_index.config import ARTIFACTS, CFG, LAST, REFERENCE, SOURCE, WEB_DATA, WEB_PLAYERS, WEB_PUBLIC, log, season_weights
 from pressure_index.evaluation.reliability import bootstrap, forward_check, split_half
 from pressure_index.export import matches as match_export
 from pressure_index.models.leverage import OUTCOMES
@@ -122,7 +126,7 @@ def role_export(b: pd.DataFrame, role: str, nat: pd.Series, ipl: pd.DataFrame, c
     boot = bootstrap(pm, eligible)
     sh = split_half(pm, eligible)
     fwd = forward_check(b, role)
-    arch = archetypes.cluster(d, t, role)
+    sim = similarity.build(d, t, role, names)
     debut = d.groupby("pid").season_yr.min()
     active = set(d[d.season_yr == LAST].pid)
     order = list(s.sort_values("rank").index) + [p for p in t.sort_values("rating", ascending=False).index if p not in s.index]
@@ -142,7 +146,7 @@ def role_export(b: pd.DataFrame, role: str, nat: pd.Series, ipl: pd.DataFrame, c
                    date=("match_date", "first"), opp=("opp_name" if role == "bat" else "team_name", "first"),
                    comp=("comp_name", "first"), li=("li", "mean"))
               .reset_index().sort_values("date"))
-        ap = arch["points"].get(int(pid))
+        sp = sim["players"].get(int(pid))
         players.append({
             "id": int(pid), "name": names[pid],
             "rank": int(s.at[pid, "rank"]) if pid in s.index else None,
@@ -157,7 +161,8 @@ def role_export(b: pd.DataFrame, role: str, nat: pd.Series, ipl: pd.DataFrame, c
             "c_n": int(row.c_n), "recent100": round(100 * row.recent, 2), "r_balls": int(row.rn),
             "r_matches": int(row.rmatches), "debut": int(debut[pid]), "active": pid in active,
             "new_face": int(debut[pid]) >= NEW_FROM,
-            "archetype": {"name": arch["names"][ap["c"]], "x": ap["x"], "y": ap["y"]} if ap else None,
+            "style": {"x": sp["x"], "y": sp["y"], "traits": sp["traits"]} if sp else None,
+            "similar": sp["similar"] if sp else [],
             "boot": boot.get(pid),
             "press": traditional(dp[dp.P == 1], role), "norm": traditional(dp[dp.P == 0], role),
             "seasons": seasons, "phases": phases,
@@ -171,8 +176,8 @@ def role_export(b: pd.DataFrame, role: str, nat: pd.Series, ipl: pd.DataFrame, c
                             "recent_from": E["recent_from"], "min_recent_balls": E["min_recent_balls"],
                             "new_from": NEW_FROM, "active_season": LAST, "n_eligible": int(len(eligible)),
                             "n_ranked": int(len(s)), "n_players": int(len(t)), "n_exported": int(len(players))}}
-    arch_out = {k: v for k, v in arch.items() if k not in ("points", "names")}
-    return data, t, d, arch_out
+    sim_out = {k: v for k, v in sim.items() if k != "players"} | {"n": len(sim["players"])}
+    return data, t, d, sim_out
 
 
 def worked_example(b: pd.DataFrame, bat: dict) -> dict:
@@ -294,7 +299,7 @@ def chase_grid(b: pd.DataFrame, models: dict) -> dict:
     return {"cols": ["wkts", "overs_left", "need", "wp", "li"], "rows": rows}
 
 
-def model_lab(models: dict, arch: dict, roles: dict, b: pd.DataFrame) -> dict:
+def model_lab(models: dict, sim: dict, roles: dict, b: pd.DataFrame) -> dict:
     metrics = ARTIFACTS / "metrics"
     read = lambda n: json.loads((metrics / f"{n}.json").read_text()) if (metrics / f"{n}.json").exists() else None
     re = models["re"][(1, LAST)]
@@ -307,11 +312,35 @@ def model_lab(models: dict, arch: dict, roles: dict, b: pd.DataFrame) -> dict:
                        "rating_hi": p["boot"]["rating_hi"]} for p in top]
     return {
         "wp_comparison": read("wp_comparison"), "tuning": read("tuning"), "next_season": read("next_season"),
-        "archetypes": arch, "re_surface": {"season": LAST, "competition": "IPL", "rows": surface},
+        "similarity": sim, "re_surface": {"season": LAST, "competition": "IPL", "rows": surface},
         "stability": stab, "split_half": {r: d["split_half"] for r, d in roles.items()},
         "forward": {r: d["forward"] for r, d in roles.items()},
         "dataset": {"balls": int(len(b)), "train_matches": int(b.match_id.nunique())},
     }
+
+
+DETAIL = ("seasons", "phases", "matches", "similar")
+
+
+def write_players(roles: dict) -> None:
+    """Full profile per player as its own file (loaded on demand); slim role files for tables; the search list;
+    and style-map points for the similar-players finder."""
+    if WEB_PLAYERS.exists():
+        shutil.rmtree(WEB_PLAYERS)
+    points, search = [], []
+    for role, data in roles.items():
+        out = WEB_PLAYERS / role
+        out.mkdir(parents=True)
+        for p in data["players"]:
+            (out / f"{p['id']}.json").write_text(json.dumps(clean(p), separators=(",", ":"), allow_nan=False, default=str))
+            search.append({"id": p["id"], "name": p["name"], "role": role, "rank": p["rank"], "ipl": p["ipl_team"], "country": p["country"]})
+            if p["style"]:
+                points.append({"id": p["id"], "name": p["name"], "role": role, "x": p["style"]["x"], "y": p["style"]["y"],
+                               "rating": p["p_rv100"], "rank": p["rank"], "country": p["country"], "ipl": p["ipl_team"]})
+        slim = {**data, "players": [{k: v for k, v in p.items() if k not in DETAIL} for p in data["players"]]}
+        write("batters.json" if role == "bat" else "bowlers.json", slim)
+    (WEB_PUBLIC / "search.json").write_text(json.dumps(clean(search), separators=(",", ":")))
+    write("similarity.json", {"points": points})
 
 
 def run() -> None:
@@ -320,18 +349,17 @@ def run() -> None:
     mp = pd.read_csv(SOURCE / "competition_team_player_mapping.csv")
     comps = pd.read_csv(SOURCE / "competitions.csv")
     nat, ipl, capped = nationality(mp, comps)
-    roles, arch = {}, {}
+    roles, sim = {}, {}
     for role in ("bat", "bowl"):
-        roles[role], _, _, arch[role] = role_export(b, role, nat, ipl, capped)
-    write("batters.json", roles["bat"])
-    write("bowlers.json", roles["bowl"])
+        roles[role], _, _, sim[role] = role_export(b, role, nat, ipl, capped)
+    write_players(roles)
     wp_metrics = json.loads((ARTIFACTS / "metrics" / "win_probability.json").read_text())
     write("summary.json", summary(b, m, models, wp_metrics, {r: d["forward"] for r, d in roles.items()}))
     write("chase_grid.json", chase_grid(b, models))
     write("example.json", worked_example(b, roles["bat"]))
     write("teams.json", teams.all_seasons(b))
     write("matches.json", {"matches": match_export.export(b)})
-    write("model_lab.json", model_lab(models, arch, roles, b))
+    write("model_lab.json", model_lab(models, sim, roles, b))
     for role in ("bat", "bowl"):
         top = [p for p in roles[role]["players"] if p["rank"]][:10]
         log(f"TOP {role}: " + ", ".join(f"{p['rank']}. {p['name']} {p['p_rv100']:+.1f} (lift {p['delta100']:+.1f})" for p in top))

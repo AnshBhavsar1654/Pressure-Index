@@ -2,11 +2,10 @@
 
 import { scaleLinear } from 'd3-scale'
 import { curveMonotoneX, line } from 'd3-shape'
-import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { signed } from '@/components/kit'
 import type { CalBin, Role } from '@/lib/types'
-import { AXIS, Legend, Tooltip, TipRow, useWidth, type TipState } from './core'
+import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 
 /* One colour job each: the production model wears signal, its closest rival data teal, the rest neutral. */
 export const MODEL_COLOR: Record<string, string> = { logistic: 'var(--signal)', gbm: 'var(--data)', gbm_isotonic: 'var(--ink-3)' }
@@ -364,97 +363,6 @@ export function ReSurface({ rows }: { rows: [number, number, number][] }) {
         </text>
       </svg>
       <Tooltip tip={tip} width={width} />
-    </div>
-  )
-}
-
-export type ArchPoint = { id: number; name: string; role: Role; arch: string; x: number; y: number; rating: number; rank: number | null }
-
-/** PCA map of playing styles. One cluster at a time wears signal; the rest stay neutral (no rainbow). */
-export function ArchetypeMap({ points, clusters }: { points: ArchPoint[]; clusters: { name: string; size: number }[] }) {
-  const [sel, setSel] = useState(clusters[0]?.name)
-  const [ref, width] = useWidth<HTMLDivElement>()
-  const [tip, setTip] = useState<TipState | null>(null)
-  const height = 400
-  const m = { t: 14, r: 14, b: 30, l: 14 }
-  const x = scaleLinear().domain([Math.min(...points.map((p) => p.x)), Math.max(...points.map((p) => p.x))]).nice().range([m.l, width - m.r])
-  const y = scaleLinear().domain([Math.min(...points.map((p) => p.y)), Math.max(...points.map((p) => p.y))]).nice().range([height - m.b, m.t])
-  const ordered = useMemo(() => [...points].sort((a, b) => Number(a.arch === sel) - Number(b.arch === sel)), [points, sel])
-  return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="Choose an archetype">
-        {clusters.map((c) => (
-          <button
-            key={c.name}
-            onClick={() => setSel(c.name)}
-            aria-pressed={c.name === sel}
-            className={`min-h-9 rounded-md border px-2.5 text-[12.5px] transition-colors ${c.name === sel ? 'border-signal bg-signal-soft text-foreground' : 'border-line bg-panel-2 text-ink-2 hover:text-foreground'}`}
-          >
-            {c.name} <span className="num text-ink-3">{c.size}</span>
-          </button>
-        ))}
-      </div>
-      <div ref={ref} className="relative w-full min-w-0">
-        <svg width={width} height={height} role="img" aria-label={`Playing-style map, ${sel} highlighted`}>
-          <line x1={x(0)} x2={x(0)} y1={m.t} y2={height - m.b} stroke={AXIS.grid} />
-          <line x1={m.l} x2={width - m.r} y1={y(0)} y2={y(0)} stroke={AXIS.grid} />
-          {ordered.map((p) => {
-            const on = p.arch === sel
-            return (
-              <circle
-                key={`${p.role}-${p.id}`}
-                cx={x(p.x)}
-                cy={y(p.y)}
-                r={on ? 5.5 : 4}
-                fill={on ? 'var(--signal)' : 'var(--neutral-mark)'}
-                stroke="var(--panel)"
-                strokeWidth={1.5}
-                onPointerEnter={(e) =>
-                  setTip({
-                    ...tipAt(e),
-                    content: (
-                      <div className="flex flex-col gap-0.5">
-                        <div className="font-semibold">{p.name}</div>
-                        <div className="text-ink-2">{p.arch}</div>
-                        <TipRow label="Pressure rating" value={signed(p.rating)} />
-                        {p.rank != null && <TipRow label="Rank" value={p.rank} />}
-                      </div>
-                    ),
-                  })
-                }
-                onPointerLeave={() => setTip(null)}
-              />
-            )
-          })}
-          <text x={width - m.r} y={height - 8} textAnchor="end" {...AXIS.label}>
-            principal component 1 →
-          </text>
-          <text x={m.l + 4} y={m.t + 10} {...AXIS.label}>
-            ↑ component 2
-          </text>
-        </svg>
-        <Tooltip tip={tip} width={width} />
-      </div>
-      <Legend
-        items={[
-          { label: sel ?? '', color: 'var(--signal)' },
-          { label: 'Other archetypes', color: 'var(--neutral-mark)' },
-        ]}
-      />
-      <ul className="grid gap-x-6 gap-y-1 text-[13px] sm:grid-cols-2">
-        {points
-          .filter((p) => p.arch === sel)
-          .sort((a, b) => b.rating - a.rating)
-          .slice(0, 8)
-          .map((p) => (
-            <li key={`${p.role}-${p.id}`} className="flex items-center justify-between border-b border-line py-1">
-              <Link href={`/players/${p.role}/${p.id}/`} className="hover:underline">
-                {p.name}
-              </Link>
-              <span className="num text-ink-2">{signed(p.rating)}</span>
-            </li>
-          ))}
-      </ul>
     </div>
   )
 }

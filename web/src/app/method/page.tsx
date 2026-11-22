@@ -3,7 +3,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Flag } from '@/components/Flag'
 import { Bullets, PageHead, SectionHead, Stat, signed } from '@/components/kit'
-import { getExample, getGrid, getLab, getRanked, getRole, getSummary } from '@/lib/data'
+import { getExample, getGrid, getLab, getPlayer, getRanked, getRole, getSummary } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import { TERMS, winPts } from '@/lib/terms'
 import type { Player, Role } from '@/lib/types'
@@ -11,7 +11,7 @@ import { EndgameTable } from '@/views/EndgameTable'
 import { CalibrationPair, StabilityPair } from '@/views/MethodCharts'
 import { MomentsTable } from '@/views/MomentsTable'
 import { ChaseMap, PressureShape } from '@/views/PressureCharts'
-import { SanityChecks } from '@/views/SanityChecks'
+import { SANITY_PLAYERS, SanityChecks } from '@/views/SanityChecks'
 import { WorkedExample } from '@/views/WorkedExample'
 
 export const metadata: Metadata = { title: 'Methodology' }
@@ -170,7 +170,7 @@ export default function MethodPage() {
       rows: [
         ['Evidence bar', `${e.min_pressure_balls} pressure balls in ${e.min_pressure_matches} matches, ${e.min_recent_balls} of them in ${e.recent_from}–26`, 'Enough to judge, and every ranked player has played top-level cricket recently'],
         ['Ordering', 'By pressure rating alone', 'Blending in win impact or consistency predicted worse in the forward test'],
-        ['Labels, not filters', `Lift, “active in ${e.active_season}”, “new face” (debut ${e.new_from}+) and archetype are shown and filterable, never used to rank`, 'Keep the rating a single, testable quantity'],
+        ['Labels, not filters', `Lift, “active in ${e.active_season}”, “new face” (debut ${e.new_from}+) and similar players are shown and filterable, never used to rank`, 'Keep the rating a single, testable quantity'],
       ],
     },
     {
@@ -238,7 +238,16 @@ export default function MethodPage() {
       </div>
 
       <h3 id="checks" className="mb-3 mt-8 scroll-mt-24 text-[17px] font-semibold">Does it find the moments anyone would name?</h3>
-      <SanityChecks pools={{ bat: bat.players, bowl: bowl.players }} />
+      <SanityChecks
+        pools={{ bat: bat.players, bowl: bowl.players }}
+        full={Object.fromEntries(
+          SANITY_PLAYERS.flatMap(([r, name]) => {
+            const lite = getRole(r).players.find((x) => x.name === name)
+            const p = lite && getPlayer(r, lite.id)
+            return p ? [[`${r}:${name}`, p]] : []
+          }),
+        )}
+      />
       <div className="mt-4 flex flex-col gap-3">
         <Details title="The tensest balls in five years (almost all last-ball finishes)">
           <MomentsTable moments={s.moments} />

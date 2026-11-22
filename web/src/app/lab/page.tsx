@@ -18,6 +18,7 @@ const CONTENTS: [string, string][] = [
   ['endgame', 'Exact final over'],
   ['tuning', 'Hyperparameter sweep'],
   ['next', 'Next-season model'],
+  ['similarity', 'Similar-player recommender'],
   ['reliability', 'Reliability'],
   ['card', 'Model card'],
 ]
@@ -268,6 +269,46 @@ export default function LabPage() {
           </Panel>
         </div>
       )}
+
+      {/* ------------------------------------------------------------ similarity */}
+      <SectionHead title="Similar-player recommender" id="similarity">
+        Content-based recommendation: every player with {lab.similarity.bat.min_balls}+ balls becomes a standardised vector of style and pressure features; neighbours are
+        ranked by cosine similarity, so players match on the shape of their game, not only on how good they are.
+      </SectionHead>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {(['bat', 'bowl'] as const).map((role) => {
+          const m = lab.similarity[role]
+          return (
+            <Panel key={role} title={role === 'bat' ? 'Batters' : 'Bowlers'}>
+              <HBars
+                rows={[
+                  { label: 'Same top-10 neighbours, odd vs even matches', value: m.stability.overlap, highlight: true },
+                  { label: 'Expected by chance', value: m.stability.chance },
+                ]}
+                digits={3}
+                unit="split-half overlap"
+              />
+              <p className="mt-3 text-[12.5px] text-ink-3">
+                {m.n} players · {m.features.length} features ({m.features.join(', ')}) · {m.stability.lift_over_chance}× chance on {m.stability.players} players present in both halves.
+              </p>
+            </Panel>
+          )
+        })}
+        <Panel className="xl:col-span-2" title="Reading the stability check">
+          <Bullets
+            items={[
+              'Each half of the data sees only half the matches, so profiles are noisier than the full-data ones the site uses; the overlap is a lower bound on how stable the real recommendations are.',
+              'About three times chance means the neighbours reflect a genuine playing style, but individual matches at the edge of the top 10 can swap. Similarity scores are shown so close calls are visible.',
+              <>
+                Every recommendation explains itself with the distinctive traits both players share (both far from average in the same direction).{' '}
+                <Link href="/similar/" className="font-semibold text-signal-ink hover:underline">
+                  Try the finder
+                </Link>
+              </>,
+            ]}
+          />
+        </Panel>
+      </div>
 
       {/* ------------------------------------------------------------ reliability */}
       <SectionHead title="Reliability" id="reliability">

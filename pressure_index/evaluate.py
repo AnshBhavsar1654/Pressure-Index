@@ -1,4 +1,4 @@
-"""Evaluation stage: model comparison, hyperparameter sweep, next-season model, archetypes.
+"""Evaluation stage: model comparison, hyperparameter sweep, next-season model.
 
 Reads the scored balls from the core stage and writes artifacts/metrics/*.json, which the export stage folds
 into the dashboard's Model Lab.

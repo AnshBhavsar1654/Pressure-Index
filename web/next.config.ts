@@ -1,12 +1,14 @@
 import type { NextConfig } from "next";
 
-// Fully static site: every page (including one per player) is prerendered at build time
-// from the JSON in ./data, so the output in ./out can be hosted anywhere.
+// Most pages are static. Player profiles are prerendered only for ranked players; every other profile renders
+// on its first request and is then cached (ISR), reading its JSON from public/data/players. Match detail and
+// the search list are plain JSON files fetched by the browser.
 const nextConfig: NextConfig = {
-  output: "export",
-  // 1,200+ pages build in parallel; a few large ones (compare, profiles) can exceed the 60 s default on a cold worker
-  staticPageGenerationTimeout: 180,
   trailingSlash: true,
+  // the profile route reads its player's JSON from disk at request time, so ship those files with the function
+  outputFileTracingIncludes: {
+    "/players/*/*": ["./public/data/players/**/*.json", "./data/*.json"],
+  },
   turbopack: {
     rules: {
       "*.css": {

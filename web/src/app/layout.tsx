@@ -5,7 +5,6 @@ import Script from 'next/script'
 import { Sidebar } from '@/components/shell/Sidebar'
 import { Topbar } from '@/components/shell/Topbar'
 import { TooltipProvider } from '@/components/ui/tooltip'
-import { getRole } from '@/lib/data'
 import { cn } from '@/lib/utils'
 import './globals.css'
 
@@ -22,10 +21,6 @@ export const metadata: Metadata = {
 const themeScript = `try{var q=new URLSearchParams(location.search).get('theme');if(q==='light'||q==='dark')localStorage.setItem('theme',q);if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // Only what the search box needs is sent to the browser.
-  const index = (['bat', 'bowl'] as const).flatMap((role) =>
-    getRole(role).players.map((p) => ({ id: p.id, name: p.name, role, rank: p.rank, ipl: p.ipl_team, country: p.country })),
-  )
   return (
     <html lang="en" className={cn('dark', body.variable, mono.variable)} suppressHydrationWarning>
       <body className="min-h-dvh font-sans">
@@ -40,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div className="mx-auto flex max-w-[1560px] gap-5 p-3 sm:p-4 lg:p-5">
             <Sidebar />
             <div className="flex min-w-0 flex-1 flex-col gap-5">
-              <Topbar players={index} />
+              <Topbar />
               <main id="main" className="min-w-0">
                 {children}
               </main>

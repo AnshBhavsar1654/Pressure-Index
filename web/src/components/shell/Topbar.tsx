@@ -31,12 +31,21 @@ import { Mark, NAV } from "./Sidebar";
 
 type Entry = { id: number; name: string; role: 'bat' | 'bowl'; rank: number | null; ipl: string | null; country: string | null };
 
-export function Topbar({ players }: { players: Entry[] }) {
+export function Topbar() {
   const router = useRouter();
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
   const [dark, setDark] = useState(true);
+  // the player list is a separate file, fetched the first time search opens (not repeated in every page)
+  const [players, setPlayers] = useState<Entry[] | null>(null);
+  useEffect(() => {
+    if (!open || players) return;
+    fetch("/search.json")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d: Entry[]) => setPlayers(d))
+      .catch(() => setPlayers([]));
+  }, [open, players]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -145,13 +154,13 @@ export function Topbar({ players }: { players: Entry[] }) {
         <Command>
           <CommandInput placeholder="Type a player name" />
           <CommandList>
-            <CommandEmpty>No rated player matches that name.</CommandEmpty>
+            <CommandEmpty>{players ? "No rated player matches that name." : "Loading players…"}</CommandEmpty>
             {(["bat", "bowl"] as const).map((role) => (
               <CommandGroup
                 key={role}
                 heading={role === "bat" ? "Batters" : "Bowlers"}
               >
-                {players
+                {(players ?? [])
                   .filter((p) => p.role === role)
                   .map((p) => (
                     <CommandItem

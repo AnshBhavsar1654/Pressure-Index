@@ -1,13 +1,11 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import type { ArchPoint } from '@/components/charts/LabCharts'
 import { PageHead, SectionHead, Stat, signed } from '@/components/kit'
 import { Flag } from '@/components/Flag'
 import { Term } from '@/components/Term'
-import { getLab, getRanked, getRole, getSummary } from '@/lib/data'
+import { getLab, getPlayer, getRanked, getRole, getSummary } from '@/lib/data'
 import { fmt } from '@/lib/format'
 import type { Player, Role } from '@/lib/types'
-import { ArchetypeSection, type ArchMeta } from '@/views/ArchetypeSection'
 
 export const metadata: Metadata = { title: 'Insights' }
 
@@ -38,17 +36,6 @@ export default function InsightsPage() {
   const s = getSummary()
   const lab = getLab()
   const c = s.contrast
-  const points: ArchPoint[] = (['bat', 'bowl'] as const).flatMap((role) =>
-    getRole(role)
-      .players.filter((p) => p.archetype)
-      .map((p) => ({ id: p.id, name: p.name, role, arch: p.archetype!.name, x: p.archetype!.x, y: p.archetype!.y, rating: p.p_rv100, rank: p.rank })),
-  )
-  const meta = Object.fromEntries(
-    (['bat', 'bowl'] as const).map((r) => {
-      const a = lab.archetypes[r]
-      return [r, { k: a.k, silhouette: a.silhouette[String(a.k)], explained: a.explained, clusters: a.clusters }]
-    }),
-  ) as unknown as ArchMeta
   const q = { bat: getRanked('bat'), bowl: getRanked('bowl') }
   const by = (xs: Player[], f: (p: Player) => number, n = 8) => xs.toSorted((a, b) => f(b) - f(a)).slice(0, n)
 
@@ -88,12 +75,36 @@ export default function InsightsPage() {
         <List title="Bowlers" note="New since the window opened" players={q.bowl.filter((p) => p.new_face).slice(0, 8)} role="bowl" value={(p) => signed(p.p_rv100)} />
       </div>
 
-      <SectionHead title="Playing-style archetypes" id="archetypes">
-        K-means on {lab.archetypes.bat.features.length} standardised features (phase shares, scoring or economy, boundary and dot rates, usual level, lift) for every player with
-        300+ balls, projected to two dimensions with PCA. Pick an archetype to light it up.
+      <SectionHead title="Who plays like whom" id="similar">
+        A nearest-neighbour recommender over standardised style and pressure profiles. Two examples; any player can be explored on the style map.
       </SectionHead>
-      <div className="panel p-5">
-        <ArchetypeSection points={points} meta={meta} />
+      <div className="grid gap-4 md:grid-cols-2">
+        {(['bat', 'bowl'] as const).map((role) => {
+          const top = q[role][0]
+          const full = top ? getPlayer(role, top.id) : null
+          return (
+            <div key={role} className="panel p-5">
+              <span className="eyebrow">{role === 'bat' ? 'Top-rated batter' : 'Top-rated bowler'}</span>
+              <h3 className="mt-1 text-[15px] font-semibold">Plays most like {top?.name}</h3>
+              <ol className="mt-2 flex flex-col">
+                {(full?.similar ?? []).slice(0, 5).map((s) => (
+                  <li key={s.id} className="flex items-center justify-between gap-3 border-b border-line py-1.5 text-[13.5px] last:border-0">
+                    <span className="min-w-0">
+                      <Link href={`/players/${role}/${s.id}/`} className="hover:underline">
+                        {s.name}
+                      </Link>
+                      <span className="block truncate text-[12px] text-ink-3">{s.why.join(', ')}</span>
+                    </span>
+                    <span className="num shrink-0 font-semibold">{Math.round(s.sim * 100)}%</span>
+                  </li>
+                ))}
+              </ol>
+              <Link href={`/similar/?role=${role}${top ? `&id=${top.id}` : ''}`} className="mt-3 block text-[13.5px] font-semibold text-signal-ink hover:underline">
+                Open the similar-players finder
+              </Link>
+            </div>
+          )
+        })}
       </div>
 
       <SectionHead title="The highest-stakes balls" id="moments">

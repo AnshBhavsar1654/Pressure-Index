@@ -18,7 +18,7 @@ probability and run expectancy are fit on every match.
 | Win probability (1st inn.) | LogisticRegression on 6 engineered features | same | AUC 0.744, Brier 0.204 |
 | Final over of a chase | exact backward recursion on empirical outcome mix (prior 150 balls) | against real results, 6.7k balls | Brier 0.0445 vs 0.0442 smooth: about the same overall, but it fixes last-ball boundary states |
 | Player rating | empirical-Bayes shrinkage toward usual level, K = 200, recency step 0.2 | walk-forward backtests on 2025 and 2026; 400-resample bootstrap; split halves | forward r 0.116 bat / 0.194 bowl |
-| Archetypes | k-means (k = 4–7 by silhouette) on 8–9 standardised usage and style features; PCA for display | silhouette ≈ 0.22 | descriptive only |
+| Similar players | cosine nearest neighbours (k = 10) on 11–12 standardised style and pressure features; PCA for the map | split-half overlap@10, odd vs even matches | 0.20 bat / 0.19 bowl vs 0.07 chance (≈3×) |
 
 Compared and rejected: gradient-boosted win-probability models (worse on CV, and piecewise-constant surfaces give unstable stakes);
 a gradient-boosted next-season predictor (overfits ~200 player-seasons a year: r 0.09 bat, −0.01 bowl).

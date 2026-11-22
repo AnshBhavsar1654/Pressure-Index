@@ -64,9 +64,9 @@ export const TERMS = {
     label: 'New face',
     def: 'First seen in top-level cricket (IPL or a full-member T20I) in 2024 or later. A label only: the ranking never uses it.',
   },
-  archetype: {
-    label: 'Archetype',
-    def: 'Playing style found by k-means clustering on when the player is used (powerplay, middle, death), how he scores or concedes, and his usual level and lift. Players with 300+ balls.',
+  similar: {
+    label: 'Similar players',
+    def: 'Nearest neighbours by cosine similarity of standardised style profiles: when the player is used (powerplay, middle, death), how he scores or concedes, boundary and dot rates, usual level, pressure rating and lift. Players with 300+ balls. 100% = identical shape.',
   },
   interval: {
     label: '90% interval',

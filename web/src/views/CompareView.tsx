@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { fmt } from '@/lib/format'
 import { betterThan, term, winPts } from '@/lib/terms'
 import { COMPONENT_LABEL, rescore, type ComponentKey, type Player, type Role } from '@/lib/types'
+import { usePlayerDetail } from '@/lib/usePlayerDetail'
 import { cn } from '@/lib/utils'
 
 const MAX = 3
@@ -77,12 +78,18 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
   }, [pools])
 
   const pool = pools[role]
-  const chosen = useMemo(() => ids.map((id) => pool.find((p) => p.id === id)).filter((p): p is Player => !!p), [ids, pool])
+  // tables come from the slim pool at once; season and phase detail is fetched for the chosen players only
+  const detail = usePlayerDetail(role, ids)
+  const chosen = ids
+    .map((id) => pool.find((p) => p.id === id))
+    .filter((p): p is Player => !!p)
+    .map((p) => detail.get(p.id) ?? { ...p, seasons: [], phases: [], matches: [], moments: [] })
   const qualified = useMemo(() => pool.filter((p) => p.rank != null), [pool])
   // evidence as z-scores against the qualified pool, adding the player if outside it
   const zs = useMemo(
     () => Object.fromEntries(chosen.map((p) => [p.id, rescore(p.rank != null ? qualified : [...qualified, p]).find((x) => x.id === p.id)!])),
-    [chosen, qualified],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [ids, role, qualified],
   )
 
   const suggestions = useMemo(() => {
@@ -202,7 +209,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
                   <h2 className="display flex items-center gap-2 text-[1.6rem]">
                     <span className="truncate">{p.name}</span>
                   </h2>
-                  <span className="text-[12.5px] text-ink-3">{p.archetype?.name ?? '–'}</span>
+                  <span className="text-[12.5px] text-ink-3">{p.style?.traits.slice(0, 2).join(', ') || p.country}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2">

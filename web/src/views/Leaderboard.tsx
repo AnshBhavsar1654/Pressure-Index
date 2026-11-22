@@ -223,7 +223,7 @@ export function Leaderboard({
                         {p.new_face && <NewFaceTag />}
                       </span>
                       <span className="block text-[12px] text-ink-3">
-                        {p.archetype?.name ?? (p.active ? 'Active' : `Last seen ${p.ipl_season ?? ''}`)}
+                        {p.style?.traits.slice(0, 2).join(', ') || (p.active ? 'Active' : `Last seen ${p.ipl_season ?? ''}`)}
                       </span>
                     </span>
                   </span>

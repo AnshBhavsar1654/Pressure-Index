@@ -44,7 +44,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
       { href: '/matches/', label: 'Match explorer', icon: PulseIcon },
       { href: '/teams/', label: 'IPL teams', icon: ShieldIcon },
       { href: '/insights/', label: 'Insights', icon: LightbulbIcon },
-      { href: '/insights/#archetypes', label: 'Archetypes', icon: ChartScatterIcon },
+      { href: '/similar/', label: 'Similar players', icon: ChartScatterIcon },
     ],
   },
 ]
@@ -65,7 +65,6 @@ export function Sidebar() {
   const path = usePathname()
   const active = (href: string) => {
     if (href === '/') return path === '/'
-    if (href.includes('#')) return false
     if (href === '/players/') return path === '/players/' || path === '/players'
     if (href.startsWith('/rankings/')) {
       const role = href.split('/')[2]
@@ -116,4 +115,4 @@ export function Sidebar() {
   )
 }
 
-export const NAV = GROUPS.flatMap((g) => g.items).filter((n) => !n.href.includes('#'))
+export const NAV = GROUPS.flatMap((g) => g.items)
