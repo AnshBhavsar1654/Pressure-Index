@@ -15,12 +15,14 @@ from __future__ import annotations
 
 import json
 import shutil
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from pressure_index.analysis import similarity, teams
-from pressure_index.config import ARTIFACTS, CFG, LAST, REFERENCE, SOURCE, WEB_DATA, WEB_PLAYERS, WEB_PUBLIC, log, season_weights
+from pressure_index.config import ARTIFACTS, CFG, LAST, SOURCE, WEB_DATA, WEB_PLAYERS, WEB_PUBLIC, log, season_weights
+from pressure_index.data.dataset import COMPETITIONS, MATCHES, MEMBERSHIP, model_input_digest, nationality_overrides, read_table
 from pressure_index.evaluation.reliability import bootstrap, forward_check, split_half
 from pressure_index.export import matches as match_export
 from pressure_index.models.leverage import OUTCOMES
@@ -102,11 +104,11 @@ def big_moments(dp: pd.DataFrame, role: str, k: int = 3) -> list:
     return out
 
 
-def nationality(mp: pd.DataFrame, comps: pd.DataFrame) -> tuple[pd.Series, pd.DataFrame, set]:
+def nationality(mp: pd.DataFrame, comps: pd.DataFrame, source: Path = SOURCE) -> tuple[pd.Series, pd.DataFrame, set]:
     """Country: the latest national side a player turned out for; IPL-only players are Indian unless the
     reference table says otherwise. Also each player's latest IPL team and season."""
     mp = mp.merge(comps[["comp_id", "season", "comp_name"]], on="comp_id", how="left", suffixes=("", "_c"))
-    over = json.loads((REFERENCE / "nationality_overrides.json").read_text(encoding="utf-8"))["overrides"]
+    over = nationality_overrides(source)
     intl = mp[~mp.comp_name.str.startswith("IPL")].sort_values("season").groupby("player_id").team_name.last()
     ipl = mp[mp.comp_name.str.startswith("IPL")].sort_values("season").groupby("player_id").last()[["team_name", "season"]]
     names = mp.groupby("player_id").player_name.last()
@@ -267,7 +269,7 @@ def summary(b: pd.DataFrame, m: pd.DataFrame, models: dict, wp_metrics: dict, fo
         "n_top_level_balls": int(b.top_level.sum()),
         "seasons": sorted(int(x) for x in b.season_yr.unique()),
         "world_cups": [{"name": r.comp_name, "matches": int(r.matches)} for r in wc.itertuples()],
-        "source": {"name": "Cricsheet", "url": "https://cricsheet.org", "licence": "CC BY 4.0 (data: Open Data Commons Attribution)"},
+        "source": {"name": "Cricsheet", "url": "https://cricsheet.org", "licence": "Open Data Commons Attribution 1.0"},
         "pressure_threshold": round(float(models["threshold"]), 3), "pressure_pctl": CFG["model"]["pressure_pctl"],
         "K": CFG["model"]["K"], "season_weights": season_weights(), "top_level": ["IPL", "T20I Full"],
         "min_match_balls": CFG["data"]["min_match_balls"],
@@ -344,16 +346,19 @@ def write_players(roles: dict) -> None:
 
 
 def run() -> None:
-    b, models = load_cached()
-    m = pd.read_csv(SOURCE / "matches.csv")
-    mp = pd.read_csv(SOURCE / "competition_team_player_mapping.csv")
-    comps = pd.read_csv(SOURCE / "competitions.csv")
+    input_digest = model_input_digest(SOURCE)
+    m = read_table(SOURCE, MATCHES)
+    mp = read_table(SOURCE, MEMBERSHIP)
+    comps = read_table(SOURCE, COMPETITIONS)
     nat, ipl, capped = nationality(mp, comps)
+    b, models = load_cached()
+    if model_input_digest(SOURCE) != input_digest:
+        raise ValueError(f"CSV inputs changed while reading {SOURCE}. Rerun the export stage.")
+    wp_metrics = json.loads((ARTIFACTS / "metrics" / "win_probability.json").read_text(encoding="utf-8"))
     roles, sim = {}, {}
     for role in ("bat", "bowl"):
         roles[role], _, _, sim[role] = role_export(b, role, nat, ipl, capped)
     write_players(roles)
-    wp_metrics = json.loads((ARTIFACTS / "metrics" / "win_probability.json").read_text())
     write("summary.json", summary(b, m, models, wp_metrics, {r: d["forward"] for r, d in roles.items()}))
     write("chase_grid.json", chase_grid(b, models))
     write("example.json", worked_example(b, roles["bat"]))

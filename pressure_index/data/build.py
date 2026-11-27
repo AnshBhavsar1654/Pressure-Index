@@ -14,12 +14,28 @@ internationals. Display names are full names from Cricsheet's names register whe
 from __future__ import annotations
 
 import json
+import shutil
 from collections import defaultdict
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import numpy as np
 import pandas as pd
 
-from pressure_index.config import CFG, PROCESSED, RAW, REFERENCE, log
+from pressure_index.config import CFG, DATASET, RAW, log
+from pressure_index.data.dataset import (
+    CITY_COUNTRY,
+    COMPETITIONS,
+    DELIVERIES,
+    LOOKUPS,
+    MATCHES,
+    MEMBERSHIP,
+    PLAYER_NAMES,
+    PLAYERS,
+    TABLES,
+    read_lookup,
+    validate,
+)
 from pressure_index.data.download import raw_files
 
 TEAM_ALIASES = {"Royal Challengers Bangalore": "Royal Challengers Bengaluru", "Kings XI Punjab": "Punjab Kings",
@@ -46,12 +62,12 @@ def overs_to_balls(o) -> float:
     return whole * 6 + round((float(o) - whole) * 10)
 
 
-def display_names() -> dict[str, str]:
+def display_names(dataset: Path = DATASET) -> dict[str, str]:
     """Cricsheet identifier -> display name: the hand-checked table first, then the people register's name
     when it is already a full name ("Kuldeep Yadav"), then the shortest full name in the names register."""
-    people = pd.read_csv(RAW / "people.csv", usecols=["identifier", "name"])
-    alt = pd.read_csv(RAW / "names.csv")
-    fixed = json.loads((REFERENCE / "player_names.json").read_text(encoding="utf-8"))["names"]
+    people = pd.read_csv(RAW / "people.csv", usecols=["identifier", "name"], dtype={"identifier": str})
+    alt = pd.read_csv(RAW / "names.csv", dtype={"identifier": str})
+    fixed = read_lookup(dataset, PLAYER_NAMES)
 
     def full(n: str) -> bool:
         parts = n.split()
@@ -91,12 +107,14 @@ def competition_of(j: dict) -> tuple[str, str, int]:
     return f"T20 Internationals {yr}", "T20I", yr
 
 
-def main() -> None:
-    cities = json.loads((REFERENCE / "city_country.json").read_text(encoding="utf-8"))["cities"]
-    names = display_names()
+def build_tables(dataset: Path) -> None:
+    cities = read_lookup(dataset, CITY_COUNTRY)
+    names = display_names(dataset)
     raw = load_matches()
     first, last = CFG["data"]["first_season"], CFG["data"]["last_season"]
     raw = [j for j in raw if first <= int(j["info"]["dates"][0][:4]) <= last]
+    if not raw:
+        raise ValueError(f"No eligible matches in {RAW}. Run `python -m pressure_index download` first.")
     log(f"{len(raw)} matches ({sum(j['_kind'] == 'ipl' for j in raw)} IPL)")
 
     teams = sorted({team(t) for j in raw for t in j["info"]["teams"]})
@@ -185,6 +203,11 @@ def main() -> None:
                         else:
                             e2 += ex["penalty"]
                     w = next((x for x in d.get("wickets", []) if x["kind"] not in NOT_OUT), None)
+                    for player_id, role in zip((bat, non, bowler), ("batter", "non_striker", "bowler")):
+                        seen_people.setdefault(player_id, reg[d[role]])
+                    if w:
+                        ident = reg[w["player_out"]]
+                        seen_people.setdefault(pid(ident), ident)
                     balls.append({
                         "match_id": mid, "innings": ii, "overid": ov["over"] + 1, "over_ball_num": pos,
                         "innings_ball_num": k, "batting_team_id": tid[bat_team], "bowling_team_id": tid[bowl_team],
@@ -199,14 +222,40 @@ def main() -> None:
                         "extras_type": etype, "extras1_runs": e1, "extras_2_runs": e2,
                     })
     if missing_city:
-        log("WARNING cities with no country (add to data/reference/city_country.json):", dict(missing_city))
+        log(f"WARNING cities with no country (add to {DATASET / CITY_COUNTRY}):", dict(missing_city))
 
-    PROCESSED.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(balls).to_csv(PROCESSED / "ball_by_ball.csv", index=False)
-    pd.DataFrame(matches).to_csv(PROCESSED / "matches.csv", index=False)
-    pd.DataFrame(comp_rows).to_csv(PROCESSED / "competitions.csv", index=False)
+    pd.DataFrame(balls).to_csv(dataset / DELIVERIES, index=False)
+    pd.DataFrame(matches).to_csv(dataset / MATCHES, index=False)
+    pd.DataFrame(comp_rows).to_csv(dataset / COMPETITIONS, index=False)
     pd.DataFrame(mapping).drop_duplicates(["comp_id", "team_id", "player_id"]).to_csv(
-        PROCESSED / "competition_team_player_mapping.csv", index=False)
+        dataset / MEMBERSHIP, index=False)
     pd.DataFrame([{"player_id": p, "name": names.get(i, i), "cricsheet_id": i} for p, i in seen_people.items()]).to_csv(
-        PROCESSED / "players.csv", index=False)
-    log(f"wrote {len(matches)} matches, {len(balls)} deliveries, {len(seen_people)} players to {PROCESSED}")
+        dataset / PLAYERS, index=False)
+
+
+def main() -> None:
+    with TemporaryDirectory(prefix=".dataset-build-", dir=DATASET.parent) as temp:
+        staged = Path(temp) / "dataset"
+        staged.mkdir()
+        for name in LOOKUPS:
+            shutil.copy2(DATASET / name, staged / name)
+        build_tables(staged)
+        counts = validate(staged)
+
+        # Keep the previous snapshot until the validated replacement is in place.
+        previous = Path(temp).with_name(Path(temp).name + "-previous")
+        DATASET.rename(previous)
+        try:
+            for name in LOOKUPS:
+                if (previous / name).read_bytes() != (staged / name).read_bytes():
+                    raise ValueError(f"{DATASET / name} changed during the build. Rerun the build stage.")
+            shutil.copytree(
+                previous, staged, dirs_exist_ok=True, symlinks=True, ignore=shutil.ignore_patterns(*TABLES, *LOOKUPS),
+            )
+            staged.rename(DATASET)
+        except BaseException:
+            previous.rename(DATASET)
+            raise
+        shutil.rmtree(previous)
+
+    log(f"wrote {counts[MATCHES]:,} matches, {counts[DELIVERIES]:,} deliveries, {counts[PLAYERS]:,} players to {DATASET}")

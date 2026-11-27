@@ -1,27 +1,32 @@
 """Command line: python -m pressure_index <stage> [...]
 
     download   fetch Cricsheet IPL + men's T20I archives and registers   -> data/raw/cricsheet/
-    build      convert to canonical CSVs                                   -> data/processed/
+    build      convert to canonical CSVs using the tracked lookups          -> data/dataset/
+    validate-data  check the CSV schemas, keys, and references in the selected dataset
     model      fit run expectancy + win probability, score every ball     -> data/cache/, artifacts/models/
     evaluate   model comparison, tuning sweep, next-season model          -> artifacts/metrics/
     export     ratings, bootstrap, teams, similar players, per-player and per-match JSON -> web/data/, web/public/
-    all        every stage after download, in order
+    all        build, model, evaluate, export
+
+    PI_SOURCE selects the CSV folder for validation, modeling, evaluation, and export.
+    Download and build use the repository's default paths.
 """
 from __future__ import annotations
 
 import sys
 import time
 
-from pressure_index.config import log
+from pressure_index.config import SOURCE, log
 
-STAGES = ("download", "build", "model", "evaluate", "export")
+REBUILD_STAGES = ("build", "model", "evaluate", "export")
+STAGES = ("download", *REBUILD_STAGES, "validate-data")
 
 
 def main(argv: list[str]) -> None:
     if not argv or argv[0] in ("-h", "--help"):
         print(__doc__)
         return
-    stages = list(STAGES[1:]) if argv[0] == "all" else argv
+    stages = REBUILD_STAGES if argv[0] == "all" else argv
     for s in stages:
         t = time.time()
         log(f"== {s}")
@@ -31,6 +36,14 @@ def main(argv: list[str]) -> None:
         elif s == "build":
             from pressure_index.data.build import main as build
             build()
+        elif s == "validate-data":
+            from pressure_index.data.dataset import validate
+            try:
+                counts = validate(SOURCE)
+            except (OSError, ValueError) as exc:
+                sys.exit(str(exc))
+            for name, count in counts.items():
+                log(f"{name}: {count:,} rows")
         elif s == "model":
             from pressure_index.pipeline import run
             run()

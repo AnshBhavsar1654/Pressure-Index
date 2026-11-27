@@ -94,7 +94,8 @@ The full write-up, with interactive charts for every result, is on the dashboard
 # 1. pipeline (Python 3.11+)
 uv sync --extra dev                      # or: pip install -e ".[dev]"
 python -m pressure_index download        # Cricsheet archives + registers  -> data/raw/
-python -m pressure_index all             # build, model, evaluate, export  -> web/data/, artifacts/
+python -m pressure_index all             # build CSVs, fit models, evaluate, export
+python -m pressure_index validate-data   # check the eight input CSVs in data/dataset/
 pytest -q && ruff check pressure_index tests
 
 # 2. dashboard
@@ -105,6 +106,16 @@ bun run build                            # static site in web/out
 ```
 
 Every setting lives in [`pressure_index/config.toml`](pressure_index/config.toml). `N_BOOT=50` gives a quick export.
+
+### CSV inputs
+
+[`data/dataset/`](data/dataset/README.md) holds five generated tables and three tracked lookup CSVs. Run
+`python -m pressure_index build` to rebuild the generated tables from the existing Cricsheet downloads.
+With a ready-to-use CSV snapshot, run `python -m pressure_index model evaluate export`. Set the
+`PI_SOURCE` environment variable to use a different snapshot. For older five-table snapshots, export
+falls back to the repository's nationality lookup. The `validate-data` command checks the complete
+eight-table layout. Run `model` after switching snapshots or changing model inputs so evaluation and
+export use matching scores.
 
 ### How the site serves data
 
@@ -120,7 +131,7 @@ plus 18 MB of JSON, instead of 1,100 prerendered profiles each repeating the ful
 
 ```
 pressure_index/
-  data/          download.py (Cricsheet), build.py (canonical CSVs)
+  data/          download.py (Cricsheet), build.py (canonical CSVs), dataset.py (CSV loading and validation)
   features/      match_state.py
   models/        run_expectancy.py, win_prob.py, endgame.py, leverage.py
   rating/        run_value.py, ratings.py (shrinkage, eligibility, ranking)
@@ -128,7 +139,9 @@ pressure_index/
   analysis/      teams.py, similarity.py (recommender)
   export/        dashboard.py, matches.py
   pipeline.py    core stage · evaluate.py · __main__.py (CLI)
-data/reference/  hand-checked lookup tables (city → country, display names, nationality fixes)
+data/dataset/    canonical CSV snapshot and hand-checked lookup CSVs
+data/raw/        upstream Cricsheet downloads used by build
+data/cache/      generated modeling cache
 artifacts/       metrics JSON and the model card
 tests/           unit tests (monotonicity, endgame bounds, rating formula, recommender, no leakage across folds)
 web/             Next.js dashboard

@@ -33,4 +33,6 @@ a gradient-boosted next-season predictor (overfits ~200 player-seasons a year: r
 
 ## Reproducibility
 `python -m pressure_index download && python -m pressure_index all`. Fixed seeds; settings in `pressure_index/config.toml`.
+The model reads the canonical CSV snapshot in [`data/dataset/`](../data/dataset/README.md). For an existing
+snapshot, set `PI_SOURCE` to its folder and run `python -m pressure_index model evaluate export`.
 The modular pipeline was checked against the original single-script implementation and matched it exactly, ball for ball.

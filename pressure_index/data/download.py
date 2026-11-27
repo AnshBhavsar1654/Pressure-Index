@@ -1,4 +1,4 @@
-"""Download Cricsheet ball-by-ball data (CC BY, cricsheet.org): the IPL and men's T20 internationals.
+"""Download Cricsheet IPL and men's T20I ball-by-ball data (ODC-BY 1.0).
 
 Cricsheet publishes each competition as one zip archive of per-match JSON files, plus a people register
 (stable ids) and a names register (alternative spellings, which include full names). Only matches from

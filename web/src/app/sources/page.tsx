@@ -20,9 +20,9 @@ const STAGES: { cmd: string; title: string; out: string; body: ReactNode[] }[] =
   {
     cmd: 'build',
     title: 'Canonical tables',
-    out: 'data/processed/*.csv',
+    out: 'data/dataset/*.csv',
     body: [
-      'Deliveries, matches, competitions, squads and players in one tidy schema',
+      'Deliveries, matches, competitions, team membership and players alongside three lookup CSVs',
       'Rain revisions (overs and target), knockout stages and host country resolved per match',
       'Each ICC T20 World Cup becomes its own competition; other T20Is are grouped by year',
     ],
@@ -134,13 +134,13 @@ export default function SourcesPage() {
       </ol>
 
       <SectionHead title="Hand-checked reference tables" id="reference">
-        Small tables kept in <code className="num rounded bg-panel-2 px-1">data/reference/</code>, each printed as a warning when it falls out of date.
+        These CSVs live in <code className="num rounded bg-panel-2 px-1">data/dataset/</code> alongside the five generated tables.
       </SectionHead>
       <div className="grid gap-3 md:grid-cols-3">
         {[
-          ['city_country.json', 'Host country for every match city. Cricsheet records the city, and T20I balls are judged against the same host country each season.'],
-          ['player_names.json', 'Full display names for players the Cricsheet register lists by initials only (for example “SA Yadav” → Suryakumar Yadav).'],
-          ['nationality_overrides.json', 'Nationality for overseas players with no T20Is in the window, who would otherwise be labelled from their IPL side.'],
+          ['city_country.csv', 'Host country for each match city. T20I deliveries are compared within the same host country and season.'],
+          ['player_name_overrides.csv', 'Full display names for players the Cricsheet register lists by initials, such as Suryakumar Yadav.'],
+          ['nationality_overrides.csv', 'Country overrides for player profiles, including overseas IPL players without T20Is in the dataset.'],
         ].map(([f, d]) => (
           <div key={f} className="panel p-4">
             <code className="num text-[13px] font-semibold">{f}</code>

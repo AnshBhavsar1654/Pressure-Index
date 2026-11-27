@@ -11,16 +11,14 @@ import numpy as np
 import pandas as pd
 
 from pressure_index.config import FULL_MEMBERS, SOURCE, TOP_LEVEL
+from pressure_index.data.dataset import MODEL_TABLES, read_table
 
 KNOCKOUT_STAGES = ["Final", "Qualifier", "Eliminator", "Semi Final"]
 
 
 def load(source: Path = SOURCE) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Deliveries, matches (with competition info) and the competition-team-player mapping."""
-    b = pd.read_csv(source / "ball_by_ball.csv", low_memory=False)
-    m = pd.read_csv(source / "matches.csv")
-    c = pd.read_csv(source / "competitions.csv")
-    mp = pd.read_csv(source / "competition_team_player_mapping.csv")
+    b, m, c, mp = (read_table(source, name) for name in MODEL_TABLES)
     m = m.merge(c, on="comp_id", how="left")
     m["season_yr"] = m["season"].astype(str).str[:4].astype(int)
     m["is_ipl"] = m["comp_name"].str.startswith("IPL").astype(int)

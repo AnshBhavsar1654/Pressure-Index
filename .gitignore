@@ -11,9 +11,17 @@ __pycache__/
 
 # pipeline working data: rebuilt with `python -m pressure_index download` and `... all`
 data/raw/
-data/processed/
+data/dataset/ball_by_ball.csv
+data/dataset/matches.csv
+data/dataset/competitions.csv
+data/dataset/competition_team_player_mapping.csv
+data/dataset/players.csv
+data/.dataset-build-*/
 data/cache/
 artifacts/models/
+
+# Generated snapshots from earlier versions.
+data/processed/
 
 # any local copy of third-party data that is not redistributable
 Data Pack/

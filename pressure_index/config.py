@@ -10,8 +10,7 @@ PKG = Path(__file__).resolve().parent
 ROOT = PKG.parent
 DATA = ROOT / "data"
 RAW = DATA / "raw" / "cricsheet"          # downloaded match files (not committed)
-PROCESSED = DATA / "processed"            # canonical CSVs built from the raw files (not committed)
-REFERENCE = DATA / "reference"            # small hand-checked lookup tables (committed)
+DATASET = DATA / "dataset"                # generated input tables and tracked lookup CSVs
 CACHE = DATA / "cache"                    # ball-level model output (parquet, not committed)
 ARTIFACTS = ROOT / "artifacts"            # metrics, model cards, saved models
 WEB_DATA = ROOT / "web" / "data"          # JSON the dashboard reads
@@ -21,9 +20,8 @@ WEB_PLAYERS = WEB_PUBLIC / "data" / "players"  # one JSON per player and role, l
 
 CFG = tomllib.loads((PKG / "config.toml").read_text(encoding="utf-8"))
 
-# The source of the canonical CSVs. Defaults to the Cricsheet build; PI_SOURCE points at another folder
-# with the same five files (used to check that refactors reproduce earlier outputs exactly).
-SOURCE = Path(os.environ.get("PI_SOURCE", PROCESSED))
+# PI_SOURCE can select a different CSV snapshot for downstream stages.
+SOURCE = Path(os.environ.get("PI_SOURCE", DATASET))
 N_BOOT = int(os.environ.get("N_BOOT", CFG["evaluation"]["n_boot"]))
 
 FIRST, LAST = CFG["data"]["first_season"], CFG["data"]["last_season"]
