@@ -4,6 +4,7 @@ import { MagnifyingGlassIcon } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useDeferredValue, useEffect, useMemo, useState } from 'react'
+import { MatchScore } from '@/components/MatchScore'
 import { WinWorm } from '@/components/charts/WinWorm'
 import { Zoomable } from '@/components/charts/Zoom'
 import { Pick, Segmented } from '@/components/filters'
@@ -141,40 +142,20 @@ function Detail({ d }: { d: MatchDetail }) {
   const [i1, i2] = d.innings
   return (
     <div className="flex flex-col gap-4">
-      <div className="panel flex flex-col gap-3 p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <span className="eyebrow">
-              {d.comp}
-              {d.stage !== 'League' ? ` · ${d.stage}` : ''}
-            </span>
-            <h2 className="display mt-1 text-[1.6rem]">
-              {d.teams[0]} v {d.teams[1]}
-            </h2>
-            <p className="text-[13.5px] text-ink-3">
-              {fmt.date(d.date)}
-              {d.venue_country ? ` · ${d.venue_country}` : ''} · <b className="font-semibold text-ink-2">{d.result}</b>
-            </p>
-          </div>
-          <dl className="flex gap-4 text-right">
-            {[i1, i2].filter(Boolean).map((x) => (
-              <div key={x.team}>
-                <dt className="text-[12px] text-ink-3">{x.team}</dt>
-                <dd className="num text-[1.25rem] font-semibold">
-                  {x.runs}/{x.wkts}
-                  <span className="ml-1 text-[12px] font-normal text-ink-3">({Math.floor(x.balls / 6)}.{x.balls % 6})</span>
-                </dd>
-              </div>
-            ))}
-          </dl>
+      <div className="panel min-w-0 overflow-hidden">
+        <div className="border-b border-line px-4 py-3 sm:px-5">
+          <h2 className="text-base font-semibold">Match scorecard</h2>
         </div>
-        <Zoomable label="match win probability">
-          <WinWorm worm={worm} height={300} sides={{ up: d.teams[0], down: d.teams[1] }} labels={{ first: `${d.teams[0]} batting`, second: `${d.teams[1]} batting` }} />
-        </Zoomable>
-        <p className="text-[12.5px] text-ink-3">
-          {d.teams[0]}’s modelled chance of winning before every ball. Shaded bands: the {i1.pressure + (i2?.pressure ?? 0)} pressure balls (top 20% by stakes
-          {d.knockout ? ', and every ball, as this is a knockout' : ''}).
-        </p>
+        <MatchScore match={d} showDate className="px-4 py-4 sm:px-5" />
+        <div className="border-t border-line bg-panel-2/50 px-3 py-3 sm:px-5">
+          <Zoomable label="match win probability" heading={<h3 className="text-base font-semibold">Win probability</h3>}>
+            <WinWorm key={d.id} worm={worm} teams={d.teams} />
+          </Zoomable>
+          <p className="mt-2 text-xs text-ink-3">
+            Both teams’ chances are shown before each delivery. The strip marks the {i1.pressure + (i2?.pressure ?? 0)} pressure deliveries
+            {d.knockout ? ' in this knockout match.' : ' ranked in the top 20% by stakes.'}
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

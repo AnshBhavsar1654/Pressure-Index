@@ -7,7 +7,7 @@ import { signed } from '@/components/kit'
 import type { CalBin, Role } from '@/lib/types'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 
-/* One colour job each: the production model wears signal, its closest rival data teal, the rest neutral. */
+/* One colour job each: the production model uses the signal token, its closest rival uses data, the rest neutral. */
 export const MODEL_COLOR: Record<string, string> = { logistic: 'var(--signal)', gbm: 'var(--data)', gbm_isotonic: 'var(--ink-3)' }
 export const MODEL_LABEL: Record<string, string> = { logistic: 'Logistic (production)', gbm: 'Gradient boosting', gbm_isotonic: 'Boosting + isotonic' }
 

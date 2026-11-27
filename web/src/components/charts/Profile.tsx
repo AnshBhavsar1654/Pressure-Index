@@ -9,8 +9,7 @@ import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 import { useZoom } from './Zoom'
 
 /**
- * One bar per match with pressure exposure: run value above (orange) or below (teal)
- * expectation. The rhythm of orange vs teal is the consistency story.
+ * One bar per match with pressure exposure, showing the change in win probability.
  */
 export function MatchStrip({ matches, role }: { matches: PlayerMatch[]; role: 'bat' | 'bowl' }) {
   const [ref, width] = useWidth<HTMLDivElement>()

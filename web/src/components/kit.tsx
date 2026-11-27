@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils'
 /** Page title with a one-sentence summary underneath; optional content on the right. */
 export function PageHead({ title, summary, children }: { title: string; summary: ReactNode; children?: ReactNode }) {
   return (
-    <header className="mb-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
-      <div className="flex max-w-[72ch] flex-col gap-2.5">
-        <h1 className="display text-[2.6rem] sm:text-[3.2rem]">{title}</h1>
-        <p className="text-[16px] leading-relaxed text-ink-2">{summary}</p>
+    <header className="mb-6 grid gap-4 border-b border-line pb-5 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-end">
+      <div className="grid max-w-[70ch] gap-2">
+        <h1 className="display text-3xl sm:text-[2.5rem]">{title}</h1>
+        <p className="text-[15px] leading-relaxed text-ink-2">{summary}</p>
       </div>
       {children}
     </header>
@@ -18,9 +18,9 @@ export function PageHead({ title, summary, children }: { title: string; summary:
 
 export function SectionHead({ title, children, id, action }: { title: string; children?: ReactNode; id?: string; action?: ReactNode }) {
   return (
-    <div id={id} className="mb-4 mt-10 flex scroll-mt-24 flex-wrap items-end justify-between gap-3">
+    <div id={id} className="mb-4 mt-10 flex scroll-mt-24 flex-wrap items-end justify-between gap-3 border-t border-line pt-4">
       <div className="flex max-w-[72ch] flex-col gap-1.5">
-        <h2 className="display text-[1.95rem]">{title}</h2>
+        <h2 className="display text-2xl">{title}</h2>
         {children && <p className="text-[14.5px] leading-relaxed text-ink-2">{children}</p>}
       </div>
       {action}
@@ -55,9 +55,9 @@ export function Stat({
   className?: string
 }) {
   return (
-    <div className={cn('flex flex-col gap-1.5 rounded-lg border border-line bg-panel-2 px-4 py-3.5', className)}>
+    <div className={cn('flex flex-col gap-1 border-t border-line px-3 py-3', className)}>
       <span className="text-[13px] text-ink-3">{label}</span>
-      <span className={cn('display num text-[2.1rem]', TONE[tone])}>{value}</span>
+      <span className={cn('num text-2xl font-medium', TONE[tone])}>{value}</span>
       {note && <span className="text-[12.5px] leading-snug text-ink-3">{note}</span>}
     </div>
   )

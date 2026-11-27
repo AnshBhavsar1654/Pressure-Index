@@ -24,10 +24,10 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Flag } from "@/components/Flag";
 import { TeamBadge } from "@/components/TeamBadge";
-import { Mark, NAV } from "./Sidebar";
+import { Mark, Navigation, sectionLabel } from "./Sidebar";
 
 type Entry = { id: number; name: string; role: 'bat' | 'bowl'; rank: number | null; ipl: string | null; country: string | null };
 
@@ -36,16 +36,30 @@ export function Topbar() {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState(false);
-  const [dark, setDark] = useState(true);
+  const [dark, setDark] = useState(false);
   // the player list is a separate file, fetched the first time search opens (not repeated in every page)
   const [players, setPlayers] = useState<Entry[] | null>(null);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     if (!open || players) return;
-    fetch("/search.json")
-      .then((r) => (r.ok ? r.json() : []))
-      .then((d: Entry[]) => setPlayers(d))
-      .catch(() => setPlayers([]));
-  }, [open, players]);
+    const request = new AbortController();
+    fetch("/search.json", { signal: request.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error("Player search unavailable");
+        return r.json();
+      })
+      .then((d: Entry[]) => {
+        if (!request.signal.aborted) {
+          setSearchFailed(false);
+          setPlayers(d);
+        }
+      })
+      .catch(() => {
+        if (!request.signal.aborted) setSearchFailed(true);
+      });
+    return () => request.abort();
+  }, [open, players, attempt]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -53,6 +67,7 @@ export function Topbar() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
         e.preventDefault();
+        setMenu(false);
         setOpen((o) => !o);
       }
     };
@@ -61,7 +76,7 @@ export function Topbar() {
   }, []);
 
   const toggleTheme = () => {
-    const next = !dark;
+    const next = !document.documentElement.classList.contains("dark");
     document.documentElement.classList.toggle("dark", next);
     try {
       localStorage.setItem("theme", next ? "dark" : "light");
@@ -78,83 +93,73 @@ export function Topbar() {
   };
 
   return (
-    <header className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
-        <Link
-          href="/"
-          className="flex items-center gap-2.5 lg:hidden"
-          aria-label="Pressure Index home"
-        >
-          <Mark size={32} />
-          <span className="display text-[1.15rem]">Pressure Index</span>
-        </Link>
-        <button
-          onClick={() => setOpen(true)}
-          className="ml-auto flex h-11 min-w-0 items-center gap-2.5 rounded-lg border border-line bg-panel px-4 text-[14px] text-ink-3 transition-colors hover:border-line-strong hover:text-ink-2 lg:ml-0 lg:w-[380px]"
-        >
-          <MagnifyingGlassIcon size={17} weight="bold" />
-          <span className="hidden sm:inline">Search any player</span>
-          <kbd className="ml-auto hidden rounded-md border border-line bg-panel-2 px-1.5 py-0.5 text-[11px] text-ink-3 lg:inline">
-            Ctrl K
-          </kbd>
-        </button>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-11 rounded-lg lg:ml-auto"
-              onClick={toggleTheme}
-              aria-label={dark ? "Use light theme" : "Use dark theme"}
-            >
-              {dark ? <SunIcon /> : <MoonIcon />}
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{dark ? "Light theme" : "Dark theme"}</TooltipContent>
-        </Tooltip>
-        <Button
-          variant="outline"
-          size="icon"
-          className="size-11 rounded-lg lg:hidden"
-          onClick={() => setMenu((m) => !m)}
-          aria-label="Open sections menu"
-          aria-expanded={menu}
-        >
-          <ListIcon />
-        </Button>
-      </div>
-      {menu && (
-        <nav
-          aria-label="Sections"
-          className="panel grid grid-cols-2 gap-1 p-2 lg:hidden"
-        >
-          {NAV.map((n) => (
-            <button
-              key={n.href}
-              onClick={() => go(n.href)}
-              className={cn(
-                "flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-left text-[14px] font-medium",
-                (n.href === "/" ? path === "/" : path.startsWith(n.href))
-                  ? "bg-panel-2 text-foreground ring-1 ring-signal/60"
-                  : "text-ink-2 hover:bg-panel-2",
-              )}
-            >
-              <n.icon size={18} />
-              {n.label}
-            </button>
-          ))}
-        </nav>
-      )}
+    <header className="flex min-h-16 items-center gap-2 border-b border-line bg-rail px-4 sm:gap-3 sm:px-7 lg:px-8">
+      <Sheet open={menu} onOpenChange={setMenu}>
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="icon" className="size-10 lg:hidden" aria-label="Open navigation">
+            <ListIcon />
+          </Button>
+        </SheetTrigger>
+        <SheetContent>
+          <SheetTitle className="mb-6 px-3 text-lg font-semibold">Pressure Index</SheetTitle>
+          <SheetDescription className="sr-only">Navigate the dashboard</SheetDescription>
+          <Navigation onNavigate={() => setMenu(false)} />
+        </SheetContent>
+      </Sheet>
+      <Link href="/" className="flex min-w-0 items-center gap-2 lg:hidden" aria-label="Pressure Index home">
+        <Mark size={28} />
+        <span className="truncate text-base font-semibold">Pressure Index</span>
+      </Link>
+      <span className="hidden text-sm font-medium text-ink-2 lg:block">{sectionLabel(path) ?? "Pressure Index"}</span>
+
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-label="Search players"
+        aria-haspopup="dialog"
+        className="ml-auto flex h-10 shrink-0 items-center gap-2 rounded-md border border-line bg-panel px-3 text-sm text-ink-2 transition-colors hover:border-line-strong hover:text-foreground lg:w-64"
+      >
+        <MagnifyingGlassIcon size={16} />
+        <span className="hidden sm:inline">Search players</span>
+        <kbd className="ml-auto hidden whitespace-nowrap rounded-sm border border-line bg-panel-2 px-1.5 text-xs text-ink-3 lg:inline">Ctrl K</kbd>
+      </button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-10 shrink-0"
+            onClick={toggleTheme}
+            aria-label={dark ? "Use light theme" : "Use dark theme"}
+          >
+            {dark ? <SunIcon /> : <MoonIcon />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{dark ? "Light theme" : "Dark theme"}</TooltipContent>
+      </Tooltip>
       <CommandDialog
         open={open}
         onOpenChange={setOpen}
         title="Search players"
-        description="Find any rated batter or bowler"
+        description="Find a batting or bowling profile"
+        className="sm:max-w-lg"
       >
-        <Command>
+        {open && <Command>
           <CommandInput placeholder="Type a player name" />
           <CommandList>
-            <CommandEmpty>{players ? "No rated player matches that name." : "Loading players…"}</CommandEmpty>
+            <CommandEmpty>
+              {searchFailed ? (
+                <>
+                  Player search is unavailable.{" "}
+                  <button type="button" className="font-semibold text-signal-ink underline" onClick={() => {
+                    setSearchFailed(false);
+                    setAttempt((n) => n + 1);
+                  }}>
+                    Try again
+                  </button>
+                </>
+              ) : players ? "No players match that name." : "Loading players…"}
+            </CommandEmpty>
             {(["bat", "bowl"] as const).map((role) => (
               <CommandGroup
                 key={role}
@@ -186,7 +191,7 @@ export function Topbar() {
               </CommandGroup>
             ))}
           </CommandList>
-        </Command>
+        </Command>}
       </CommandDialog>
     </header>
   );

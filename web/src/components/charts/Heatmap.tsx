@@ -9,7 +9,7 @@ import { useZoom } from './Zoom'
 
 /**
  * Chase pressure map: overs left (x, counting down) by runs needed (y), shaded by
- * Leverage Index for a chosen number of wickets in hand. One hue (orange), light to dark,
+ * Leverage Index for a chosen number of wickets in hand. One hue, light to dark,
  * expressed as opacity over the surface so it stays correct in both themes.
  */
 export function ChaseHeatmap({ grid, wkts, maxNeed = 200 }: { grid: ChaseGrid; wkts: number; maxNeed?: number }) {

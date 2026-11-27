@@ -9,7 +9,7 @@ import { fmt } from '@/lib/format'
 import type { TeamMatch, TeamPhase } from '@/lib/types'
 import { AXIS, Tooltip, TipRow, useWidth, type TipState } from './core'
 
-/** Runs per match gained (orange) or lost (teal) against an average side, by phase, batting and bowling. */
+/** Runs per match gained or lost against an average side, by phase, batting and bowling. */
 export function PhaseGaps({ phases, nTeams }: { phases: TeamPhase[]; nTeams: number }) {
   const [ref, width] = useWidth<HTMLDivElement>()
   const [tip, setTip] = useState<TipState | null>(null)

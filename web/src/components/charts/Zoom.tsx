@@ -16,7 +16,7 @@ const STEPS = [1, 1.5, 2, 3, 4]
  * opt in through useZoom, taller) inside a scrollable viewport, so lines stay sharp and
  * labels keep their size. Drag to pan when zoomed in.
  */
-export function Zoomable({ children, label = 'chart', className }: { children: ReactNode; label?: string; className?: string }) {
+export function Zoomable({ children, heading, label = 'chart', className }: { children: ReactNode; heading?: ReactNode; label?: string; className?: string }) {
   const [step, setStep] = useState(0)
   const zoom = STEPS[step]
   const view = useRef<HTMLDivElement>(null)
@@ -53,19 +53,22 @@ export function Zoomable({ children, label = 'chart', className }: { children: R
 
   return (
     <div className={cn('flex min-w-0 flex-col gap-2', className)}>
-      <div className="flex items-center justify-end gap-1" role="group" aria-label={`Zoom ${label}`}>
-        <Button variant="outline" size="icon-sm" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} aria-label="Zoom out">
-          <MagnifyingGlassMinusIcon />
-        </Button>
-        <span className="num w-12 text-center text-[12.5px] text-ink-3" aria-live="polite">
-          {Math.round(zoom * 100)}%
-        </span>
-        <Button variant="outline" size="icon-sm" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} disabled={step === STEPS.length - 1} aria-label="Zoom in">
-          <MagnifyingGlassPlusIcon />
-        </Button>
-        <Button variant="ghost" size="icon-sm" onClick={() => setStep(0)} disabled={step === 0} aria-label="Reset zoom">
-          <ArrowsInIcon />
-        </Button>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        {heading}
+        <div className="ml-auto flex items-center gap-1" role="group" aria-label={`Zoom ${label}`}>
+          <Button variant="outline" size="icon-sm" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0} aria-label="Zoom out">
+            <MagnifyingGlassMinusIcon />
+          </Button>
+          <span className="num w-12 text-center text-[12.5px] text-ink-3" aria-live="polite">
+            {Math.round(zoom * 100)}%
+          </span>
+          <Button variant="outline" size="icon-sm" onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))} disabled={step === STEPS.length - 1} aria-label="Zoom in">
+            <MagnifyingGlassPlusIcon />
+          </Button>
+          <Button variant="ghost" size="icon-sm" onClick={() => setStep(0)} disabled={step === 0} aria-label="Reset zoom">
+            <ArrowsInIcon />
+          </Button>
+        </div>
       </div>
       <div
         ref={view}

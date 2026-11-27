@@ -12,7 +12,7 @@ export function ChaseMap({ grid }: { grid: ChaseGrid }) {
   return (
     <ChartFrame
       title="Where pressure lives in a chase"
-      subtitle="Each square is a chase situation: runs still needed (up) against overs left (across). Darker orange means one ball changes the result more. Move the slider to see how losing wickets shifts the danger zone."
+      subtitle="Each square is a chase situation: runs still needed (up) against overs left (across). Stronger shading means one ball can change the result more. Move the slider to see how losing wickets shifts the danger zone."
       legend={
         <div className="flex flex-wrap items-center gap-3 text-[14px] text-ink-2">
           <label htmlFor="wk" className="font-semibold text-ink">

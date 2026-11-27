@@ -87,10 +87,10 @@ export function Leaderboard({
     <div className="flex flex-col gap-5">
       <Card>
         <CardHeader>
-          <CardTitle>Who qualifies</CardTitle>
+          <CardTitle>Ranking eligibility</CardTitle>
           <CardDescription>
-            Default: {bar.balls}+ pressure balls in {bar.matches}+ matches, {bar.recentBalls}+ of them in 2025–26. Move the bar and the
-            ranking, the scatter and every percentile re-compute in the browser.
+            Default: {bar.balls}+ pressure balls in {bar.matches}+ matches, {bar.recentBalls}+ of them in 2025–26. Adjust either minimum to recalculate the ranking.
+            <a href="#rankings" className="ml-2 whitespace-nowrap font-semibold text-signal-ink underline-offset-4 hover:underline">Jump to rankings</a>
           </CardDescription>
           <CardAction>
             <Button
@@ -108,7 +108,7 @@ export function Leaderboard({
           </CardAction>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-[1fr_1fr_auto] md:items-center">
-          <div className="flex flex-col gap-3 rounded-lg border border-line bg-panel-2 p-4">
+          <div className="flex flex-col gap-3 border-t border-line pt-3">
             <div className="flex items-baseline justify-between gap-2">
               <span id="min-balls" className="text-[14px] font-semibold">
                 Minimum pressure balls
@@ -121,7 +121,7 @@ export function Leaderboard({
               <span>300</span>
             </span>
           </div>
-          <div className="flex flex-col gap-3 rounded-lg border border-line bg-panel-2 p-4">
+          <div className="flex flex-col gap-3 border-t border-line pt-3">
             <div className="flex items-baseline justify-between gap-2">
               <span id="min-matches" className="text-[14px] font-semibold">
                 Minimum matches with pressure balls
@@ -159,7 +159,7 @@ export function Leaderboard({
         <PressureScatter role={role} players={players} highlight={top10} onSelect={open} height={460} />
       </ChartFrame>
 
-      <Card className="gap-0 pb-0">
+      <Card id="rankings" className="scroll-mt-4 gap-0 pb-0">
         <CardHeader className="border-b pb-4">
           <CardTitle>
             {rows.length === players.length ? `All ${players.length} qualified ${noun}` : `${rows.length} of ${players.length} qualified ${noun}`}

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Fira_Code, Fira_Sans } from 'next/font/google'
+import { Source_Sans_3, Source_Serif_4 } from 'next/font/google'
 import Link from 'next/link'
 import Script from 'next/script'
 import { Sidebar } from '@/components/shell/Sidebar'
@@ -8,8 +8,8 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import './globals.css'
 
-const body = Fira_Sans({ subsets: ['latin'], variable: '--font-body', weight: ['400', '500', '600', '700'] })
-const mono = Fira_Code({ subsets: ['latin'], variable: '--font-mono-face', weight: ['400', '500', '600'] })
+const body = Source_Sans_3({ subsets: ['latin'], variable: '--font-body' })
+const display = Source_Serif_4({ subsets: ['latin'], variable: '--font-headline' })
 
 export const metadata: Metadata = {
   title: { default: 'Pressure Index', template: '%s | Pressure Index' },
@@ -17,12 +17,11 @@ export const metadata: Metadata = {
     'Who performs when the match is on the line? Win-probability and run-expectancy models over 600k+ IPL and T20I deliveries, pressure-adjusted player ratings, and an interactive analytics dashboard.',
 }
 
-// Dark is the home theme; a stored "light" choice is applied before paint.
-const themeScript = `try{var q=new URLSearchParams(location.search).get('theme');if(q==='light'||q==='dark')localStorage.setItem('theme',q);if(localStorage.getItem('theme')==='light')document.documentElement.classList.remove('dark')}catch(e){}`
+const themeScript = `var systemDark=matchMedia('(prefers-color-scheme: dark)').matches;try{var q=new URLSearchParams(location.search).get('theme');if(q==='light'||q==='dark')localStorage.setItem('theme',q);var theme=localStorage.getItem('theme');document.documentElement.classList.toggle('dark',theme?theme==='dark':systemDark)}catch(e){document.documentElement.classList.toggle('dark',systemDark)}`
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn('dark', body.variable, mono.variable)} suppressHydrationWarning>
+    <html lang="en" className={cn(body.variable, display.variable)} suppressHydrationWarning>
       <body className="min-h-dvh font-sans">
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         <TooltipProvider delayDuration={150}>
@@ -32,14 +31,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           >
             Skip to content
           </a>
-          <div className="mx-auto flex max-w-[1560px] gap-5 p-3 sm:p-4 lg:p-5">
+          <div className="mx-auto flex min-h-dvh max-w-[1600px]">
             <Sidebar />
-            <div className="flex min-w-0 flex-1 flex-col gap-5">
+            <div className="flex min-w-0 flex-1 flex-col">
               <Topbar />
-              <main id="main" className="min-w-0">
+              <main id="main" tabIndex={-1} className="min-w-0 flex-1 px-4 py-6 sm:px-7 lg:px-8 lg:py-8">
                 {children}
               </main>
-              <footer className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pb-6 pt-5 text-[13px] text-ink-3">
+              <footer className="mx-4 mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-line pb-6 pt-5 text-[13px] text-ink-3 sm:mx-7 lg:mx-8">
                 <div className="flex flex-col gap-1">
                   <span>
                     Built by <b className="font-semibold text-ink-2">Ansh Bhavsar</b> ·{' '}

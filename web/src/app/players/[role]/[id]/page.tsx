@@ -139,12 +139,12 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
         </span>
       </nav>
 
-      <section className="panel grid-hero grid gap-6 p-6 sm:p-7 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
+      <section className="grid gap-6 border-y border-line py-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <div className="flex flex-col gap-5">
           <div className="flex items-start gap-4">
             <RankRibbon rank={p.rank ?? '–'} className="shrink-0" />
             <div className="flex min-w-0 items-center gap-4">
-              <PlayerAvatar name={p.name} highlight={p.rank != null && p.rank <= 10} size={72} />
+              <PlayerAvatar name={p.name} size={56} />
               <div className="min-w-0">
                 <h1 className="display flex flex-wrap items-center gap-3 text-[2.3rem] sm:text-[2.8rem]">
                   {p.name}
@@ -185,7 +185,7 @@ export default async function PlayerPage({ params }: { params: Promise<Params> }
         </div>
         <dl className="grid grid-cols-2 gap-2.5 self-end sm:grid-cols-3">
           {bannerStats.map(([k, v], i) => (
-            <div key={i} className="rounded-lg border border-line bg-panel-2 px-4 py-3">
+            <div key={i} className="border-t border-line px-2 py-3">
               <dt className="text-[12.5px] text-ink-3">{k}</dt>
               <dd className="display num mt-1 text-[1.75rem]">{v}</dd>
             </div>

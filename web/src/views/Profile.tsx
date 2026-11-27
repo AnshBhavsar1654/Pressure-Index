@@ -38,7 +38,7 @@ export function ProfileCharts({ p, role }: { p: Player; role: Role }) {
       </div>
       <ChartFrame
         title="Every match with pressure moments"
-        subtitle="One bar per match, oldest to newest: how many percentage points this player’s pressure balls added to (orange) or took from (teal) the team’s chance of winning. A tall orange bar is a match won under pressure; a long run of orange is what consistency looks like. Hover for the runs too."
+        subtitle="One bar per match, oldest to newest. Bars above zero show how much this player’s pressure balls improved the team’s win probability. Bars below zero show how much it fell. Hover for runs added or saved."
         legend={
           <Legend
             items={[

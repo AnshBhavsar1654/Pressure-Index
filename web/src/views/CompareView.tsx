@@ -241,7 +241,7 @@ export function CompareView({ pools }: { pools: Record<Role, Player[]> }) {
           <Card className="gap-0 pb-0">
             <CardHeader className="border-b pb-4">
               <CardTitle>Side by side</CardTitle>
-              <CardDescription>The best figure in each row is marked in orange. Volume rows have no winner.</CardDescription>
+              <CardDescription>The best figure in each row is highlighted. Volume rows have no winner.</CardDescription>
             </CardHeader>
             <Table className="min-w-[560px] text-[14px]">
               <TableHeader>

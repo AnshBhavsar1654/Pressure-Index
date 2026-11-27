@@ -18,7 +18,7 @@ interface Props {
 
 /**
  * Baseline (x) vs pressure (y) run value per 100 balls. Points above the diagonal
- * lift under pressure; the top 10 by live score wear the orange accent.
+ * lift under pressure; the top 10 by live score use the accent color.
  */
 export function PressureScatter({ players, highlight, selected, onSelect, role = 'bat', height: baseHeight = 420 }: Props) {
   const height = baseHeight * useZoom()
